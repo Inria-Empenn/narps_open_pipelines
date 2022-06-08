@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: ''
+labels: "\U0001F6A6 status: awaiting triage"
 assignees: ''
 
 ---
