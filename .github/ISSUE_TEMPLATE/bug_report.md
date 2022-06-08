@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: "\U0001F6E0 goal: fix"
+labels: "\U0001F6E0 goal: fix, \U0001F6A6 status: awaiting triage"
 assignees: ''
 
 ---
