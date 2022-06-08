@@ -1,1 +1,46 @@
-# open_pipeline
+# THE OPEN PIPELINE PROJECT
+
+## Table of contents
+   * [Project presentation](#project-presentation)
+   * [To start](#to-start)
+   	  * [Contents overview](#contents-overview)
+	   	  * [src](#src)
+	   	  * [data](#data)
+	   	  * [Other files](#other-files)
+   	  * [Install Docker container](#install-docker-container)
+   * [References](#references)
+
+
+## Project presentation
+
+Neuroimaging workflows are highly flexible, leaving researchers with multiple possible options to analyze a dataset (Carp, 2012).
+However, different analytical choices can cause variation in the results (Botvinik-Nezer et al., 2020), leading to what was called a "vibration of effects" (Ioannidis, 2008) or analytical variability. 
+
+The open pipeline project aims at providing a overview of the possible pipelines that are used in the community to analyze a dataset. 
+
+## To start 
+
+### Contents overview
+
+#### `src`
+
+This directory contains scripts of the reproduce pipelines along with notebooks and/or scripts to launch them. 
+
+#### `data`
+
+This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
+
+#### Other files 
+
+This repository contains other files: 
+- `Dockerfile` used to create the environment in which the notebooks could be launch. 
+
+
+### Install Docker container
+
+## References
+
+- Botvinik-Nezer, R. et al. (2020), ‘Variability in the analysis of a single neuroimaging dataset by many teams’, Nature.
+- Carp, J. et al. (2012), ‘On the Plurality of (Methodological) Worlds: Estimating the Analytic Flexibility of fMRI Experiments’, Frontiers in Neuroscience. ;
+- Gorgolewski, K.J. et al. (2015), ‘NeuroVault.org: a web-based repository for collecting and sharing unthresholded statistical maps of the human brain’ Frontiers in Neuroinformatics. ;
+- Ioannidis, J.P.A. (2008), ‘Why Most Discovered True Associations Are Inflated’, Epidemiology. ;
