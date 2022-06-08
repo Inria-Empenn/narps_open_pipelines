@@ -33,7 +33,7 @@ This directory contains scripts of the reproduce pipelines along with notebooks 
 
 This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
 
-Instructions to download data are available in 
+Instructions to download data are available [below](#download-data).
 
 ### Install Docker container
 
