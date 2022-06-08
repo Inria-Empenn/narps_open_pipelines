@@ -6,8 +6,11 @@
    	  * [Contents overview](#contents-overview)
 	   	  * [src](#src)
 	   	  * [data](#data)
-	   	  * [Other files](#other-files)
    	  * [Install Docker container](#install-docker-container)
+   	  * [Download data](#download-data)
+   	  	  * [Original dataset](#original-dataset)
+   	  	  * [Derived data](#derived-data)
+	  	  * [Contributing](#contributing)
    * [References](#references)
 
 
@@ -30,13 +33,32 @@ This directory contains scripts of the reproduce pipelines along with notebooks 
 
 This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
 
-#### Other files 
-
-This repository contains other files: 
-- `Dockerfile` used to create the environment in which the notebooks could be launch. 
-
+Instructions to download data are available in 
 
 ### Install Docker container
+
+*Coming soon*
+
+### Download data 
+
+#### Original dataset
+
+The dataset used for the `/src/reproduction_*.ipynb` notebooks can be downloaded [**here**](https://openneuro.org/datasets/ds001734/versions/1.0.5).
+
+The data must be stored in a directory inside the `data/original` directory. 
+
+I recommand to download it with **Datalad**. If you want to use it, install [**Datalad**](http://handbook.datalad.org/en/latest/intro/installation.html#install), place yourself in the `data/original` directory and run `datalad install ///openneuro/ds001734`.
+After, you can download all the files by running `datalad get ./*` and if you only want parts of the data, replace the * by the paths to the desired files. 
+
+#### Derived data
+
+Derived data such as original stat maps from teams and reproduced stat maps can be downloaded from [NeuroVault](www.neurovault.org) (Gorgolewski & al, 2015). 
+
+*Coming soon*
+
+### Contributing 
+
+Follow the guidelines in [CONTRIBUTING.md](https://github.com/elodiegermani/open_pipeline/blob/main/CONTRIBUTING.md)
 
 ## References
 
