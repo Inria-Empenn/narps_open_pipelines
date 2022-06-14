@@ -43,6 +43,8 @@ Instructions to download data are available [below](#download-data).
 
 #### Original dataset
 
+File containing pipeline description is available in `/data/original`.
+
 The dataset used for the `/src/reproduction_*.ipynb` notebooks can be downloaded [**here**](https://openneuro.org/datasets/ds001734/versions/1.0.5).
 
 The data must be stored in a directory inside the `data/original` directory. 
