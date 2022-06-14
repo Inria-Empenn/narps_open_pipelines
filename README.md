@@ -1,5 +1,7 @@
 # THE OPEN PIPELINE PROJECT
 
+![project_illustration](https://github.com/Inria-Empenn/narps_open_pipelines/tree/main/static/images/project_illustration.png)
+
 ## Table of contents
    * [Project presentation](#project-presentation)
    * [To start](#to-start)
