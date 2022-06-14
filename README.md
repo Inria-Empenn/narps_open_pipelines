@@ -1,6 +1,8 @@
 # THE OPEN PIPELINE PROJECT
 
-![project_illustration](https://github.com/elodiegermani/narps_open_pipelines/blob/main/static/images/project_illustration.png)
+<p align="center">
+	<img src="https://github.com/elodiegermani/narps_open_pipelines/blob/main/static/images/project_illustration.png"/> 
+</p>
 
 ## Table of contents
    * [Project presentation](#project-presentation)
