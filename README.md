@@ -25,6 +25,8 @@ However, different analytical choices can cause variation in the results (Botvin
 
 **The goal of the NARPS open pipeline project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
+To perform the reproduction, we are lucky to be able to use the description provided by each team available here.
+
 ## To start 
 
 ### Contents overview
