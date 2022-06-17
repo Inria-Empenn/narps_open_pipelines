@@ -1,4 +1,4 @@
-
+# THIS IS A TEMPLATE THAT CAN BE USE TO REPRODUCE A NEW PIPELINE 
 
 from nipype.interfaces.spm import node_function # Complete with necessary functions
 from nipype.interfaces.fsl import node_function # Complete with necessary functions
@@ -253,7 +253,7 @@ def get_contrasts(subject_id):
 
     return contrasts
 
-
+# FUNCTION TO CREATE THE WORKFLOW OF A L1 ANALYSIS (SUBJECT LEVEL)
 def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir, output_dir):
     """
     Returns the first level analysis workflow.
@@ -270,7 +270,7 @@ def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir
     Returns: 
         - l1_analysis : Nipype WorkFlow 
     """
-    # THE FOLLOWING PART STAYS THE SAME FOR ALL PREPROCESSING PIPELINES 
+    # THE FOLLOWING PART STAYS THE SAME FOR ALL PIPELINES 
     # Infosource Node - To iterate on subjects
     infosource = Node(IdentityInterface(fields = ['subject_id', 'exp_dir', 'result_dir', 
                                                   'working_dir', 'run_list'], 
@@ -282,7 +282,7 @@ def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir
 
     # Templates to select files node
     func_file = opj(result_dir, output_dir, 'preprocess', '_run_id_*_subject_id_{subject_id}', 
-                   'swusub-{subject_id}_task-MGT_run-*_bold.nii')
+                   'complete_filename_{subject_id}_complete_filename.nii') # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF RESULTS OF PREPROCESSING
 
     event_files = opj(exp_dir, 'sub-{subject_id}', 'func', 
                       'sub-{subject_id}_task-MGT_run-*_events.tsv')
@@ -331,7 +331,10 @@ def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir
     
     return l1_analysis
 
-def get_subset_contrasts(file_list, method, subject_list, participants_file):
+
+# THIS FUNCTION RETURNS THE LIST OF IDS AND FILES OF EACH GROUP OF PARTICIPANTS TO DO SEPARATE GROUP LEVEL ANALYSIS AND BETWEEN GROUP ANALYSIS
+# THIS FUNCTIONS IS ADAPTED FOR AN SPM PIPELINE. 
+def get_subset_contrasts_spm(file_list, method, subject_list, participants_file):
     ''' 
     Parameters :
     - file_list : original file list selected by selectfiles node 
@@ -346,18 +349,19 @@ def get_subset_contrasts(file_list, method, subject_list, participants_file):
     equalIndifference_files = []
     equalRange_files = []
 
-    with open(participants_file, 'rt') as f:
+    with open(participants_file, 'rt') as f: # Reading file containing participants IDs and groups
             next(f)  # skip the header
             
             for line in f:
                 info = line.strip().split()
                 
-                if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                    equalIndifference_id.append(info[0][-3:])
+                if info[0][-3:] in subject_list and info[1] == "equalIndifference": # Checking for each participant if its ID was selected 
+                # and separate people depending on their group
+                    equalIndifference_id.append(info[0][-3:]) 
                 elif info[0][-3:] in subject_list and info[1] == "equalRange":
                     equalRange_id.append(info[0][-3:])
     
-    for file in file_list:
+    for file in file_list: # Checking for each selected file if the corresponding participant was selected and add the file to the list corresponding to its group
         sub_id = file.split('/')
         if sub_id[-2][-3:] in equalIndifference_id:
             equalIndifference_files.append(file)
@@ -366,7 +370,104 @@ def get_subset_contrasts(file_list, method, subject_list, participants_file):
             
     return equalIndifference_id, equalRange_id, equalIndifference_files, equalRange_files
 
+# THIS FUNCTION IS ADAPTED FOR AN FSL PIPELINE. 
+def get_subgroups_contrasts_fsl(copes, varcopes, subject_list, participants_file):
+    ''' 
+    Parameters :
+    - copes: original file list selected by selectfiles node 
+    - varcopes: original file list selected by selectfiles node
+    - subject_ids: list of subject IDs that are analyzed
+    - participants_file: str, file containing participants caracteristics
+    
+    This function return the file list containing only the files belonging to subject in the wanted group.
+    '''
+    
+    from os.path import join as opj
+    
+    equalRange_id = []
+    equalIndifference_id = []
+    
+    with open(participants_file, 'rt') as f: # Reading file containing participants IDs and groups
+            next(f)  # skip the header
+            
+            for line in f:
+                info = line.strip().split()
 
+                # Checking for each participant if its ID was selected 
+                # and separate people depending on their group
+                if info[0][-3:] in subject_list and info[1] == "equalIndifference":
+                    equalIndifference_id.append(info[0][-3:])
+                elif info[0][-3:] in subject_list and info[1] == "equalRange":
+                    equalRange_id.append(info[0][-3:])
+                    
+    copes_equalIndifference = []
+    copes_equalRange = []
+    copes_global = []
+    varcopes_equalIndifference = []
+    varcopes_equalRange = []
+    varcopes_global = []
+    
+    for file in copes: # Checking for each selected file if the corresponding participant was selected and add the file to the list corresponding to its group
+        sub_id = file.split('/')
+        if sub_id[-2][-3:] in equalIndifference_id:
+            copes_equalIndifference.append(file)
+        elif sub_id[-2][-3:] in equalRange_id:
+            copes_equalRange.append(file) 
+        if sub_id[-2][-3:] in subject_list:
+            copes_global.append(file)
+            
+    for file in varcopes: # Same thing but for varcopes files
+        sub_id = file.split('/')
+        if sub_id[-2][-3:] in equalIndifference_id:
+            varcopes_equalIndifference.append(file)
+        elif sub_id[-2][-3:] in equalRange_id:
+            varcopes_equalRange.append(file) 
+        if sub_id[-2][-3:] in subject_list:
+            varcopes_global.append(file)
+            
+    return copes_equalIndifference, copes_equalRange, varcopes_equalIndifference, varcopes_equalRange, equalIndifference_id, equalRange_id, copes_global, varcopes_global
+
+# THIS FUNCTION CREATES THE DICTIONNARY OF REGRESSORS USED IN FSL NIPYPE PIPELINES
+def get_regs(equalRange_id, equalIndifference_id, method, subject_list):
+    """
+    Create dictionnary of regressors for group analysis. 
+
+    Parameters: 
+        - equalRange_id: list of str, ids of subjects in equal range group
+        - equalIndifference_id: list of str, ids of subjects in equal indifference group
+        - method: one of "equalRange", "equalIndifference" or "groupComp"
+        - subject_list: list of str, ids of subject for which to do the analysis
+
+    Returns:
+        - regressors: dict, dictionnary of regressors used to distinguish groups in FSL group analysis
+    """
+    # For one sample t-test, creates a dictionnary with a list of the size of the number of participants
+    if method == "equalRange":
+        regressors = dict(group_mean = [1 for i in range(len(equalRange_id))])
+        
+    elif method == "equalIndifference":
+        regressors = dict(group_mean = [1 for i in range(len(equalIndifference_id))]) 
+
+
+    # For two sample t-test, creates 2 lists: one for equal range group, one for equal indifference group
+    # Each list contains n_sub values with 0 and 1 depending on the group of the participant
+    # For equalRange_reg list --> participants with a 1 are in the equal range group 
+    elif method == "groupComp":   
+        equalRange_reg = [1 for i in range(len(equalRange_id) + len(equalIndifference_id))]
+        equalIndifference_reg = [0 for i in range(len(equalRange_id) + len(equalIndifference_id))]
+        
+        for i, sub_id in enumerate(subject_list): 
+            if sub_id in equalIndifference_id:
+                index = i
+                equalIndifference_reg[index] = 1
+                equalRange_reg[index] = 0
+            
+        regressors = dict(equalRange = equalRange_reg, 
+                      equalIndifference = equalIndifference_reg)
+    
+    return regressors
+
+# FUNCTION TO CREATE THE WORKFLOW OF A L2 ANALYSIS (GROUP LEVEL)
 def get_l2_analysis(subject_list, n_sub, contrast_list, method, exp_dir, result_dir, working_dir, output_dir):   
     """
     Returns the 2nd level of analysis workflow.
@@ -384,6 +485,7 @@ def get_l2_analysis(subject_list, n_sub, contrast_list, method, exp_dir, result_
     Returns: 
         - l2_analysis: Nipype WorkFlow 
     """         
+    # THE FOLLOWING PART STAYS THE SAME FOR ALL PREPROCESSING PIPELINES 
     # Infosource - a function free node to iterate over the list of subject names
     infosource_groupanalysis = Node(IdentityInterface(fields=['contrast_id', 'subjects'],
                                                       subjects = subject_list),
@@ -392,7 +494,8 @@ def get_l2_analysis(subject_list, n_sub, contrast_list, method, exp_dir, result_
     infosource_groupanalysis.iterables = [('contrast_id', contrast_list)]
 
     # SelectFiles
-    contrast_file = opj(result_dir, output_dir, 'l1_analysis', '_subject_id_*', "con_00{contrast_id}.nii")
+    contrast_file = opj(result_dir, output_dir, 'l1_analysis', '_subject_id_*', "complete_filename_{contrast_id}_complete_filename.nii")
+    # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF THE RESULTS OF PREPROCESSING (DIFFERENT FOR AN FSL PIPELINE)
 
     participants_file = opj(exp_dir, 'participants.tsv')
 
@@ -405,68 +508,66 @@ def get_l2_analysis(subject_list, n_sub, contrast_list, method, exp_dir, result_
     datasink_groupanalysis = Node(DataSink(base_directory = result_dir, container = output_dir), 
                                   name = 'datasink_groupanalysis')
     
+    # IF THIS IS AN SPM PIPELINE:
     # Node to select subset of contrasts
     sub_contrasts = Node(Function(input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
                                  output_names = ['equalIndifference_id', 'equalRange_id', 'equalIndifference_files', 'equalRange_files'],
-                                 function = get_subset_contrasts),
+                                 function = get_subset_contrasts_spm),
                         name = 'sub_contrasts')
 
     sub_contrasts.inputs.method = method
 
-    ## Estimate model 
-    estimate_model = Node(EstimateModel(estimation_method={'Classical':1}), name = "estimate_model")
+    # IF THIS IS AN FSL PIPELINE: 
+    subgroups_contrasts = Node(Function(input_names = ['copes', 'varcopes', 'subject_ids', 'participants_file'], 
+                                  output_names = ['copes_equalIndifference', 'copes_equalRange',
+                                                  'varcopes_equalIndifference', 'varcopes_equalRange', 
+                                                 'equalIndifference_id', 'equalRange_id', 'copes_global', 
+                                                 'varcopes_global'],
+                                  function = get_subgroups_contrasts), 
+                         name = 'subgroups_contrasts')
+    
+    
+    regs = Node(Function(input_names = ['equalRange_id', 'equalIndifference_id', 'method', 'subject_list'],
+                                        output_names = ['regressors'],
+                                        function = get_regs), name = 'regs')
+    regs.inputs.method = method
+    regs.inputs.subject_list = subject_list
 
-    ## Estimate contrasts
-    estimate_contrast = Node(EstimateContrast(group_contrast=True),
-                             name = "estimate_contrast")
+    # THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
+    node_variable = Node(node_function, name = 'node_name') # Replace with the name of the node_variable, 
+    # the node_function to use in the NiPype interface,
+    # and the name of the node (recommanded to be the same as node_variable)
 
-    ## Create thresholded maps 
-    threshold = MapNode(Threshold(use_fwe_correction = False, height_threshold = 0.001), name = "threshold", iterfield = ["stat_image", "contrast_index"])
+    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
     l2_analysis = Workflow(base_dir = opj(result_dir, working_dir), name = f"l2_analysis_{method}_nsub_{n_sub}")
-
+    # FOR AN SPM PIPELINE 
     l2_analysis.connect([(infosource_groupanalysis, selectfiles_groupanalysis, [('contrast_id', 'contrast_id')]),
         (infosource_groupanalysis, sub_contrasts, [('subjects', 'subject_list')]),
-        (selectfiles_groupanalysis, sub_contrasts, [('contrast', 'file_list'), ('participants', 'participants_file')]),
-        (estimate_model, estimate_contrast, [('spm_mat_file', 'spm_mat_file'),
-            ('residual_image', 'residual_image'),
-            ('beta_images', 'beta_images')]),
-        (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),
-            ('spmT_images', 'stat_image')]),
-        (estimate_model, datasink_groupanalysis, [('mask_image', f"l2_analysis_{method}_nsub_{n_sub}.@mask")]),
-        (estimate_contrast, datasink_groupanalysis, [('spm_mat_file', f"l2_analysis_{method}_nsub_{n_sub}.@spm_mat"),
-            ('spmT_images', f"l2_analysis_{method}_nsub_{n_sub}.@T"),
-            ('con_images', f"l2_analysis_{method}_nsub_{n_sub}.@con")]),
-        (threshold, datasink_groupanalysis, [('thresholded_map', f"l2_analysis_{method}_nsub_{n_sub}.@thresh")])])
+        (selectfiles_groupanalysis, sub_contrasts, [('contrast', 'file_list'), ('participants', 'participants_file')]), # Complete with other links between nodes
+        ])
+
+    # FOR AN FSL PIPELINE
+    l2_analysis.connect([(infosource_groupanalysis, selectfiles_groupanalysis, [('contrast_id', 'contrast_id')]),
+                        (infosource_groupanalysis, subgroups_contrasts, [('subject_list', 'subject_ids')]),
+                        (selectfiles_groupanalysis, subgroups_contrasts, [('cope', 'copes'), ('varcope', 'varcopes'),
+                                                                    ('participants', 'participants_file')]), 
+                        (selectfiles_groupanalysis, node_variable [('func', 'node_input_name')]), # Complete with name of node to link with and the name of the input 
+                        # Input and output names can be found on NiPype documentation
+                        (node_variable, datasink_groupanalysis, [('node_output_name', 'preprocess.@sym_link')])
+                        ]) # Complete with other links between nodes
     
     if method=='equalRange' or method=='equalIndifference':
         contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])] 
-        ## Specify design matrix 
-        one_sample_t_test_design = Node(OneSampleTTestDesign(), name = "one_sample_t_test_design")
-
-        l2_analysis.connect([(sub_contrasts, one_sample_t_test_design, [(f"{method}_files", 'in_files')]),
-            (one_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])])
-
-        threshold.inputs.contrast_index = [1, 2]
-        threshold.synchronize = True
 
     elif method == 'groupComp':
         contrasts = [('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])]
-        # Node for the design matrix
-        two_sample_t_test_design = Node(TwoSampleTTestDesign(), name = 'two_sample_t_test_design')
 
-        l2_analysis.connect([(sub_contrasts, two_sample_t_test_design, [('equalRange_files', "group1_files"), 
-            ('equalIndifference_files', 'group2_files')]),
-            (two_sample_t_test_design, estimate_model, [("spm_mat_file", "spm_mat_file")])])
-
-        threshold.inputs.contrast_index = [1]
-        threshold.synchronize = True
-
-    estimate_contrast.inputs.contrasts = contrasts
+    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
     return l2_analysis
 
-
+# THIS FUNCTION IS USED TO REORGANIZE FINAL RESULTS OF THE PIPELINE
 def reorganize_results(result_dir, output_dir, n_sub, team_ID):
     """
     Reorganize the results to analyze them. 
@@ -495,12 +596,9 @@ def reorganize_results(result_dir, output_dir, n_sub, team_ID):
 
     h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]
 
-    repro_unthresh = [opj(filename, "spmT_0002.nii") if i in [4, 5] else opj(filename, 
-                     "spmT_0001.nii") for i, filename in enumerate(h)]
+    repro_unthresh = [opj(filename, "_change_filename_.nii") for i, filename in enumerate(h)] # Change filename with the filename of the final results 
 
-    repro_thresh = [opj(filename, "_threshold1", 
-         "spmT_0002_thr.nii") if i in [4, 5] else opj(filename, 
-          "_threshold0", "spmT_0001_thr.nii")  for i, filename in enumerate(h)]
+    repro_thresh = [opj(filename, "_change_filename_.nii") for i, filename in enumerate(h)]
     
     if not os.path.isdir(opj(result_dir, "NARPS-reproduction")):
         os.mkdir(opj(result_dir, "NARPS-reproduction"))
