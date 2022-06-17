@@ -2,6 +2,8 @@
 
 General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). 
 
+## Reproduce a pipeline ⌨️
+
 ## Find or propose an issue 📋
 
 Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
