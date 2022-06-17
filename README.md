@@ -21,9 +21,11 @@
 ## Project presentation
 
 Neuroimaging workflows are highly flexible, leaving researchers with multiple possible options to analyze a dataset (Carp, 2012).
-However, different analytical choices can cause variation in the results (Botvinik-Nezer et al., 2020), leading to what was called a "vibration of effects" (Ioannidis, 2008) or analytical variability. 
+However, different analytical choices can cause variation in the results (Botvinik-Nezer et al., 2020), leading to what was called a "vibration of effects" (Ioannidis, 2008) also known as analytical variability. 
 
-The open pipeline project aims at providing a overview of the possible pipelines that are used in the community to analyze a dataset. 
+**The goal of the NARPS open pipeline project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
+
+To perform the reproduction, we are lucky to be able to use the description provided by each team available here.
 
 ## To start 
 
