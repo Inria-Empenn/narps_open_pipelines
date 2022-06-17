@@ -2,6 +2,17 @@
 
 General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). 
 
+## Reproduce a pipeline ⌨️
+
+### If you have experience with NiPype
+
+We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `src/lib/pipeline_template.py`. 
+Do not hesitate to modify this template if you fill it could be better explained. 
+
+### If you have experience with the original software package but not with NiPype
+
+A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save you NiPype script in a .py file and send it to us in a new issue, we will convert this script to a script which works with our specific parameters. 
+
 ## Find or propose an issue 📋
 
 Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
