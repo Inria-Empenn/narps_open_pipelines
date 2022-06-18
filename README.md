@@ -63,27 +63,27 @@ When the installation is finished, you have to build a container using the comma
 
 ```bash
 docker run 	-ti \
-		   	-p 8888:8888 \
-			elodiegermani/open_pipeline
+		-p 8888:8888 \
+		elodiegermani/open_pipeline
 ```
 
 On this command line, you need to add volumes to be able to link with your local files (original dataset and git repository). If you stored the original dataset in `data/original`, just make a volume with the `narps_open_pipelines` directory:
 
 ```bash
 docker run 	-ti \
-			-p 8888:8888 \
-			-v /users/egermani/Documents/narps_open_pipelines:/home/ \
-			elodiegermani/open_pipeline
+		-p 8888:8888 \
+		-v /users/egermani/Documents/narps_open_pipelines:/home/ \
+		elodiegermani/open_pipeline
 ``` 
 
 If it is in another directory, make a second volume with the path to your dataset:
 
 ```bash
 docker run 	-ti \
-			-p 8888:8888 \
-			-v /Users/egermani/Documents/narps_open_pipelines:/home/ \
-			-v /Users/egermani/Documents/data/NARPS/:/data/ \
-			elodiegermani/open_pipeline
+		-p 8888:8888 \
+		-v /Users/egermani/Documents/narps_open_pipelines:/home/ \
+		-v /Users/egermani/Documents/data/NARPS/:/data/ \
+		elodiegermani/open_pipeline
 ```
 
 After that, your container will be launched! 
@@ -143,9 +143,9 @@ docker start [name_of_the_container]
 
 ```bash
 docker run 	-ti \
-			-p 8888:8888 \
-			-v /home/egermani:/home \
-			[name_of_the_image]
+		-p 8888:8888 \
+		-v /home/egermani:/home \
+		[name_of_the_image]
 ```
 
 #### To use SPM inside the container, use this command at the beginning of your script:
