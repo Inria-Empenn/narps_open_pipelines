@@ -258,7 +258,7 @@ as release on zenodo: https://zenodo.org/record/3528329/
 
 There are aslo included as a datalad subdataset in `data/neurovault`.
 
-Each teams results is kept in the `neurovault_downloads` in folder organized using the pattern:
+Each teams results is kept in the `orig` in folder organized using the pattern:
 
 ```
 neurovaultCollectionNumber_teamID
