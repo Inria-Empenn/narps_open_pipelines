@@ -6,7 +6,7 @@
 
 ## Table of contents
    * [Project presentation](#project-presentation)
-   * [To start](#to-start)
+   * [Getting Started](#getting-started)
    	  * [Contents overview](#contents-overview)
 	   	  * [src](#src)
 	   	  * [data](#data)
@@ -20,14 +20,16 @@
 
 ## Project presentation
 
-Neuroimaging workflows are highly flexible, leaving researchers with multiple possible options to analyze a dataset (Carp, 2012).
-However, different analytical choices can cause variation in the results (Botvinik-Nezer et al., 2020), leading to what was called a "vibration of effects" (Ioannidis, 2008) also known as analytical variability. 
+Neuroimaging workflows are highly flexible, leaving researchers with multiple possible options to analyze a dataset [(Carp, 2012)](https://www.frontiersin.org/articles/10.3389/fnins.2012.00149/full).
+However, different analytical choices can cause variation in the results [(Botvinik-Nezer et al., 2020)](https://www.nature.com/articles/s41586-020-2314-9), leading to what was called a "vibration of effects" [(Ioannidis, 2008)](https://pubmed.ncbi.nlm.nih.gov/18633328/) also known as analytical variability. 
 
 **The goal of the NARPS open pipeline project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
 To perform the reproduction, we are lucky to be able to use the description provided by each team available [here](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx).
 
-## To start 
+## Getting Started
+
+[Fork and clone](https://docs.github.com/en/get-started/quickstart/fork-a-repo) this repository to your local machine. 
 
 ### Contents overview
 
@@ -106,20 +108,44 @@ matlab_cmd = '/opt/spm12-r7771/run_spm12.sh /opt/matlabmcr-2010a/v713/ script'
 spm.SPMCommand.set_mlab_paths(matlab_cmd=matlab_cmd, use_mcr=True)
 ```
 
-### Download data 
+### Data Download Instructions
+The dataset used for the `/src/reproduction_*.ipynb` can be downloaded using one of the three options below. For the scripts to work as intended, the dataset **MUST** be stored in `data/original`.
 
-#### Original dataset
+On your local copy, place yourself in `data/original` directory before running the commands below.
+#### Original Dataset
+**Option 1: with DataLad (Recommended)**
+1. Install DataLad and it's dependencies from **[here](http://handbook.datalad.org/en/latest/intro/installation.html)**, if you don't have it installed already.
+2. After installation, run one of the following commands:
 
-The dataset used for the `/src/reproduction_*.ipynb` notebooks can be downloaded [**here**](https://openneuro.org/datasets/ds001734/versions/1.0.5).
+    `datalad install https://github.com/OpenNeuroDatasets/ds001734.git`
 
-I recommand to store the data in a directory inside the `data/original` directory. 
+    **OR**
 
-I recommand to download it with **Datalad**. If you want to use it, install [**Datalad**](http://handbook.datalad.org/en/latest/intro/installation.html#install), place yourself in the `data/original` directory and run `datalad install ///openneuro/ds001734`.
-After, you can download all the files by running `datalad get ./*` and if you only want parts of the data, replace the * by the paths to the desired files. 
+    `datalad install ///openneuro/ds001734`
 
+The `datalad install` command only downloads the metadata associated with the dataset. To download the actual files run 
+`datalad get ./*` and if you only want parts of the data, replace the `*` by the paths to the desired files.
+
+**Option 2: with Node.js**
+
+Using [@openneuro/cli](https://www.npmjs.com/package/@openneuro/cli) you can download this dataset from the command line using [Node.js](https://nodejs.org/en/download/). This method is good for larger datasets or unstable connections, but has known issues on Windows.
+
+`openneuro download --snapshot 1.0.5 ds001734 ds001734/`
+
+This will download to `ds001734/` in the current directory. If your download is interrupted and you need to retry, rerun the command to resume the download.
+
+**Option 3: from S3**
+
+The most recently published snapshot can be downloaded from S3. This method is best for larger datasets or unstable connections. This example uses [AWS CLI](https://aws.amazon.com/cli/).
+
+`aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734-download/`
+
+File containing pipeline description is available in `/data/original`.
+
+Download Instructions Source: https://openneuro.org/datasets/ds001734/versions/1.0.5/download
 #### Derived data
 
-Derived data such as original stat maps from teams and reproduced stat maps can be downloaded from [NeuroVault](https://www.neurovault.org) (Gorgolewski & al, 2015). 
+Derived data such as original stat maps from teams and reproduced stat maps can be downloaded from [NeuroVault](https://www.neurovault.org) [(Gorgolewski & al, 2015)](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full). . 
 
 *Coming soon*
 
@@ -129,7 +155,7 @@ Follow the guidelines in [CONTRIBUTING.md](https://github.com/elodiegermani/open
 
 ## References
 
-- Botvinik-Nezer, R. et al. (2020), ‘Variability in the analysis of a single neuroimaging dataset by many teams’, Nature.
-- Carp, J. et al. (2012), ‘On the Plurality of (Methodological) Worlds: Estimating the Analytic Flexibility of fMRI Experiments’, Frontiers in Neuroscience. ;
-- Gorgolewski, K.J. et al. (2015), ‘NeuroVault.org: a web-based repository for collecting and sharing unthresholded statistical maps of the human brain’ Frontiers in Neuroinformatics. ;
-- Ioannidis, J.P.A. (2008), ‘Why Most Discovered True Associations Are Inflated’, Epidemiology. ;
+1. [Botvinik-Nezer, R. et al. (2020), ‘Variability in the analysis of a single neuroimaging dataset by many teams’, Nature.](https://www.nature.com/articles/s41586-020-2314-9)
+2. [Carp, J. et al. (2012), ‘On the Plurality of (Methodological) Worlds: Estimating the Analytic Flexibility of fMRI Experiments’, Frontiers in Neuroscience.](https://www.frontiersin.org/articles/10.3389/fnins.2012.00149/full)
+3. [Gorgolewski, K.J. et al. (2015), ‘NeuroVault.org: a web-based repository for collecting and sharing unthresholded statistical maps of the human brain’ Frontiers in Neuroinformatics.](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full)
+4. [Ioannidis, J.P.A. (2008), ‘Why Most Discovered True Associations Are Inflated’, Epidemiology.](https://pubmed.ncbi.nlm.nih.gov/18633328/)
