@@ -218,6 +218,8 @@ On your local copy, place yourself in `data/original` directory before running t
 **Option 1: with DataLad (Recommended)**
 
 1. Install DataLad and it's dependencies from **[here](http://handbook.datalad.org/en/latest/intro/installation.html)**, if you don't have it installed already.
+
+Tips for people using M1 MacBooks: git-annex is not yet available for M1 MacBooks. A solution to install it can be found [here](https://gist.github.com/Arshitha/45026e56b71ae35446af2239f98dcb4b). 
    
 2. If you have [cloned this repository using Datalad](#getting-started) with the `--recusive` option
    then the dataset should mostly already be in `data/original/ds001734`
