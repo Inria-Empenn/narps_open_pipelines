@@ -249,9 +249,20 @@ File containing pipeline description is available in `/data/original`.
 Download Instructions Source: https://openneuro.org/datasets/ds001734/versions/1.0.5/download
 #### Derived data
 
-Derived data such as original stat maps from teams and reproduced stat maps can be downloaded from [NeuroVault](https://www.neurovault.org) [(Gorgolewski & al, 2015)](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full). . 
+Derived data such as original stat maps from teams and reproduced stat maps 
+can be downloaded from [NeuroVault](https://www.neurovault.org) 
+[(Gorgolewski & al, 2015)](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full). 
 
-*Coming soon*
+The original derivative data from the NARPS paper are available 
+as release on zenodo: https://zenodo.org/record/3528329/
+
+There are aslo included as a datalad subdataset in `data/neurovault`.
+
+Each teams results is kept in the `orig` in folder organized using the pattern:
+
+```
+neurovaultCollectionNumber_teamID
+```
 
 ### Contributing 
 
