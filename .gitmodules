@@ -1,0 +1,5 @@
+[submodule "data/original/ds001734"]
+	path = data/original/ds001734
+	url = https://github.com/OpenNeuroDatasets/ds001734.git
+	datalad-id = ca05bc10-29a0-11e9-9a7b-0242ac13000d
+	datalad-url = https://github.com/OpenNeuroDatasets/ds001734.git
