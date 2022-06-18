@@ -48,8 +48,9 @@ Instructions to download data are available [below](#download-data).
 
 To use the notebooks and launch the pipelines, you need to install the [NiPype](https://nipype.readthedocs.io/en/latest/users/install.html) Python package but also the original software package used in the pipeline (SPM, FSL, AFNI...). 
 
-To facilitate this step, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains the necessary Python packages and software packages. To install the Docker image, use the command below: 
+To facilitate this step, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains the necessary Python packages and software packages. To install the Docker image, two options are available.
 
+#### Option 1: Using Dockerhub
 ```bash
 docker pull elodiegermani/open_pipeline:latest
 ```
@@ -58,6 +59,37 @@ The image should install itself. Once it's done you can check available images o
 
 ```bash
 docker images
+```
+
+#### Option 2: Using a Dockerfile 
+The Dockerfile used for the image stored on Dockerhub is available on the GitHub repository. But you might want to personalize your Dockerfile to install only the necessary software packages. To do so, modify the command below to modify the Dockerfile: 
+
+```bash
+docker run --rm repronim/neurodocker:0.7.0 generate docker \
+           --base neurodebian:stretch-non-free --pkg-manager apt \
+           --install git \
+           --fsl version=6.0.3 \
+           --afni version=latest method=binaries install_r=true install_r_pkgs=true install_python2=true install_python3=true \
+           --spm12 version=r7771 method=binaries \
+           --user=neuro \
+           --workdir /home \
+           --miniconda create_env=neuro \
+                       conda_install="python=3.8 traits jupyter nilearn graphviz nipype scikit-image" \
+                       pip_install="matplotlib" \
+                       activate=True \
+           --env LD_LIBRARY_PATH="/opt/miniconda-latest/envs/neuro:$LD_LIBRARY_PATH" \
+           --run-bash "source activate neuro" \
+           --user=root \
+           --run 'chmod 777 -Rf /home' \
+           --run 'chown -R neuro /home' \
+           --user=neuro \
+           --run 'mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py' > Dockerfile
+```
+
+When you are satisfied with your Dockerfile, just build the image:
+
+```bash
+docker build --tag [name_of_the_image] - < Dockerfile
 ```
 
 When the installation is finished, you have to build a container using the command below:
