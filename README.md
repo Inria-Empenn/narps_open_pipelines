@@ -48,63 +48,113 @@ Instructions to download data are available [below](#download-data).
 To use the notebooks and launch the pipelines, you need to install the [NiPype](https://nipype.readthedocs.io/en/latest/users/install.html) Python package but also the original software package used in the pipeline (SPM, FSL, AFNI...). 
 
 To facilitate this step, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains the necessary Python packages and software packages. To install the Docker image, use the command below: 
-```
+
+```bash
 docker pull elodiegermani/open_pipeline:latest
 ```
 
 The image should install itself. Once it's done you can check available images on your system:
-```
+
+```bash
 docker images
 ```
 
 When the installation is finished, you have to build a container using the command below:
-```
-docker run -ti -p 8888:8888 elodiegermani/open_pipeline
+
+```bash
+docker run 	-ti \
+		-p 8888:8888 \
+		elodiegermani/open_pipeline
 ```
 
-On this commandline, you need to add volumes to be able to link with your local files (original dataset and git repository). If you stored the original dataset in `data/original`, just make a volume with the `narps_open_pipelines` directory:
-```
-docker run -ti -p 8888:8888 -v /users/egermani/Documents/narps_open_pipelines:/home/ elodiegermani/open_pipeline
+On this command line, you need to add volumes to be able to link with your local files (original dataset and git repository). If you stored the original dataset in `data/original`, just make a volume with the `narps_open_pipelines` directory:
+
+```bash
+docker run 	-ti \
+		-p 8888:8888 \
+		-v /users/egermani/Documents/narps_open_pipelines:/home/ \
+		elodiegermani/open_pipeline
 ``` 
 
 If it is in another directory, make a second volume with the path to your dataset:
-```
-docker run -ti -p 8888:8888 -v /Users/egermani/Documents/narps_open_pipelines:/home/ -v /Users/egermani/Documents/data/NARPS/:/data/ elodiegermani/open_pipeline
+
+```bash
+docker run 	-ti \
+		-p 8888:8888 \
+		-v /Users/egermani/Documents/narps_open_pipelines:/home/ \
+		-v /Users/egermani/Documents/data/NARPS/:/data/ \
+		elodiegermani/open_pipeline
 ```
 
 After that, your container will be launched! 
 
 #### Other command that could be useful: 
 ##### START THE CONTAINER 
-```docker start [name_of_the_container]```
+
+```bash
+docker start [name_of_the_container]
+```
 
 ##### VERIFY THE CONTAINER IS IN THE LIST 
-```docker ps ```
+
+```bash
+docker ps
+```
 
 ##### EXECUTE BASH OR ATTACH YOUR CONTAINER 
-```docker exec -ti [name_of_the_container] bash```
-OR
-```docker attach [name_of_the_container]```
+
+```bash
+docker exec -ti [name_of_the_container] bash
+```
+
+**OR**
+
+```bash
+docker attach [name_of_the_container]
+```
 
 #### Useful command inside the container: 
 ##### ACTIVATE CONDA ENVIRONMENT
-```source activate neuro```
+
+```bash
+source activate neuro
+```
 
 ##### LAUNCH JUPYTER NOTEBOOK
-```jupyter notebook --port=8888 --no-browser --ip=0.0.0.0```
+
+```bash
+jupyter notebook --port=8888 --no-browser --ip=0.0.0.0
+```
 
 #### If you did not use your container for a while: 
 ##### VERIFY IT STILL RUN : 
-```docker ps -l```
-##### IF YOUR DOCKER CONTAINER IS IN THE LIST, RUN : 
-```docker start [name_of_the_container]```
+
+```bash
+docker ps -l
+```
+
+##### IF YOUR DOCKER CONTAINER IS IN THE LIST, RUN :
+
+```bash
+docker start [name_of_the_container]
+```
+
 ##### ELSE, RERUN IT WITH : 
-```docker run -ti -p 8888:8888 -v /home/egermani:/home [name_of_the_image]```
+
+```bash
+docker run 	-ti \
+		-p 8888:8888 \
+		-v /home/egermani:/home \
+		[name_of_the_image]
+```
 
 #### To use SPM inside the container, use this command at the beginning of your script:
-```
+
+```python
 from nipype.interfaces import spm
+
 matlab_cmd = '/opt/spm12-r7771/run_spm12.sh /opt/matlabmcr-2010a/v713/ script'
+
 spm.SPMCommand.set_mlab_paths(matlab_cmd=matlab_cmd, use_mcr=True)
 ```
 
@@ -117,11 +167,15 @@ On your local copy, place yourself in `data/original` directory before running t
 1. Install DataLad and it's dependencies from **[here](http://handbook.datalad.org/en/latest/intro/installation.html)**, if you don't have it installed already.
 2. After installation, run one of the following commands:
 
-    `datalad install https://github.com/OpenNeuroDatasets/ds001734.git`
+    ```bash
+	datalad install https://github.com/OpenNeuroDatasets/ds001734.git
+	```
 
     **OR**
 
-    `datalad install ///openneuro/ds001734`
+	```bash
+    datalad install ///openneuro/ds001734
+	```
 
 The `datalad install` command only downloads the metadata associated with the dataset. To download the actual files run 
 `datalad get ./*` and if you only want parts of the data, replace the `*` by the paths to the desired files.
@@ -130,7 +184,9 @@ The `datalad install` command only downloads the metadata associated with the da
 
 Using [@openneuro/cli](https://www.npmjs.com/package/@openneuro/cli) you can download this dataset from the command line using [Node.js](https://nodejs.org/en/download/). This method is good for larger datasets or unstable connections, but has known issues on Windows.
 
-`openneuro download --snapshot 1.0.5 ds001734 ds001734/`
+```bash
+openneuro download --snapshot 1.0.5 ds001734 ds001734/
+```
 
 This will download to `ds001734/` in the current directory. If your download is interrupted and you need to retry, rerun the command to resume the download.
 
@@ -138,7 +194,9 @@ This will download to `ds001734/` in the current directory. If your download is 
 
 The most recently published snapshot can be downloaded from S3. This method is best for larger datasets or unstable connections. This example uses [AWS CLI](https://aws.amazon.com/cli/).
 
-`aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734-download/`
+```
+aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734-download/
+```
 
 File containing pipeline description is available in `/data/original`.
 
