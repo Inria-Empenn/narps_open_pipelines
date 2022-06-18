@@ -5,17 +5,18 @@
 </p>
 
 ## Table of contents
-   * [Project presentation](#project-presentation)
-   * [Getting Started](#getting-started)
-   	  * [Contents overview](#contents-overview)
-	   	  * [src](#src)
-	   	  * [data](#data)
-   	  * [Install Docker container](#install-docker-container)
-   	  * [Download data](#download-data)
-   	  	  * [Original dataset](#original-dataset)
-   	  	  * [Derived data](#derived-data)
-	  	  * [Contributing](#contributing)
-   * [References](#references)
+- [Table of contents](#table-of-contents)
+- [Project presentation](#project-presentation)
+- [Getting Started](#getting-started)
+	- [Contents overview](#contents-overview)
+		- [`src`](#src)
+		- [`data`](#data)
+	- [Install Docker container](#install-docker-container)
+	- [Data Download Instructions](#data-download-instructions)
+		- [Original Dataset](#original-dataset)
+		- [Derived data](#derived-data)
+	- [Contributing](#contributing)
+- [References](#references)
 
 
 ## Project presentation
@@ -42,7 +43,7 @@ This directory contains scripts of the reproduce pipelines along with notebooks 
 
 This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
 
-Instructions to download data are available [below](#download-data).
+Instructions to download data are available [below](#data-download-instructions).
 
 ### Install Docker container
 
