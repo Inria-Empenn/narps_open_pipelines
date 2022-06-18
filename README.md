@@ -5,17 +5,18 @@
 </p>
 
 ## Table of contents
-   * [Project presentation](#project-presentation)
-   * [Getting Started](#getting-started)
-   	  * [Contents overview](#contents-overview)
-	   	  * [src](#src)
-	   	  * [data](#data)
-   	  * [Install Docker container](#install-docker-container)
-   	  * [Download data](#download-data)
-   	  	  * [Original dataset](#original-dataset)
-   	  	  * [Derived data](#derived-data)
-	  	  * [Contributing](#contributing)
-   * [References](#references)
+- [Table of contents](#table-of-contents)
+- [Project presentation](#project-presentation)
+- [Getting Started](#getting-started)
+	- [Contents overview](#contents-overview)
+		- [`src`](#src)
+		- [`data`](#data)
+	- [Install Docker container](#install-docker-container)
+	- [Data Download Instructions](#data-download-instructions)
+		- [Original Dataset](#original-dataset)
+		- [Derived data](#derived-data)
+	- [Contributing](#contributing)
+- [References](#references)
 
 
 ## Project presentation
@@ -32,6 +33,20 @@ We also created a shared spreadsheet that can be use to add comments on pipeline
 
 [Fork and clone](https://docs.github.com/en/get-started/quickstart/fork-a-repo) this repository to your local machine. 
 
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
+```
+
+If you are using [Datalad](#data-download-instructions),
+because the NARPS data is "bundled" in this repository as 
+[datalad subdataset](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html), 
+you may want to use datalad to clone your fork of the repository by doing:
+
+```bash
+datalad install --recursive https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
+```
+
+
 ### Contents overview
 
 #### `src`
@@ -42,7 +57,7 @@ This directory contains scripts of the reproduce pipelines along with notebooks 
 
 This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
 
-Instructions to download data are available [below](#download-data).
+Instructions to download data are available [below](#data-download-instructions).
 
 ### Install Docker container
 
@@ -192,26 +207,24 @@ spm.SPMCommand.set_mlab_paths(matlab_cmd=matlab_cmd, use_mcr=True)
 ```
 
 ### Data Download Instructions
-The dataset used for the `/src/reproduction_*.ipynb` can be downloaded using one of the three options below. For the scripts to work as intended, the dataset **MUST** be stored in `data/original`.
+
+The dataset used for the `/src/reproduction_*.ipynb` can be downloaded using one of the three options below. 
+
+For the scripts to work as intended, the dataset **MUST** be stored in `data/original`.
 
 On your local copy, place yourself in `data/original` directory before running the commands below.
 #### Original Dataset
+
 **Option 1: with DataLad (Recommended)**
+
 1. Install DataLad and it's dependencies from **[here](http://handbook.datalad.org/en/latest/intro/installation.html)**, if you don't have it installed already.
-2. After installation, run one of the following commands:
+   
+2. If you have [cloned this repository using Datalad](#getting-started) with the `--recusive` option
+   then the dataset should mostly already be in `data/original/ds001734`
 
-    ```bash
-	datalad install https://github.com/OpenNeuroDatasets/ds001734.git
-	```
-
-    **OR**
-
-	```bash
-    datalad install ///openneuro/ds001734
-	```
-
-The `datalad install` command only downloads the metadata associated with the dataset. To download the actual files run 
-`datalad get ./*` and if you only want parts of the data, replace the `*` by the paths to the desired files.
+The `datalad install` command only downloads the metadata associated with the dataset. 
+To download the actual files run `datalad get ./*` and if you only want parts of the data, 
+replace the `*` by the paths to the desired files.
 
 **Option 2: with Node.js**
 
@@ -227,7 +240,7 @@ This will download to `ds001734/` in the current directory. If your download is 
 
 The most recently published snapshot can be downloaded from S3. This method is best for larger datasets or unstable connections. This example uses [AWS CLI](https://aws.amazon.com/cli/).
 
-```
+```bash
 aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734-download/
 ```
 
