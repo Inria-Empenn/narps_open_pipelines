@@ -1,22 +1,24 @@
 # THIS IS A TEMPLATE THAT CAN BE USE TO REPRODUCE A NEW PIPELINE
 
-from nipype.interfaces.spm import node_function  # Complete with necessary functions
-from nipype.interfaces.fsl import node_function  # Complete with necessary functions
-from nipype.algorithms.modelgen import (
-    SpecifySPMModel,
-    SpecifyModel,
-)  # Functions used during L1 analysis
-from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.io import SelectFiles, DataSink
-from nipype.algorithms.misc import Gunzip
-from nipype import Workflow, Node, MapNode, JoinNode
-from nipype.interfaces.base import Bunch
-
-from os.path import join as opj
-import os
+import gzip
 import json
-
+import os
+import shutil
+from os.path import join as opj
 from typing import List
+
+import numpy as np
+from nipype import JoinNode, MapNode, Node, Workflow
+from nipype.algorithms.misc import Gunzip
+from nipype.algorithms.modelgen import (  # Functions used during L1 analysis
+    SpecifyModel,
+    SpecifySPMModel,
+)
+from nipype.interfaces.base import Bunch
+from nipype.interfaces.fsl import node_function  # Complete with necessary functions
+from nipype.interfaces.io import DataSink, SelectFiles
+from nipype.interfaces.spm import node_function  # Complete with necessary functions
+from nipype.interfaces.utility import Function, IdentityInterface
 
 
 def get_preprocessing(
@@ -155,7 +157,6 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
     """
-    from nipype.interfaces.base import Bunch
 
     cond_names = ["trial", "accepting", "rejecting"]
     onset = {}
@@ -249,9 +250,6 @@ def get_session_infos_fsl(event_file: str):
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
     """
-    from os.path import join as opj
-    from nipype.interfaces.base import Bunch
-    import numpy as np
 
     cond_names = ["trial", "gain", "loss"]
 
@@ -301,7 +299,8 @@ def get_session_infos_fsl(event_file: str):
 
 
 # THIS FUNCTION CREATES THE CONTRASTS THAT WILL BE ANALYZED IN THE FIRST LEVEL ANALYSIS
-# IT IS ADAPTED FOR A SPECIFIC PIPELINE AND SHOULD BE MODIFIED DEPENDING ON THE PIPELINE YOU ARE TRYING TO REPRODUCE
+# IT IS ADAPTED FOR A SPECIFIC PIPELINE AND SHOULD BE MODIFIED DEPENDING ON THE PIPELINE
+# YOU ARE TRYING TO REPRODUCE
 def get_contrasts(subject_id: str):
     """
     Create the list of tuples that represents contrasts.
@@ -400,7 +399,8 @@ def get_l1_analysis(
     )
 
     # THIS IS THE NODE EXECUTING THE get_subject_infos_spm FUNCTION
-    # IF YOU'RE DOING AN FSL PIPELINE --> JUST CHANGE THE NAME OF THE FUNCTION TO get_subject_infos_fsl
+    # IF YOU'RE DOING AN FSL PIPELINE
+    # JUST CHANGE THE NAME OF THE FUNCTION TO get_subject_infos_fsl
     # Get Subject Info - get subject specific condition information
     subject_infos = Node(
         Function(
@@ -428,7 +428,7 @@ def get_l1_analysis(
         node_function, name="node_name"
     )  # Replace with the name of the node_variable,
     # the node_function to use in the NiPype interface,
-    # and the name of the node (recommanded to be the same as node_variable)
+    # and the name of the node (recommended to be the same as node_variable)
 
     # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
@@ -452,7 +452,8 @@ def get_l1_analysis(
     return l1_analysis
 
 
-# THIS FUNCTION RETURNS THE LIST OF IDS AND FILES OF EACH GROUP OF PARTICIPANTS TO DO SEPARATE GROUP LEVEL ANALYSIS AND BETWEEN GROUP ANALYSIS
+# THIS FUNCTION RETURNS THE LIST OF IDS AND FILES OF EACH GROUP OF PARTICIPANTS
+# TO DO SEPARATE GROUP LEVEL ANALYSIS AND BETWEEN GROUP ANALYSIS
 # THIS FUNCTIONS IS ADAPTED FOR AN SPM PIPELINE.
 def get_subset_contrasts_spm(
     file_list, method: str, subject_list: List[str], participants_file: str
@@ -461,10 +462,11 @@ def get_subset_contrasts_spm(
     Parameters :
     - file_list : original file list selected by selectfiles node
     - subject_list : list of subject IDs that are in the wanted group for the analysis
-    - participants_file: file containing participants caracteristics
+    - participants_file: file containing participants characteristics
     - method: one of "equalRange", "equalIndifference" or "groupComp"
 
-    This function return the file list containing only the files belonging to subject in the wanted group.
+    This function return the file list containing only the files belonging
+    to the subject in the wanted group.
     """
     equalIndifference_id = []
     equalRange_id = []
@@ -518,8 +520,6 @@ def get_subgroups_contrasts_fsl(
     This function return the file list containing only the files
     belonging to subject in the wanted group.
     """
-
-    from os.path import join as opj
 
     equalRange_id = []
     equalIndifference_id = []
@@ -583,7 +583,7 @@ def get_regs(
     equalIndifference_id: List[str],
     method: str,
     subject_list: List[str],
-):
+) -> dict:
     """
     Create dictionary of regressors for group analysis.
 
@@ -594,9 +594,10 @@ def get_regs(
         - subject_list: ids of subject for which to do the analysis
 
     Returns:
-        - regressors: dict, dictionary of regressors used to distinguish groups in FSL group analysis
+        - regressors: regressors used to distinguish groups in FSL group analysis
     """
-    # For one sample t-test, creates a dictionary with a list of the size of the number of participants
+    # For one sample t-test, creates a dictionary
+    # with a list of the size of the number of participants
     if method == "equalRange":
         regressors = dict(group_mean=[1 for i in range(len(equalRange_id))])
 
@@ -673,7 +674,8 @@ def get_l2_analysis(
         "_subject_id_*",
         "complete_filename_{contrast_id}_complete_filename.nii",
     )
-    # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF THE RESULTS OF PREPROCESSING (DIFFERENT FOR AN FSL PIPELINE)
+    # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF THE RESULTS OF PREPROCESSING
+    # (DIFFERENT FOR AN FSL PIPELINE)
 
     participants_file = opj(exp_dir, "participants.tsv")
 
@@ -832,10 +834,6 @@ def reorganize_results(result_dir: str, output_dir: str, n_sub: int, team_ID: st
         - team_ID: ID of the team to reorganize results
 
     """
-    from os.path import join as opj
-    import os
-    import shutil
-    import gzip
 
     h1 = opj(
         result_dir,
