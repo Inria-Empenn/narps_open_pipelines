@@ -1,3 +1,11 @@
+tmp
+
+# neuro user in docker image
+neuro
+
+# nipype
+crash*pklz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
