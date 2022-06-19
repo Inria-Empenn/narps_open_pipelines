@@ -94,7 +94,7 @@ def get_preprocessing(
         node_function, name="node_name"
     )  # Replace with the name of the node_variable,
     # the node_function to use in the NiPype interface,
-    # and the name of the node (recommanded to be the same as node_variable)
+    # and the name of the node (recommended to be the same as node_variable)
 
     # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
@@ -125,7 +125,7 @@ def get_preprocessing(
     return preprocessing
 
 
-# THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF SPM
+# FIXME: THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF SPM
 # THIS IS AN EXAMPLE THAT IS ADAPTED TO A SPECIFIC PIPELINE
 # MODIFY ACCORDING TO THE PIPELINE YOU WANT TO REPRODUCE
 def get_subject_infos_spm(event_files: List[str], runs: List[str]):
@@ -237,7 +237,7 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
     return subject_info
 
 
-# THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF FSL
+# FIXME: THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF FSL
 # THIS IS AN EXAMPLE THAT IS ADAPTED TO A SPECIFIC PIPELINE
 # MODIFY ACCORDING TO THE PIPELINE YOU WANT TO REPRODUCE
 def get_session_infos_fsl(event_file: str):
@@ -298,7 +298,7 @@ def get_session_infos_fsl(event_file: str):
     return subject_info
 
 
-# THIS FUNCTION CREATES THE CONTRASTS THAT WILL BE ANALYZED IN THE FIRST LEVEL ANALYSIS
+# FIXME: THIS FUNCTION CREATES THE CONTRASTS THAT WILL BE ANALYZED IN THE FIRST LEVEL ANALYSIS
 # IT IS ADAPTED FOR A SPECIFIC PIPELINE AND SHOULD BE MODIFIED DEPENDING ON THE PIPELINE
 # YOU ARE TRYING TO REPRODUCE
 def get_contrasts(subject_id: str):
@@ -368,16 +368,20 @@ def get_l1_analysis(
         name="infosource",
     )
 
-    infosource.iterables = [("subject_id", subject_list)]  # ITERATES OVER SUBJECT LIST
+    # ITERATES OVER SUBJECT LIST
+    infosource.iterables = [("subject_id", subject_list)]  
 
     # Templates to select files node
+
+    # FIXME: CHANGE THE NAME OF THE FILE 
+    # DEPENDING ON THE FILENAMES OF RESULTS OF PREPROCESSING
     func_file = opj(
         result_dir,
         output_dir,
         "preprocess",
         "_run_id_*_subject_id_{subject_id}",
         "complete_filename_{subject_id}_complete_filename.nii",
-    )  # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF RESULTS OF PREPROCESSING
+    )  
 
     event_files = opj(
         exp_dir,
@@ -398,7 +402,7 @@ def get_l1_analysis(
         DataSink(base_directory=result_dir, container=output_dir), name="datasink"
     )
 
-    # THIS IS THE NODE EXECUTING THE get_subject_infos_spm FUNCTION
+    # FIXME: THIS IS THE NODE EXECUTING THE get_subject_infos_spm FUNCTION
     # IF YOU'RE DOING AN FSL PIPELINE
     # JUST CHANGE THE NAME OF THE FUNCTION TO get_subject_infos_fsl
     # Get Subject Info - get subject specific condition information
@@ -423,14 +427,14 @@ def get_l1_analysis(
         name="contrasts",
     )
 
-    # THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
+    # FIXME: THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
     node_variable = Node(
         node_function, name="node_name"
     )  # Replace with the name of the node_variable,
     # the node_function to use in the NiPype interface,
     # and the name of the node (recommended to be the same as node_variable)
 
-    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
+    # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
     # Create l1 analysis workflow and connect its nodes
     l1_analysis = Workflow(base_dir=opj(result_dir, working_dir), name="l1_analysis")
@@ -440,10 +444,11 @@ def get_l1_analysis(
             (infosource, selectfiles, [("subject_id", "subject_id")]),
             (infosource, contrasts, [("subject_id", "subject_id")]),
             (selectfiles, subject_infos, [("event", "event_files")]),
+            # FIXME: Complete with name of node to link with and the name of the input
             (
                 selectfiles,
                 node_variable[("func", "node_input_name")],
-            ),  # Complete with name of node to link with and the name of the input
+            ),  
             # Input and output names can be found on NiPype documentation
             (node_variable, datasink, [("node_output_name", "preprocess.@sym_link")]),
         ]
@@ -674,7 +679,8 @@ def get_l2_analysis(
         "_subject_id_*",
         "complete_filename_{contrast_id}_complete_filename.nii",
     )
-    # CHANGE THE NAME OF THE FILE DEPENDING ON THE FILENAMES OF THE RESULTS OF PREPROCESSING
+    # FIXME: CHANGE THE NAME OF THE FILE DEPENDING ON 
+    # THE FILENAMES OF THE RESULTS OF PREPROCESSING
     # (DIFFERENT FOR AN FSL PIPELINE)
 
     participants_file = opj(exp_dir, "participants.tsv")
@@ -745,14 +751,14 @@ def get_l2_analysis(
     regs.inputs.method = method
     regs.inputs.subject_list = subject_list
 
-    # THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
+    # FIXME: THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
     node_variable = Node(
         node_function, name="node_name"
     )  # Replace with the name of the node_variable,
     # the node_function to use in the NiPype interface,
-    # and the name of the node (recommanded to be the same as node_variable)
+    # and the name of the node (recommended to be the same as node_variable)
 
-    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
+    # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
     l2_analysis = Workflow(
         base_dir=opj(result_dir, working_dir), name=f"l2_analysis_{method}_nsub_{n_sub}"
@@ -817,7 +823,7 @@ def get_l2_analysis(
             ("Eq range vs Eq indiff in loss", "T", ["Group_{1}", "Group_{2}"], [1, -1])
         ]
 
-    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
+    # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
     return l2_analysis
 
