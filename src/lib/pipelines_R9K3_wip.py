@@ -1,24 +1,22 @@
 # THIS IS A TEMPLATE THAT CAN BE USE TO REPRODUCE A NEW PIPELINE
 
-import gzip
-import json
 import os
 import shutil
 from os.path import join as opj
 from typing import List
 
-import numpy as np
-from nipype import JoinNode, MapNode, Node, Workflow
+from nipype import Node, Workflow
 from nipype.algorithms.misc import Gunzip
 from nipype.algorithms.modelgen import (  # Functions used during L1 analysis
     SpecifyModel,
     SpecifySPMModel,
 )
 from nipype.interfaces.base import Bunch
-from nipype.interfaces.fsl import node_function  # Complete with necessary functions
 from nipype.interfaces.io import DataSink, SelectFiles
-from nipype.interfaces.spm import node_function  # Complete with necessary functions
+from nipype.interfaces.spm import Smooth
 from nipype.interfaces.utility import Function, IdentityInterface
+
+from .utils import fmriprep_data_template, raw_data_template
 
 
 def get_preprocessing(
@@ -46,61 +44,35 @@ def get_preprocessing(
         - preprocessing: Nipype WorkFlow
     """
 
-    # THE FOLLOWING PART STAYS THE SAME FOR ALL PREPROCESSING PIPELINES
     infosource_preproc = Node(
         IdentityInterface(fields=["subject_id", "run_id"]), name="infosource_preproc"
     )
 
+    # Iterates over subject and runs
     infosource_preproc.iterables = [
         ("subject_id", subject_list),
         ("run_id", run_list),
-    ]  # Iterates over subject and runs
-
-    # Templates to select files node
-    anat_file = opj("sub-{subject_id}", "anat", "sub-{subject_id}_T1w.nii.gz")
-
-    func_file = opj(
-        "sub-{subject_id}", "func", "sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz"
-    )
-
-    magnitude_file = opj(
-        "sub-{subject_id}", "fmap", "sub-{subject_id}_magnitude1.nii.gz"
-    )
-
-    phasediff_file = opj(
-        "sub-{subject_id}", "fmap", "sub-{subject_id}_phasediff.nii.gz"
-    )
-
-    template = {
-        "anat": anat_file,
-        "func": func_file,
-        "magnitude": magnitude_file,
-        "phasediff": phasediff_file,
-    }
+    ]
 
     # SelectFiles node - to select necessary files
     selectfiles_preproc = Node(
-        SelectFiles(template, base_directory=exp_dir), name="selectfiles_preproc"
+        SelectFiles(fmriprep_data_template(), base_directory=exp_dir),
+        name="selectfiles_preproc",
     )
 
     # DataSink Node - store the wanted results in the wanted repository
     datasink_preproc = Node(
-        DataSink(base_directory=result_dir, container=output_dir),
+        DataSink(base_directory=result_dir, container=working_dir),
         name="datasink_preproc",
     )
 
-    # THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
-    node_variable = Node(
-        node_function, name="node_name"
-    )  # Replace with the name of the node_variable,
-    # the node_function to use in the NiPype interface,
-    # and the name of the node (recommended to be the same as node_variable)
+    gunzip_func = Node(Gunzip(), name="gunzip_func")
 
-    # ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
+    smooth = Node(Smooth(fwhm=fwhm, implicit_masking=False), name="smooth")
 
     preprocessing = Workflow(
         base_dir=opj(result_dir, working_dir), name="preprocessing"
-    )  # Workflow creation
+    )
 
     preprocessing.connect(
         [
@@ -109,23 +81,52 @@ def get_preprocessing(
                 selectfiles_preproc,
                 [("subject_id", "subject_id"), ("run_id", "run_id")],
             ),
-            # FIXME Complete with name of node to link with and the name of the input
-            # Input and output names can be found on NiPype documentation
             (
                 selectfiles_preproc,
-                node_variable, 
-                [("func", "node_input_name")],
-            ),  
-            
+                gunzip_func,
+                [("func_preproc", "in_file")],
+            ),
             (
-                node_variable,
+                gunzip_func,
+                smooth,
+                [("out_file", "in_files")],
+            ),
+            (
+                smooth,
                 datasink_preproc,
-                [("node_output_name", "preprocess.@sym_link")],
+                [("smoothed_files", "preprocess.@sym_link")],
             ),
         ]
     )
 
     return preprocessing
+
+"""
+In first level analyses, three regressors of interest were included in the model: 
+
+1) task-related activity, 
+2) task-related activity modulated by the amount of gain, and 
+3) task-related activity modulated by the amount of loss. 
+
+The regressor for the basic task-related activity was defined 
+as a vector of ones at every trial onset and zeros at all other time points 
+(event duration = 0 s). 
+
+Within each functional run, each parametric modulator 
+(the raw gain or loss values) was scaled such that its maximum value became 1. 
+All three regressors were convolved with the canonical hemodynamic response function. 
+The two modulated regressors were orthogonalized against the original task regressor. 
+Temporal/dispersion derivatives of the regressors were not included. 
+
+In both first and second level analyses, model parameters were estimated 
+using the classical (Restricted Maximum Likelihood) method as implemented in SPM12. 
+
+For second level analyses, we used a mixed-effects approach with weighted least squares. 
+
+In the second level analysis performed to test hypothesis 9 
+(two-sample t-test comparing the equal indifference group and the equal range group), 
+the two groups were assumed to be independent and have unequal variance.   
+"""
 
 
 # FIXME: THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF SPM
@@ -133,24 +134,6 @@ def get_preprocessing(
 # MODIFY ACCORDING TO THE PIPELINE YOU WANT TO REPRODUCE
 def get_subject_infos_spm(event_files: List[str], runs: List[str]):
     """
-
-    The model contained 6 regressors per run:
-
-    - One predictor with onset at the start of the trial and duration of 4s.
-
-    - Two parametric modulators (one for gains, one for losses)
-      were added to the trial onset predictor.
-      The two parametric modulators were orthogonalized w.r.t. the main predictor,
-      but were not orthogonalized w.r.t. one another.
-
-    - Two predictors modelling the decision output,
-      one for accepting the gamble and one for rejecting it
-      (merging strong and weak decisions).
-
-    The onset was defined as the beginning of the trial + RT
-    and the duration was set to 0 (stick function).
-    - One constant term for each run was included (SPM12 default design).
-
     Create Bunchs for specifySPMModel.
 
     Parameters :
@@ -169,13 +152,12 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
     onset_button = {}
     duration_button = {}
 
-    for r in range(len(runs)):  # Loop over number of runs.
-        onset.update(
-            {s + "_run" + str(r + 1): [] for s in cond_names}
-        )  # creates dictionary items with empty lists
-        duration.update({s + "_run" + str(r + 1): [] for s in cond_names})
-        weights_gain.update({"gain_run" + str(r + 1): []})
-        weights_loss.update({"loss_run" + str(r + 1): []})
+    # Loop over number of runs.
+    for r in range(len(runs)):  
+        onset |= {f"{s}_run{str(r + 1)}": [] for s in cond_names}
+        duration |= {f"{s}_run{str(r + 1)}": [] for s in cond_names}
+        weights_gain[f"gain_run{str(r + 1)}"] = []
+        weights_loss[f"loss_run{str(r + 1)}"] = []
 
     for r, run in enumerate(runs):
 
@@ -188,9 +170,9 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
                 info = line.strip().split()
 
                 for cond in cond_names:
-                    val = cond + "_run" + str(r + 1)  # trial_run1 or accepting_run1
-                    val_gain = "gain_run" + str(r + 1)  # gain_run1
-                    val_loss = "loss_run" + str(r + 1)  # loss_run1
+                    val = f"{cond}_run{str(r + 1)}"
+                    val_gain = f"gain_run{str(r + 1)}"
+                    val_loss = f"loss_run{str(r + 1)}"
                     if cond == "trial":
                         onset[val].append(float(info[0]))  # onsets for trial_run1
                         duration[val].append(float(4))
@@ -212,9 +194,9 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
     subject_info = []
     for r in range(len(runs)):
 
-        cond = [s + "_run" + str(r + 1) for s in cond_names]
-        gain = "gain_run" + str(r + 1)
-        loss = "loss_run" + str(r + 1)
+        cond = [f"{s}_run{str(r + 1)}" for s in cond_names]
+        gain = f"gain_run{str(r + 1)}"
+        loss = f"loss_run{str(r + 1)}"
 
         subject_info.insert(
             r,
@@ -236,67 +218,6 @@ def get_subject_infos_spm(event_files: List[str], runs: List[str]):
                 regressors=None,
             ),
         )
-
-    return subject_info
-
-
-# FIXME: THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF FSL
-# THIS IS AN EXAMPLE THAT IS ADAPTED TO A SPECIFIC PIPELINE
-# MODIFY ACCORDING TO THE PIPELINE YOU WANT TO REPRODUCE
-def get_session_infos_fsl(event_file: str):
-    """
-    Create Bunchs for specifyModel.
-
-    Parameters :
-    - event_file : file corresponding to the run and the subject to analyze
-
-    Returns :
-    - subject_info : list of Bunch for 1st level analysis.
-    """
-
-    cond_names = ["trial", "gain", "loss"]
-
-    onset = {}
-    duration = {}
-    amplitude = {}
-
-    for c in cond_names:  # For each condition.
-        onset.update({c: []})  # creates dictionary items with empty lists
-        duration.update({c: []})
-        amplitude.update({c: []})
-
-    with open(event_file, "rt") as f:
-        next(f)  # skip the header
-
-        for line in f:
-            info = line.strip().split()
-            # Creates list with onsets, duration and loss/gain for amplitude (FSL)
-            for c in cond_names:
-                if c == "gain":
-                    onset[c].append(float(info[0]))
-                    duration[c].append(float(info[4]))
-                    amplitude[c].append(float(info[2]))
-                elif c == "loss":
-                    onset[c].append(float(info[0]))
-                    duration[c].append(float(info[4]))
-                    amplitude[c].append(float(info[3]))
-                elif c == "trial":
-                    onset[c].append(float(info[0]))
-                    duration[c].append(float(info[4]))
-                    amplitude[c].append(float(1))
-
-    subject_info = []
-
-    subject_info.append(
-        Bunch(
-            conditions=cond_names,
-            onsets=[onset[k] for k in cond_names],
-            durations=[duration[k] for k in cond_names],
-            amplitudes=[amplitude[k] for k in cond_names],
-            regressor_names=None,
-            regressors=None,
-        )
-    )
 
     return subject_info
 
@@ -354,7 +275,6 @@ def get_l1_analysis(
         - run_list: list of runs for which you want to do the analysis
         - TR: time repetition used during acquisition
 
-
     Returns:
         - l1_analysis : Nipype WorkFlow
     """
@@ -372,11 +292,11 @@ def get_l1_analysis(
     )
 
     # ITERATES OVER SUBJECT LIST
-    infosource.iterables = [("subject_id", subject_list)]  
+    infosource.iterables = [("subject_id", subject_list)]
 
     # Templates to select files node
 
-    # FIXME: CHANGE THE NAME OF THE FILE 
+    # FIXME: CHANGE THE NAME OF THE FILE
     # DEPENDING ON THE FILENAMES OF RESULTS OF PREPROCESSING
     func_file = opj(
         result_dir,
@@ -384,7 +304,7 @@ def get_l1_analysis(
         "preprocess",
         "_run_id_*_subject_id_{subject_id}",
         "complete_filename_{subject_id}_complete_filename.nii",
-    )  
+    )
 
     event_files = opj(
         exp_dir,
@@ -393,7 +313,9 @@ def get_l1_analysis(
         "sub-{subject_id}_task-MGT_run-*_events.tsv",
     )
 
-    template = {"func": func_file, "event": event_files}
+    
+
+    template = {"func": func_file, "event": raw_data_template()["event_file"]}
 
     # SelectFiles node - to select necessary files
     selectfiles = Node(
@@ -405,9 +327,6 @@ def get_l1_analysis(
         DataSink(base_directory=result_dir, container=output_dir), name="datasink"
     )
 
-    # FIXME: THIS IS THE NODE EXECUTING THE get_subject_infos_spm FUNCTION
-    # IF YOU'RE DOING AN FSL PIPELINE
-    # JUST CHANGE THE NAME OF THE FUNCTION TO get_subject_infos_fsl
     # Get Subject Info - get subject specific condition information
     subject_infos = Node(
         Function(
@@ -430,15 +349,6 @@ def get_l1_analysis(
         name="contrasts",
     )
 
-    # FIXME: THE FOLLOWING PART HAS TO BE MODIFIED WITH NODES OF THE PIPELINE
-    node_variable = Node(
-        node_function, name="node_name"
-    )  # Replace with the name of the node_variable,
-    # the node_function to use in the NiPype interface,
-    # and the name of the node (recommended to be the same as node_variable)
-
-    # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
-
     # Create l1 analysis workflow and connect its nodes
     l1_analysis = Workflow(base_dir=opj(result_dir, working_dir), name="l1_analysis")
 
@@ -451,7 +361,7 @@ def get_l1_analysis(
             (
                 selectfiles,
                 node_variable[("func", "node_input_name")],
-            ),  
+            ),
             # Input and output names can be found on NiPype documentation
             (node_variable, datasink, [("node_output_name", "preprocess.@sym_link")]),
         ]
@@ -464,14 +374,13 @@ def get_l1_analysis(
 # TO DO SEPARATE GROUP LEVEL ANALYSIS AND BETWEEN GROUP ANALYSIS
 # THIS FUNCTIONS IS ADAPTED FOR AN SPM PIPELINE.
 def get_subset_contrasts_spm(
-    file_list, method: str, subject_list: List[str], participants_file: str
+    file_list, subject_list: List[str], participants_file: str
 ):
     """
     Parameters :
     - file_list : original file list selected by selectfiles node
     - subject_list : list of subject IDs that are in the wanted group for the analysis
     - participants_file: file containing participants characteristics
-    - method: one of "equalRange", "equalIndifference" or "groupComp"
 
     This function return the file list containing only the files belonging
     to the subject in the wanted group.
@@ -482,20 +391,19 @@ def get_subset_contrasts_spm(
     equalRange_files = []
 
     with open(
-        participants_file, "rt"
-    ) as f:  # Reading file containing participants IDs and groups
+            participants_file, "rt"
+        ) as f:  # Reading file containing participants IDs and groups
         next(f)  # skip the header
 
         for line in f:
             info = line.strip().split()
 
-            if (
-                info[0][-3:] in subject_list and info[1] == "equalIndifference"
-            ):  # Checking for each participant if its ID was selected
-                # and separate people depending on their group
-                equalIndifference_id.append(info[0][-3:])
-            elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                equalRange_id.append(info[0][-3:])
+            if info[0][-3:] in subject_list:
+                if info[1] == "equalIndifference":  # Checking for each participant if its ID was selected
+                    # and separate people depending on their group
+                    equalIndifference_id.append(info[0][-3:])
+                elif info[1] == "equalRange":
+                    equalRange_id.append(info[0][-3:])
 
     # Checking for each selected file if the corresponding participant was selected
     # and add the file to the list corresponding to its group
@@ -512,130 +420,6 @@ def get_subset_contrasts_spm(
         equalIndifference_files,
         equalRange_files,
     )
-
-
-# THIS FUNCTION IS ADAPTED FOR AN FSL PIPELINE.
-def get_subgroups_contrasts_fsl(
-    copes, varcopes, subject_list: List[str], participants_file: str
-):
-    """
-    Parameters :
-    - copes: original file list selected by selectfiles node
-    - varcopes: original file list selected by selectfiles node
-    - subject_ids: list of subject IDs that are analyzed
-    - participants_file: file containing participants characteristics
-
-    This function return the file list containing only the files
-    belonging to subject in the wanted group.
-    """
-
-    equalRange_id = []
-    equalIndifference_id = []
-
-    # Reading file containing participants IDs and groups
-    with open(participants_file, "rt") as f:
-        next(f)  # skip the header
-
-        for line in f:
-            info = line.strip().split()
-
-            # Checking for each participant if its ID was selected
-            # and separate people depending on their group
-            if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                equalIndifference_id.append(info[0][-3:])
-            elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                equalRange_id.append(info[0][-3:])
-
-    copes_equalIndifference = []
-    copes_equalRange = []
-    copes_global = []
-    varcopes_equalIndifference = []
-    varcopes_equalRange = []
-    varcopes_global = []
-
-    # Checking for each selected file if the corresponding participant was selected
-    # and add the file to the list corresponding to its group
-    for file in copes:
-        sub_id = file.split("/")
-        if sub_id[-2][-3:] in equalIndifference_id:
-            copes_equalIndifference.append(file)
-        elif sub_id[-2][-3:] in equalRange_id:
-            copes_equalRange.append(file)
-        if sub_id[-2][-3:] in subject_list:
-            copes_global.append(file)
-
-    for file in varcopes:  # Same thing but for varcopes files
-        sub_id = file.split("/")
-        if sub_id[-2][-3:] in equalIndifference_id:
-            varcopes_equalIndifference.append(file)
-        elif sub_id[-2][-3:] in equalRange_id:
-            varcopes_equalRange.append(file)
-        if sub_id[-2][-3:] in subject_list:
-            varcopes_global.append(file)
-
-    return (
-        copes_equalIndifference,
-        copes_equalRange,
-        varcopes_equalIndifference,
-        varcopes_equalRange,
-        equalIndifference_id,
-        equalRange_id,
-        copes_global,
-        varcopes_global,
-    )
-
-
-# THIS FUNCTION CREATES THE DICTIONARY OF REGRESSORS USED IN FSL NIPYPE PIPELINES
-def get_regs(
-    equalRange_id: List[str],
-    equalIndifference_id: List[str],
-    method: str,
-    subject_list: List[str],
-) -> dict:
-    """
-    Create dictionary of regressors for group analysis.
-
-    Parameters:
-        - equalRange_id: ids of subjects in equal range group
-        - equalIndifference_id: ids of subjects in equal indifference group
-        - method: one of "equalRange", "equalIndifference" or "groupComp"
-        - subject_list: ids of subject for which to do the analysis
-
-    Returns:
-        - regressors: regressors used to distinguish groups in FSL group analysis
-    """
-    # For one sample t-test, creates a dictionary
-    # with a list of the size of the number of participants
-    if method == "equalRange":
-        regressors = dict(group_mean=[1 for i in range(len(equalRange_id))])
-
-    elif method == "equalIndifference":
-        regressors = dict(group_mean=[1 for i in range(len(equalIndifference_id))])
-
-    # For two sample t-test, creates 2 lists:
-    #  - one for equal range group,
-    #  - one for equal indifference group
-    # Each list contains n_sub values with 0 and 1 depending on the group of the participant
-    # For equalRange_reg list --> participants with a 1 are in the equal range group
-    elif method == "groupComp":
-        equalRange_reg = [
-            1 for i in range(len(equalRange_id) + len(equalIndifference_id))
-        ]
-        equalIndifference_reg = [
-            0 for i in range(len(equalRange_id) + len(equalIndifference_id))
-        ]
-
-        for i, sub_id in enumerate(subject_list):
-            if sub_id in equalIndifference_id:
-                index = i
-                equalIndifference_reg[index] = 1
-                equalRange_reg[index] = 0
-
-        regressors = dict(
-            equalRange=equalRange_reg, equalIndifference=equalIndifference_reg
-        )
-
-    return regressors
 
 
 # FUNCTION TO CREATE THE WORKFLOW OF A L2 ANALYSIS (GROUP LEVEL)
@@ -682,7 +466,7 @@ def get_l2_analysis(
         "_subject_id_*",
         "complete_filename_{contrast_id}_complete_filename.nii",
     )
-    # FIXME: CHANGE THE NAME OF THE FILE DEPENDING ON 
+    # FIXME: CHANGE THE NAME OF THE FILE DEPENDING ON
     # THE FILENAMES OF THE RESULTS OF PREPROCESSING
     # (DIFFERENT FOR AN FSL PIPELINE)
 
