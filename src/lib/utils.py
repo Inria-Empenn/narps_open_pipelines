@@ -141,7 +141,8 @@ def directories(team_ID: str) -> dict:
 def raw_data_template() -> dict:
     """
     Returns:
-        dict: dictionary of directories to pass to the SelectFiles nipype interface
+        dict: dictionary of filename templates for the raw dataset
+        to pass to the SelectFiles nipype interface
     """
 
     task = "MGT"
@@ -180,7 +181,8 @@ def raw_data_template() -> dict:
 def fmriprep_data_template() -> dict:
     """
     Returns:
-        dict: dictionary of directories to pass to the SelectFiles nipype interface
+        dict: dictionary of filename templates for the fmriprep dataset
+        to pass to the SelectFiles nipype interface
     """
 
     task = "MGT"
