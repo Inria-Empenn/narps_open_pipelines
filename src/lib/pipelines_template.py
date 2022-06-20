@@ -109,11 +109,14 @@ def get_preprocessing(
                 selectfiles_preproc,
                 [("subject_id", "subject_id"), ("run_id", "run_id")],
             ),
+            # FIXME Complete with name of node to link with and the name of the input
+            # Input and output names can be found on NiPype documentation
             (
                 selectfiles_preproc,
-                node_variable[("func", "node_input_name")],
-            ),  # Complete with name of node to link with and the name of the input
-            # Input and output names can be found on NiPype documentation
+                node_variable, 
+                [("func", "node_input_name")],
+            ),  
+            
             (
                 node_variable,
                 datasink_preproc,
