@@ -149,7 +149,7 @@ spm.SPMCommand.set_mlab_paths(matlab_cmd=matlab_cmd, use_mcr=True)
 
 ## Data Download Instructions
 
-The dataset used for the `/src/reproduction_*.ipynb` can be downloaded using one of the three options below. 
+The dataset used for the project can be downloaded using one of the three options below. 
 
 For the scripts to work as intended, the dataset **MUST** be stored in `data/original`.
 

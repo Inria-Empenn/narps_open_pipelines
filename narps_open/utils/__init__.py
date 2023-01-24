@@ -30,7 +30,7 @@ def return_team_config(team_ID: str) -> dict:
     Returns:
         dict: configuration for analysis for this team
 
-    Partly read from ``src/lib/analysis_pipelines_config.tsv``
+    Partly read from ``narps_open/pipelines/analysis_pipelines_config.tsv``
 
     keys:
 

@@ -1,4 +1,4 @@
-from lib.utils import return_team_config
+from narps_open.utils import return_team_config
 
 
 def test_return_team_config():

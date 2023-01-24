@@ -9,8 +9,6 @@
 - [Project presentation](#project-presentation)
 - [Getting Started](#getting-started)
 	- [Contents overview](#contents-overview)
-		- [`src`](#src)
-		- [`data`](#data)
 	- [Installation](#installation)
 	- [Contributing](#contributing)
 - [References](#references)
@@ -34,7 +32,7 @@ We also created a shared spreadsheet that can be use to add comments on pipeline
 git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
 ```
 
-If you are using [Datalad](#data-download-instructions),
+If you are using [Datalad](INSTALL.md#data-download-instructions),
 because the NARPS data is "bundled" in this repository as 
 [datalad subdataset](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html), 
 you may want to use datalad to clone your fork of the repository by doing:
@@ -45,15 +43,23 @@ datalad install --recursive https://github.com/YOUR_GITHUB_USERNAME/narps_open_p
 
 ### Contents overview
 
-#### `src`
+#### `narps_open` :snake: :package:
 
-This directory contains scripts of the reproduce pipelines along with notebooks and/or scripts to launch them. 
+This directory contains the Python package with all the pipelines logic.
 
-#### `data`
+#### `data` :brain:
 
-This directory is made to contain data that will be used by scripts/notebooks stored in the `src` directory and to contain the results (intermediate results and final data) of those scripts. 
+This directory is made to contain data that will be used by the pipelines, as well as the (intermediate or final) results data.
 
-Instructions to download data are available [below](#data-download-instructions).
+Instructions to download data are available [in `INSTALL.md`](INSTALL.md#data-download-instructions).
+
+#### `examples` :orange_book:
+
+This directory contains notebooks examples to launch of the reproduced pipelines.
+
+#### `tests` :microscope:
+
+This directory contains the tests of the narps_open package.
 
 ### Installation
 

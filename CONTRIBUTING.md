@@ -6,7 +6,7 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 
 ### If you have experience with NiPype
 
-We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `src/lib/pipeline_template.py`. 
+We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `narps_open/pipelines/pipeline_template.py`. 
 Do not hesitate to modify this template if you fill it could be better explained. 
 
 ### If you have experience with the original software package but not with NiPype
