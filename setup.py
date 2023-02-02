@@ -14,6 +14,7 @@ will add the current directory (.) to the system path.
 from setuptools import setup, find_packages
 
 requires = [
+    'importlib_resources>=5.10.2,<5.11',
 ]
 
 setup(
