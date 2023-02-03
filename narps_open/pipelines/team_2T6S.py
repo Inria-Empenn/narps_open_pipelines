@@ -25,12 +25,18 @@ class PipelineTeam2T6S(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = '2T6S'
+        self.contrast_list = ['0001', '0002', '0003', '0004']
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team 2T6S """
         return None
 
-    @staticmethod
+    def get_run_level_analysis(self):
+        """ No run level analysis has been done by team 2T6S """
+        return None
+
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_subject_infos(event_files, runs):
         ''' Create Bunchs for specifySPMModel.
 
@@ -102,7 +108,8 @@ class PipelineTeam2T6S(Pipeline):
 
         return subject_info
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_contrasts():
         '''
         Create a list of tuples that represent contrasts.
@@ -121,7 +128,8 @@ class PipelineTeam2T6S(Pipeline):
         # Return contrast list
         return [trial, effect_gain, positive_effect_loss, negative_effect_loss]
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_parameters_file(filepaths, subject_id, working_dir):
         '''
         Create new tsv files with only desired parameters per subject per run.
@@ -170,7 +178,8 @@ class PipelineTeam2T6S(Pipeline):
 
         return parameters_file
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def remove_gunzip_files(_, subject_id, working_dir):
         """
         This method is used in a Function node to fully remove
@@ -191,7 +200,8 @@ class PipelineTeam2T6S(Pipeline):
         else:
             print('The directory is deleted successfully')
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def remove_smoothed_files(_, subject_id, working_dir):
         """
         This method is used in a Function node to fully remove
@@ -221,9 +231,9 @@ class PipelineTeam2T6S(Pipeline):
         """
         # Infosource Node - To iterate on subjects
         infosource = Node(IdentityInterface(
-            fields = ['subject_id', 'dataset_dir', 'result_dir', 'working_dir', 'run_list'],
+            fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
             dataset_dir = self.directories.dataset_dir,
-            result_dir = self.directories.results_dir,
+            results_dir = self.directories.results_dir,
             working_dir = self.directories.working_dir,
             run_list = self.run_list),
             name = 'infosource')
@@ -322,7 +332,7 @@ class PipelineTeam2T6S(Pipeline):
         l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
         l1_analysis.connect([
             (infosource, selectfiles, [('subject_id', 'subject_id')]),
-            (infosource, subject_infos, [('exp_dir', 'exp_dir'), ('run_list', 'runs')]),
+            (infosource, subject_infos, [('run_list', 'runs')]),
             (infosource, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (infosource, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_infos, specify_model, [('subject_info', 'subject_info')]),
@@ -331,7 +341,6 @@ class PipelineTeam2T6S(Pipeline):
             (selectfiles, subject_infos, [('event', 'event_files')]),
             (infosource, parameters, [
                 ('subject_id', 'subject_id'),
-                ('result_dir', 'result_dir'),
                 ('working_dir', 'working_dir')]),
             (selectfiles, gunzip_func, [('func', 'in_file')]),
             (gunzip_func, smooth, [('out_file', 'in_files')]),
@@ -348,12 +357,13 @@ class PipelineTeam2T6S(Pipeline):
                 ('con_images', 'l1_analysis.@con_images'),
                 ('spmT_images', 'l1_analysis.@spmT_images'),
                 ('spm_mat_file', 'l1_analysis.@spm_mat_file')]),
-            (contrast_estimate, remove_smoothed_files, [('spmT_images', 'files')])
+            (contrast_estimate, remove_smoothed_files, [('spmT_images', '_')])
             ])
 
         return l1_analysis
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_subset_contrasts(file_list, method, subject_list, participants_file):
         '''
         Parameters :
@@ -388,7 +398,8 @@ class PipelineTeam2T6S(Pipeline):
 
         return equal_indifference_id, equal_range_id, equal_indifference_files, equal_range_files
 
-    @staticmethod
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def reorganize_results(team_id, nb_sub, output_dir, results_dir):
         """ Reorganize the results to analyze them. """
         from os import mkdir
@@ -437,12 +448,22 @@ class PipelineTeam2T6S(Pipeline):
 
         print(f'Results files of team {team_id} reorganized.')
 
-    def get_group_level_analysis(self, contrast_list, method):
+    def get_group_level_analysis(self):
+        """
+        Return all workflows for the group level analysis.
+
+        Returns;
+            - a list of nipype.WorkFlow
+        """
+
+        methods = ['equalRange', 'equalIndifference', 'groupComp']
+        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
+
+    def get_group_level_analysis_sub_workflow(self, method):
         """
         Return a workflow for the group level analysis.
 
         Parameters:
-            - contrast_list: list of str, list of contrasts to analyze
             - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns:
@@ -457,25 +478,25 @@ class PipelineTeam2T6S(Pipeline):
                 fields = ['contrast_id', 'subjects'],
                 subjects = self.subject_list),
                 name = 'infosource_groupanalysis')
-        infosource_groupanalysis.iterables = [('contrast_id', contrast_list)]
+        infosource_groupanalysis.iterables = [('contrast_id', self.contrast_list)]
 
         # SelectFiles
         templates = {
             # Contrast for all participants
             'contrast' : join(self.directories.output_dir,
-                'l1_analysis', '_subject_id_*', 'con_00{contrast_id}.nii'),
+                'l1_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
             # Participants file
             'participants' : join(self.directories.dataset_dir, 'participants.tsv')
             }
 
         selectfiles_groupanalysis = Node(SelectFiles(
-            templates, base_directory=self.directories.result_dir, force_list= True),
+            templates, base_directory=self.directories.results_dir, force_list= True),
             name = 'selectfiles_groupanalysis')
 
         # Datasink - save important files
         datasink_groupanalysis = Node(DataSink(
-            base_directory = self.directories.result_dir,
-            container = self.directories.output_dir),
+            base_directory = str(self.directories.output_dir)
+            ),
             name = 'datasink_groupanalysis')
 
         # Function node reorganize_results - organize results once computed
@@ -500,17 +521,17 @@ class PipelineTeam2T6S(Pipeline):
             name = 'sub_contrasts')
         sub_contrasts.inputs.method = method
 
-        ## Estimate model
+        # Estimate model
         estimate_model = Node(EstimateModel(
             estimation_method = {'Classical':1}),
             name = 'estimate_model')
 
-        ## Estimate contrasts
+        # Estimate contrasts
         estimate_contrast = Node(EstimateContrast(
             group_contrast = True),
             name = 'estimate_contrast')
 
-        ## Create thresholded maps
+        # Create thresholded maps
         threshold = MapNode(Threshold(
             use_topo_fdr = False, use_fwe_correction = False, extent_threshold = 10,
             height_threshold = 0.001, height_threshold_type = 'p-value',
