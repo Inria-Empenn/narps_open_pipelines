@@ -72,11 +72,23 @@ class PipelineRunner():
         """
         Start the pipeline
         """
-        # Actually start
         print(f'Starting pipeline for team: {self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
-        self._pipeline.get_preprocessing()
-        self._pipeline.get_subject_level_analysis()
-        self._pipeline.get_group_level_analysis()
+
+        for workflow in [
+            self._pipeline.get_preprocessing(),
+            self._pipeline.get_run_level_analysis(),
+            self._pipeline.get_subject_level_analysis(),
+            self._pipeline.get_group_level_analysis()
+        ]:
+            if workflow is None:
+                pass
+            elif isinstance(workflow, list):
+                for sub_workflow in workflow:
+                    sub_workflow.run('MultiProc', plugin_args={'n_procs': 8})
+                    sub_workflow.run()
+            else:
+                workflow.run('MultiProc', plugin_args={'n_procs': 8})
+                workflow.run()
 
 if __name__ == '__main__':
 

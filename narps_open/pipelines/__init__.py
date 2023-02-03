@@ -173,8 +173,12 @@ class Pipeline(ABC):
             for the pipeline
 
         # Lists of data
-            - subject_list: list of str, list of subject for which you want to do the analysis
-            - run_list: list of str, list of runs for which you want to do the analysis
+            - subject_list: list of str, list of subject for which
+            you want to do the subject level analysis
+            - run_list: list of str, list of runs for which
+            you want to do the subject level analysis
+            - contrast_list: list of str, list of contrasts for which
+            you want to do the group level analysis
 
         # Parameters
             - team_id: str, identifier of the team responsible for the pipeline
@@ -187,7 +191,8 @@ class Pipeline(ABC):
 
         # Data
         self._subject_list = []
-        self._run_list = []
+        self._run_list = ['01', '02', '03', '04']
+        self._constrast_list = []
 
         # Parameters
         self._team_id = ''
@@ -225,6 +230,16 @@ class Pipeline(ABC):
         self._run_list = value
 
     @property
+    def contrast_list(self):
+        """ Getter for property contrast_list """
+        return self._contrast_list
+
+    @contrast_list.setter
+    def contrast_list(self, value: list):
+        """ Setter for property contrast_list """
+        self._contrast_list = value
+
+    @property
     def team_id(self):
         """ Getter for property team_id """
         return self._team_id
@@ -254,9 +269,13 @@ class Pipeline(ABC):
         """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
 
     @abstractmethod
+    def get_run_level_analysis(self):
+        """ Return a Nipype worflow describing the run level analysis part of the pipeline """
+
+    @abstractmethod
     def get_subject_level_analysis(self):
-        """ Return a Nipype worflow describing the subject level analysis part of the workflow """
+        """ Return a Nipype worflow describing the subject level analysis part of the pipeline """
 
     @abstractmethod
     def get_group_level_analysis(self):
-        """ Return a Nipype worflow describing the group level analysis part of the workflow """
+        """ Return a Nipype worflow describing the group level analysis part of the pipeline """
