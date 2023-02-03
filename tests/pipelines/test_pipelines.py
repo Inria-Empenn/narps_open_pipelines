@@ -34,6 +34,9 @@ class InheritingPipeline(Pipeline):
     def get_preprocessing(self):
         return 'a'
 
+    def get_run_level_analysis(self):
+        return 'r'
+
     def get_subject_level_analysis(self):
         return 'b'
 
