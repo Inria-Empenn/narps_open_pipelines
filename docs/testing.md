@@ -4,16 +4,22 @@
 
 ## Dependancies
 
-Use *pylint* to run static code analysis.
+Use [*pylint*](http://pylint.pycqa.org/en/latest/) to run static code analysis.
 
-*[Pylint](http://pylint.pycqa.org/en/latest/) is a tool that checks for errors in Python code, tries to enforce a coding standard and looks for code smells. It can also look for certain type errors, it can recommend suggestions about how particular blocks can be refactored and can offer you details about the code's complexity.*
+> Pylint is a tool that checks for errors in Python code, tries to enforce a coding standard and looks for code smells. It can also look for certain type errors, it can recommend suggestions about how particular blocks can be refactored and can offer you details about the code's complexity.
 
 * Run the analysis on all the source files with : `pylint ./narps_open`
 * To create a .xml JUnit report : `pylint --fail-under=8.0 --ignored-classes=_socketobject --load-plugins=pylint_junit --output-format=pylint_junit.JUnitReporter narps_open > pylint_report_narps_open.xml`
 
+It is also a good idea to use [*black*](https://github.com/psf/black) to automatically conform your code to PEP8.
+
+> Black is the uncompromising Python code formatter. By using it, you agree to cede control over minutiae of hand-formatting. In return, Black gives you speed, determinism, and freedom from pycodestyle nagging about formatting. You will save time and mental energy for more important matters.
+
+* Run the command on any source file you want to lint : `black ./narps_open` or `black ./narps_open/runner.py` 
+
 Use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage.
 
-*The pytest framework makes it easy to write small tests, yet scales to support complex functional testing for applications and libraries.*
+> The pytest framework makes it easy to write small tests, yet scales to support complex functional testing for applications and libraries.
 
 Tests can be launched manually or while using CI (Continuous Integration).
 
