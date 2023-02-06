@@ -8,7 +8,7 @@ from random import choices
 from argparse import ArgumentParser
 from pathlib import Path
 
-from narps_open.pipelines import implemented_pipelines
+from narps_open.pipelines import Pipeline, implemented_pipelines
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
 
 class PipelineRunner():
@@ -21,6 +21,11 @@ class PipelineRunner():
         # so that the code inside it is executed. That would not be the
         # case if simply setting the `self._team_id` attribute i.e.: `self._team_id = team_id`
         self.team_id = team_id
+
+    @property
+    def pipeline(self) -> Pipeline:
+        """ Getter for property pipeline """
+        return self._pipeline
 
     @property
     def subjects(self) -> list:
@@ -109,10 +114,10 @@ if __name__ == '__main__':
 
     # Initialize a PipelineRunner
     runner = PipelineRunner(team_id = arguments.team)
-    runner._pipeline.directories.dataset_dir = arguments.dataset
-    runner._pipeline.directories.results_dir = arguments.output
-    runner._pipeline.directories.set_output_dir_with_team_id(arguments.team)
-    runner._pipeline.directories.set_working_dir_with_team_id(arguments.team)
+    runner.pipeline.directories.dataset_dir = arguments.dataset
+    runner.pipeline.directories.results_dir = arguments.output
+    runner.pipeline.directories.set_output_dir_with_team_id(arguments.team)
+    runner.pipeline.directories.set_working_dir_with_team_id(arguments.team)
 
     if arguments.subjects is not None:
         runner.subjects = arguments.subjects
@@ -120,6 +125,4 @@ if __name__ == '__main__':
         runner.random_nb_subjects = int(arguments.random)
 
     # Start the runner
-    print(runner.__dict__)
-    print(runner._pipeline.__dict__)
     runner.start()
