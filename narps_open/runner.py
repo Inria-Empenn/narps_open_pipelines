@@ -8,8 +8,9 @@ from random import choices
 from argparse import ArgumentParser
 from pathlib import Path
 
+from nipype import Workflow
+
 from narps_open.pipelines import Pipeline, implemented_pipelines
-from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -64,7 +65,8 @@ class PipelineRunner():
         # It's up to the PipelineRunner to find the right pipeline, based on the team ID
         if self._team_id not in implemented_pipelines:
             raise KeyError(f'Wrong team ID : {self.team_id}')
-        elif implemented_pipelines[self._team_id] is None:
+
+        if implemented_pipelines[self._team_id] is None:
             raise NotImplementedError(f'Pipeline not implemented for team : {self.team_id}')
 
         # Instanciate the pipeline
@@ -77,7 +79,8 @@ class PipelineRunner():
         """
         Start the pipeline
         """
-        print(f'Starting pipeline for team: {self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
+        print('Starting pipeline for team: '+
+            f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
         for workflow in [
             self._pipeline.get_preprocessing(),
@@ -89,11 +92,15 @@ class PipelineRunner():
                 pass
             elif isinstance(workflow, list):
                 for sub_workflow in workflow:
+                    if not isinstance(sub_workflow, Workflow):
+                        raise AttributeError('Workflow must be of type nipype.Workflow')
                     sub_workflow.run('MultiProc', plugin_args={'n_procs': 8})
-                    sub_workflow.run()
+                    #sub_workflow.run()
             else:
+                if not isinstance(workflow, Workflow):
+                    raise AttributeError('Workflow must be of type nipype.Workflow')
                 workflow.run('MultiProc', plugin_args={'n_procs': 8})
-                workflow.run()
+                #workflow.run()
 
 if __name__ == '__main__':
 
