@@ -13,7 +13,12 @@ Usage:
 
 from pytest import raises
 
-from narps_open.pipelines import PipelineDirectories, Pipeline
+from narps_open.pipelines import (
+    PipelineDirectories,
+    Pipeline,
+    get_not_implemented_pipelines,
+    get_implemented_pipelines
+    )
 
 class InheritingErrorPipeline(Pipeline):
     """ A class to test the inheritance of the Pipeline class """
@@ -24,10 +29,13 @@ class InheritingPipeline(Pipeline):
     def __init__(self):
         super().__init__()
 
-        self.fwhm = 8.0
+        self._fwhm = 8.0
 
     def get_preprocessing(self):
         return 'a'
+
+    def get_run_level_analysis(self):
+        return 'r'
 
     def get_subject_level_analysis(self):
         return 'b'
@@ -42,45 +50,43 @@ class TestPipelineDirectories:
     def test_create():
         """ Test the creation of a PipelineDirectories object """
 
-        # 1a - create the object
+        # 1 - create the object
         pipeline_dir = PipelineDirectories()
 
-        # 1b - 'hard writing' the class attributes for test purposes
-        pipeline_dir._dataset_dir = 'pipeline_dir._dataset_dir'
-        pipeline_dir._working_dir = 'pipeline_dir._working_dir'
-        pipeline_dir._output_dir = 'pipeline_dir._output_dir'
+        # 2 - check one can access the properties of the class
+        pipeline_dir.dataset_dir = 'test_d'
+        assert pipeline_dir.dataset_dir == 'test_d'
 
-        # 2 - check one can access the following attributes
-        #    - dataset_dir (get only)
-        #    - working_dir (get and set)
-        #    - output_dir (get and set)
-        assert pipeline_dir.dataset_dir == 'pipeline_dir._dataset_dir'
-        with raises(AttributeError):
-            pipeline_dir.dataset_dir = 'test_d'
+        pipeline_dir.results_dir = 'test_r'
+        assert pipeline_dir.results_dir == 'test_r'
 
-        assert pipeline_dir.working_dir == 'pipeline_dir._working_dir'
         pipeline_dir.working_dir = 'test_w'
         assert pipeline_dir.working_dir == 'test_w'
 
-        assert pipeline_dir.output_dir == 'pipeline_dir._output_dir'
-        pipeline_dir.output_dir = 'test'
-        assert pipeline_dir.output_dir == 'test'
+        pipeline_dir.output_dir = 'test_o'
+        assert pipeline_dir.output_dir == 'test_o'
 
     @staticmethod
-    def test_setup():
-        """ Test the setup method of PipelineDirectories """
+    def test_alternative_setters():
+        """ Test the alternatives setters of PipelineDirectories """
 
-        # 1a - create the object
+        # 1 - create the object
         pipeline_dir = PipelineDirectories()
 
-        # 1b - 'hard writing' the class attributes for test purposes
-        pipeline_dir._results_dir = 'pipeline_dir._results_dir'
+        # 2 - check generation of the directories without setting results_dir
+        with raises(AttributeError):
+            pipeline_dir.set_working_dir_with_team_id('2T6S')
+        with raises(AttributeError):
+            pipeline_dir.set_output_dir_with_team_id('2T6S')
 
-        # 2 - 
-        pipeline_dir.setup('team_id_test')
-        test_str = 'pipeline_dir._results_dir/NARPS-team_id_test-reproduced/intermediate_results'
+        # 3 - check generation of the directories after results_dir is set
+        pipeline_dir.results_dir = 'pipeline_dir._results_dir'
+        pipeline_dir.set_working_dir_with_team_id('2T6S')
+        pipeline_dir.set_output_dir_with_team_id('2T6S')
+
+        test_str = 'pipeline_dir._results_dir/NARPS-2T6S-reproduced/intermediate_results'
         assert pipeline_dir.working_dir == test_str
-        assert pipeline_dir.output_dir == 'pipeline_dir._results_dir/NARPS-team_id_test-reproduced'
+        assert pipeline_dir.output_dir == 'pipeline_dir._results_dir/NARPS-2T6S-reproduced'
 
 class TestPipelines:
     """ A class that contains all the unit tests for the Pipeline class."""
@@ -101,9 +107,8 @@ class TestPipelines:
         pipeline = InheritingPipeline()
 
         # 4 - check accessing the attributes of Pipeline through an inheriting class
-        assert type(pipeline.directories) == PipelineDirectories
+        assert isinstance(pipeline.directories, PipelineDirectories)
 
-        
         assert pipeline.tr == 1.0
         with raises(AttributeError):
             pipeline.tr = 2.0
@@ -115,3 +120,15 @@ class TestPipelines:
         assert pipeline.get_preprocessing() == 'a'
         assert pipeline.get_subject_level_analysis() == 'b'
         assert pipeline.get_group_level_analysis() == 'c'
+
+class TestUtils:
+    """ A class that contains all the unit tests for the utils in module pipelines."""
+
+    @staticmethod
+    def test_utils():
+        """ Test the utils methods of PipelineRunner """
+        # 1 - Get number of not implemented pipelines
+        assert len(get_not_implemented_pipelines()) == 69
+
+        # 2 - Get number of implemented pipelines
+        assert len(get_implemented_pipelines()) == 1
