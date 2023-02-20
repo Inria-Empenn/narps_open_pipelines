@@ -1,0 +1,42 @@
+name: pylint
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pylint
+
+    - name: Analyse the code with pylint
+      run: |
+        pylint --exit-zero --ignored-classes=_socketobject narps_open > pylint_report_narps_open.txt
+        pylint --exit-zero --ignored-classes=_socketobject tests > pylint_report_tests.txt
+        grep -R 'TODO' narps_open/ > todos_narps_open.txt
+        grep -R 'TODO' tests/ > todos_tests.txt
+
+    - name: Archive pylint results
+      uses: actions/upload-artifact@v3
+      with:
+        name: pylint-reports
+        path: |
+          pylint_report_narps_open.txt
+          pylint_report_tests.txt
+          todos_narps_open.txt
+          todos_tests.txt
