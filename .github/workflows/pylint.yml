@@ -36,3 +36,4 @@ jobs:
         path: |
           pylint_report_narps_open.txt
           pylint_report_tests.txt
+        retention-days: 15
