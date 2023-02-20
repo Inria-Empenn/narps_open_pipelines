@@ -27,13 +27,12 @@ jobs:
     - name: Analyse the code with pylint
       run: |
         pylint --exit-zero narps_open > pylint_report_narps_open.txt
+        pylint --exit-zero tests > pylint_report_narps_open.txt
 
     - name: Archive pylint results
       uses: actions/upload-artifact@v3
       with:
-        name: pylint-reports
+        name: pylint-reports-python${{ matrix.python-version }}
         path: |
           pylint_report_narps_open.txt
           pylint_report_tests.txt
-          todos_narps_open.txt
-          todos_tests.txt
