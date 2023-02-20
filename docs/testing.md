@@ -1,4 +1,4 @@
-# How to test NARPS open pipelines ?
+# :microscope: How to test NARPS open pipelines ?
 
 :mega: This file descripes the test suite and features for the project.
 
