@@ -12,6 +12,6 @@ These worflows are YAML files, located in the `.github/workflows/` directory. Fo
 
 * [pylint.yml](/.github/workflows/pylint.yml)
 	* **What does it do ?** It performs static analyses of the python code (see the [testing](/docs/testing.md) topic of the documentation for more information).
-	* **When is it launched ?** For every push on the repository. You can always [prevent GitHub from running a workflow](https://docs.github.com/en/actions/managing-workflow-runs/skipping-workflow-runs)
+	* **When is it launched ?** For every push on the repository, if there are changes on `.py` files. You can always [prevent GitHub from running a workflow](https://docs.github.com/en/actions/managing-workflow-runs/skipping-workflow-runs)
 	* **Where does it run ?** On GitHub servers.
 	* **How can I see the results ?** Outputs (logs of pylint) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push.
