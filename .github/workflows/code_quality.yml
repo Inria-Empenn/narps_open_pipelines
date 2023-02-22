@@ -1,7 +1,7 @@
 # Name the workflow
-name: pylint
+name: code_quality
 
-# Define when it runs (on pushes when python files changed)
+# Define when it runs (on pushes when python files change)
 on:
   push:
     paths:
@@ -10,7 +10,7 @@ on:
 # Jobs that define the workflow
 jobs:
   # Name of the job running pylint
-  static-analysis:
+  pylint:
 
     # Define the OS and the python versions to use
     runs-on: ubuntu-latest
