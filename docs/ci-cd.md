@@ -2,6 +2,26 @@
 
 :mega: This file descripes how CI/CD works for the project.
 
+## CI strategies
+
+### Safety
+- code owners for `.github/workflows` et `.gitlab-ci.yml`
+- reviewing deployments / environments for CI-CD workflows (for local runners)
+	- environment `Empenn`
+-
+
+## CD 
+> how to make the code available ? > package + docker / singularity images
+> major release when a new pipeline is over ?
+> semver
+> tagging launches a new deployment (image build & packaging) & release (artifacts are available)
+	- how to prevent someone from tagging ? > save this for maintainers
+	- 
+
+## CI scheme
+
+![Scheme of CI for NARPS open pipelines](/docs/assets/ci-scheme.svg)
+
 ## CI on GitHub
 
 GitHub allows to launch CI workflows using [Actions](https://docs.github.com/en/actions).
