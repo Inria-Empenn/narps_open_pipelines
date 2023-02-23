@@ -4,8 +4,12 @@
 
 ## CI strategies
 
-### Safety
-- code owners for `.github/workflows` et `.gitlab-ci.yml`
+### Security
+
+Following [GitHub good security practices](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions), and in order to avoid malicious code to be run through GitHub Actions workflows.
+
+
+- The [CODEOWNERS](/.github/CODEOWNERS) file assigns "owners" for `.github/workflows` and `.gitlab-ci.yml` (see [CODEOWNERS reference](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)). This prevents unwanted changes to these files that are responsible for the CI-CD workflows.
 - reviewing deployments / environments for CI-CD workflows (for local runners)
 	- environment `Empenn`
 -
@@ -22,7 +26,7 @@
 
 ![Scheme of CI for NARPS open pipelines](/docs/assets/ci-scheme.svg)
 
-## CI on GitHub
+## :octopus: CI on GitHub
 
 GitHub allows to launch CI workflows using [Actions](https://docs.github.com/en/actions).
 
@@ -36,6 +40,6 @@ These worflows are YAML files, located in the `.github/workflows/` directory. Fo
 	* **Where does it run ?** On GitHub servers.
 	* **How can I see the results ?** Outputs (logs of pylint) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push.
 
-## CI on GitLab
+## :fox_face: CI on GitLab
 
 A `.gitlab-ci.yml` file is provided in the repository as an example for contributors who would like to trigger [GitLab CI](https://docs.gitlab.com/ee/ci/) scripts from a [GitLab mirror repository](https://docs.gitlab.com/ee/user/project/repository/mirror/) of their fork of Inria-Empenn/narps_open_pipelines.
