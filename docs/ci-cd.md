@@ -32,12 +32,12 @@ Furthermore, you can always [prevent GitHub from running workflows](https://docs
 
 For now, the following workflows are set up:
 
-| Name | File | What does it do ? | When is it launched ? | Where does it run ? | How can I see the results ? |
+| Name / File | What does it do ? | When is it launched ? | Where does it run ? | How can I see the results ? |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| code_quality | [code_quality.yml](/.github/workflows/code_quality.yml) | A static analysis of the python code (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every push if there are changes on `.py` files. | On GitHub servers. | Outputs (logs of pylint) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push. |
-| pipeline_tests | [pipeline_tests.yml](/.github/workflows/pipelines.yml) | Runs all the tests for changed pipelines. | For every pull request, if a pipeline file changed inside `narps_open/pipelines/`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
-| test_changes | [tests.yml](/.github/workflows/test_changes.yml) | It runs all the changed tests for the project. | For every pull request, if a test file changed inside `tests/`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
-| unit_testing | [unit_testing.yml](/.github/workflows/unit_testing.yml) | It runs all the unit tests for the project (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every pull request, if a file changed inside `narps_open/` other than in `narps_open/pipeline`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
+| [code_quality](/.github/workflows/code_quality.yml) | A static analysis of the python code (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every push if there are changes on `.py` files. | On GitHub servers. | Outputs (logs of pylint) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push. |
+| [pipeline_tests](/.github/workflows/pipelines.yml) | Runs all the tests for changed pipelines. | For every pull request, if a pipeline file changed inside `narps_open/pipelines/`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
+| [test_changes](/.github/workflows/test_changes.yml) | It runs all the changed tests for the project. | For every pull request, if a test file changed inside `tests/`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
+| [unit_testing](/.github/workflows/unit_testing.yml) | It runs all the unit tests for the project (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every pull request, if a file changed inside `narps_open/` other than in `narps_open/pipeline`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
 
 ### Security
 
