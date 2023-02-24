@@ -25,15 +25,15 @@
      inkscape:deskcolor="#505050"
      inkscape:document-units="mm"
      showgrid="true"
-     inkscape:zoom="7.1268238"
-     inkscape:cx="522.95386"
-     inkscape:cy="749.4222"
+     inkscape:zoom="1.2598564"
+     inkscape:cx="364.32725"
+     inkscape:cy="887.40275"
      inkscape:window-width="2560"
      inkscape:window-height="1403"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g22067"><inkscape:grid
+     inkscape:current-layer="layer3"><inkscape:grid
        type="xygrid"
        id="grid8326"
        units="mm"
@@ -415,7 +415,7 @@
            x="-5.4860263"
            y="73.811279">fork contributor/narps_open_pipelines</tspan></text></g><path
        style="fill:none;stroke:#88aa00;stroke-width:0.4;stroke-linejoin:round;stroke-dasharray:none;marker-end:url(#TriangleStart)"
-       d="M 90,65 C 95,50 75,50 80,65"
+       d="M 50,30 C 55,15 35,15 40,30"
        id="path1633"
        sodipodi:nodetypes="cc" /><g
        id="g22067"
@@ -462,7 +462,7 @@
            y="136.06715"
            id="tspan21787-7">docs</tspan></text></g><g
        id="g6263"
-       transform="translate(-54.778145,-42.480469)"><rect
+       transform="translate(-54.778145,-57.480469)"><rect
          style="fill:none;stroke:#333333;stroke-width:0.2;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0"
          id="rect3644-9"
          width="20"
@@ -480,8 +480,8 @@
            x="79.693474"
            y="158.15604"
            id="tspan1066">code_quality</tspan></text></g><path
-       style="fill:none;stroke:#c83737;stroke-width:0.4;stroke-linejoin:round;stroke-dasharray:0.4, 1.2;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#TriangleStart)"
-       d="M 85,75 C 85,90 25,90 25,105"
+       style="fill:none;stroke:#88aa00;stroke-width:0.4;stroke-linejoin:round;stroke-dasharray:0.4, 1.2;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#TriangleStart)"
+       d="M 45,40 C 45,55 25,75 25,90"
        id="path3766"
        sodipodi:nodetypes="cc" /><use
        x="0"
@@ -641,8 +641,7 @@
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="Legend"
-     style="display:inline"
-     sodipodi:insensitive="true"><text
+     style="display:inline"><text
        xml:space="preserve"
        style="font-size:3.52777px;font-family:'Latin Modern Mono';-inkscape-font-specification:'Latin Modern Mono';text-align:justify;fill:#333333;stroke:none;stroke-width:0.2;stroke-linejoin:round;stroke-dasharray:0.2, 0.600001;stroke-dashoffset:0;stroke-opacity:1"
        x="5"
@@ -722,7 +721,7 @@
          id="tspan6340-4-6-3-6-7"
          style="stroke-width:0.2"
          x="160"
-         y="275">review needed</tspan></text><text
+         y="275">approval needed</tspan></text><text
        xml:space="preserve"
        style="font-size:3.52777px;font-family:'Latin Modern Mono';-inkscape-font-specification:'Latin Modern Mono';text-align:justify;fill:#333333;stroke:none;stroke-width:0.2;stroke-linejoin:round;stroke-dasharray:0.2, 0.600001;stroke-dashoffset:0;stroke-opacity:1"
        x="20"
