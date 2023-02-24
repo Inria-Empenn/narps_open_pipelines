@@ -1,0 +1,70 @@
+## Disclaimer - This GitHub Actions workflow runs all the tests for changed pipelines.
+
+# Name the workflow
+name: pipeline_tests
+
+# Define when it runs (on PR when code for a pipeline changes)
+on:
+  pull_request:
+    paths:
+      - 'narps_open/pipelines/**'
+
+# Jobs that define the workflow
+jobs:
+
+  # A job to list the tests to be run
+  identify-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.identify.outputs.tests }}
+    steps:
+    - name: Checkout main branch for comparison
+      uses: actions/checkout@v3
+      with:
+        ref: main
+        fetch-depth: 0
+
+    - name: Checkout current branch
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Create a list of tests for changed pipelines
+      id: identify
+      run: |
+        # Loop through modified files
+        for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
+        do
+          # List team id corresponding to team_* files
+          if [[ "$file" =~ .*"narps_open/pipelines/team_".* ]]; then
+            echo "Modified pipeline = $file"
+            tmp=${file#*"team_"} # remove prefix ending in "team_"
+            team_id=${tmp%".py"*}   # remove suffix starting with ".py"
+            # Populate the list of test files
+            test_files="$test_files tests/pipelines/test_team_$team_id.py"
+          fi
+        done
+        # Send the test list as job output
+        echo "tests=$test_files" >> $GITHUB_OUTPUT
+
+  # A job to run the identified tests
+  pytest:
+    needs: identify-tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install .
+
+    - name: Collect tests with pytest
+      run: pytest --collect-only -q ${{ needs.identify-tests.outputs.tests }}

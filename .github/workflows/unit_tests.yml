@@ -1,0 +1,39 @@
+## Disclaimer - This GitHub Actions workflow runs all the unit tests for the project.
+
+# Name the workflow
+name: unit_testing
+
+# Define when it runs (on PR when narps_open files change)
+on:
+  pull_request:
+    paths:
+      - 'narps_open/**'
+      - '!narps_open/pipelines/**'
+
+# Jobs that define the workflow
+jobs:
+  # Name of the job running unit tests
+  pytest:
+
+    # Define the runner for this job
+    runs-on: ubuntu-latest
+
+    # Steps that define the job
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install .
+
+    - name: Collect tests with pytest
+      run: |
+        pytest --collect-only -q --ignore=tests/pipelines/ tests/

@@ -1,0 +1,154 @@
+## Disclaimer - This GitLab CI script allow contributors to perform CI on 
+
+# We assume the runner uses Docker as executor
+# We assume that the following images are available on the system :
+#   - elodiegermani/open_pipeline
+
+default:
+  # Run all scripts in a docker container based on this image
+  image: elodiegermani/open_pipeline
+
+before_script:
+  # Activate conda virtual environment
+  - source activate neuro
+
+  # Install the narps_open python package from the source code
+  - pip install .
+
+stages:
+  - code_quality
+  - testing
+
+# Static analysis of the project's code
+pylint_job:
+  stage: code_quality
+  script:
+    # Install pylint
+    - pip install pylint
+
+    # Run pylint
+    - pylint --exit-zero narps_open > pylint_report_narps_open.txt
+    - pylint --exit-zero tests > pylint_report_tests.txt
+
+  artifacts:
+    when: always
+    paths:
+      - pylint_report_narps_open.txt
+      - pylint_report_tests.txt
+      - todos_narps_open.txt
+      - todos_tests.txt
+
+# Running tests for narps_open (except pipelines)
+unit_tests-job:
+  stage: testing
+  script:
+    # Install pytest & coverage
+    - pip install pytest pytest-cov
+
+    # Run tests and produce reports
+    - coverage run -m pytest --junit-xml=pytest_report.xml --ignore=tests/pipelines/ tests/
+    - coverage report
+    - coverage xml
+
+  artifacts:
+    when: on_success
+    reports:
+      junit: pytest_report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+  rules:
+    # If something changed in narps_open (except in narps_open/pipelines)
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - 'narps_open/(?!pipelines)*'
+
+# Running tests for pipelines
+pipeline_tests-job:
+  stage: testing
+  variables:
+    PIPELINES_TEST_FILES : ""
+    #GIT_STRATEGY: clone # So that we can access the main branch for git diff purpose
+  script:
+    # Install pytest & coverage
+    - pip install pytest pytest-cov
+
+    - git switch main
+    - git switch $CI_COMMIT_BRANCH
+
+    # List test files corresponding to modified files
+    - |
+      for file in $(git diff --name-only origin/main...$CI_COMMIT_BRANCH)
+      do
+        if [[ "$file" =~ .*"pipeline".* ]]; then
+          echo "Modified pipeline = $file"
+
+          tmp=${file#*"team_"} # remove prefix ending in "team_"
+          team_id=${tmp%".py"*}   # remove suffix starting with ".py"
+
+          PIPELINES_TEST_FILES="$PIPELINES_TEST_FILES tests/pipelines/test_team_$team_id.py"
+        fi
+      done
+
+    - echo "$PIPELINES_TEST_FILES"
+
+    # Run tests and produce reports
+    - coverage run -m pytest --junit-xml=pytest_report.xml "$PIPELINES_TEST_FILES"
+    - coverage report
+    - coverage xml
+
+  artifacts:
+    when: on_success
+    reports:
+      junit: pytest_report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+  rules:
+    # If something changed in narps_open/pipelines
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - 'narps_open/pipelines*'
+
+# Running tests that changed
+test_changes-job:
+  stage: testing
+  variables:
+    TEST_FILES : ""
+    #GIT_STRATEGY: clone # So that we can access the main branch for git diff purpose
+  script:
+    # Install pytest & coverage
+    - pip install pytest pytest-cov
+
+    - git switch main
+    - git switch $CI_COMMIT_BRANCH
+
+    # List test files corresponding to modified files
+    - TEST_FILES=$(git diff --name-only origin/main...$CI_COMMIT_BRANCH)
+
+    # Run tests and produce reports
+    - coverage run -m pytest --junit-xml=pytest_report.xml "$TEST_FILES"
+    - coverage report
+    - coverage xml
+
+  artifacts:
+    when: on_success
+    reports:
+      junit: pytest_report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+  rules:
+    # If something changed in narps_open/pipelines
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - 'tests/*'
