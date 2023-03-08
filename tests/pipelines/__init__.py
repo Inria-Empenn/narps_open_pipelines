@@ -38,6 +38,21 @@ def test_pipeline(team_id: str, dataset_dir: str, results_dir: str, nb_subjects:
         ]
 
 
+# Example paths for reference data 2T6S
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo1_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo2_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo3_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo4_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo5_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo6_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo7_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo8_unthresh'
+'https://neurovault.org/collections/4881/NARPS-2T6S/hypo9_unthresh'
+
+# Need a conversion between pipeline's output data and reference data
+#  > each pipeline must implement a convertor or always store data the same way
+
+
 
 ### This function can be used as follows:
 assert test_pipeline('2T6S', '/data/', '/output/', 4) > .5
