@@ -49,6 +49,7 @@ class TestUtilsConfiguration:
         assert configuration['preprocessing.motion'] == '6'
         assert configuration['analysis.RT_modeling'] == 'duration'
         assert configuration['categorized_for_analysis.analysis_SW_with_version'] == 'SPM12'
+        assert configuration['derived.func_fwhm'] == '8'
 
         # 4 - Check properties
         assert isinstance(configuration.general, dict)
@@ -56,6 +57,7 @@ class TestUtilsConfiguration:
         assert isinstance(configuration.preprocessing, dict)
         assert isinstance(configuration.analysis, dict)
         assert isinstance(configuration.categorized_for_analysis, dict)
+        assert isinstance(configuration.derived, dict)
 
         assert list(configuration.general.keys()) == [
             'teamID',
@@ -74,6 +76,7 @@ class TestUtilsConfiguration:
         assert configuration.preprocessing['motion'] == '6'
         assert configuration.analysis['RT_modeling'] == 'duration'
         assert configuration.categorized_for_analysis['analysis_SW_with_version'] == 'SPM12'
+        assert configuration.derived['func_fwhm'] == '8'
 
         # 6 - Test another team
         configuration = TeamConfiguration('9Q6R')
