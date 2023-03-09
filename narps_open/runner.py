@@ -11,6 +11,7 @@ from pathlib import Path
 from nipype import Workflow
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
+from narps_open.utils import get_all_participants, get_participants
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -37,9 +38,10 @@ class PipelineRunner():
     def subjects(self, value: list) -> None:
         """ Setter for property subjects """
 
-        for subject in value:
-            if int(subject) > 108:
-                raise AttributeError(f'Subject ID {subject} is not in the range [1:108]')
+        all_participants = get_all_participants()
+        for subject_id in value:
+            if str(int(subject_id)).zfill(3) not in all_participants:
+                raise AttributeError(f'Subject ID {subject_id} is not valid')
 
         self._pipeline.subject_list = list(dict.fromkeys(
             [str(int(subject_id)).zfill(3) for subject_id in value])) # remove duplicates
@@ -48,9 +50,7 @@ class PipelineRunner():
     def random_nb_subjects(self, value: int) -> None:
         """ Setter for property random_nb_subjects """
         # Generate a random list of subjects
-        self._pipeline.subject_list = choices(
-            [str(subject_id).zfill(3) for subject_id in range(1,109)], # a list of all subjects
-            k = value)
+        self._pipeline.subject_list = choices(get_participants(self.team_id), k = value)
 
     @property
     def team_id(self) -> str:
