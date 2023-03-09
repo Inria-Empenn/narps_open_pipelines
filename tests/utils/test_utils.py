@@ -1,6 +1,5 @@
 from narps_open.utils import return_team_config
 
-
 def test_return_team_config():
 
     team_ID = "9Q6R"
@@ -12,7 +11,6 @@ def test_return_team_config():
     assert cfg["directories"]["output"] == "NARPS-9Q6R-reproduced"
 
     assert "018" not in cfg["subject_list"]
-
 
 def test_return_team_config_default():
 

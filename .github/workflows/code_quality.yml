@@ -1,0 +1,48 @@
+# Name the workflow
+name: code_quality
+
+# Define when it runs (on pushes when python files change)
+on:
+  push:
+    paths:
+      - '**.py'
+
+# Jobs that define the workflow
+jobs:
+  # Name of the job running pylint
+  pylint:
+
+    # Define the OS and the python versions to use
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
+
+    # Steps that define the job
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pylint
+
+    - name: Analyse the code with pylint
+      run: |
+        pylint --exit-zero narps_open > pylint_report_narps_open.txt
+        pylint --exit-zero tests > pylint_report_narps_open.txt
+
+    - name: Archive pylint results
+      uses: actions/upload-artifact@v3
+      with:
+        name: pylint-reports-python${{ matrix.python-version }}
+        path: |
+          pylint_report_narps_open.txt
+          pylint_report_tests.txt
+        retention-days: 15

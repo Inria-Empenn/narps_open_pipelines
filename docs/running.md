@@ -1,4 +1,4 @@
-# How to run NARPS open pipelines ? :running:
+# :running: How to run NARPS open pipelines ?
 
 ## Using the `PipelineRunner`
 
