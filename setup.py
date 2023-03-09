@@ -41,7 +41,7 @@ setup(
     },
     packages = find_packages(exclude=('tests', 'examples')),
     data_files = [
-        ('narps_open/pipelines', ['narps_open/pipelines/analysis_pipelines_config.tsv']),
+        ('narps_open/pipelines', ['narps_open/pipelines/analysis_pipelines_derived_configuration.tsv']),
         ('narps_open/pipelines', ['narps_open/pipelines/analysis_pipelines_full_configuration.tsv'])
     ]
 )

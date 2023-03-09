@@ -18,6 +18,9 @@ class TeamConfiguration(dict):
     configuration_file = join(
         files('narps_open.pipelines'),
         'analysis_pipelines_full_configuration.tsv')
+    derived_configuration_file = join(
+        files('narps_open.pipelines'),
+        'analysis_pipelines_derived_configuration.tsv')
 
     def __init__(self, team_id):
         super().__init__()
@@ -49,6 +52,11 @@ class TeamConfiguration(dict):
         """ Getter for the sub dictionary categorized_for_analysis """
         return self._get_sub_dict('categorized_for_analysis')
 
+    @property
+    def derived(self) -> dict:
+        """ Getter for the sub dictionary containing derived team configuration """
+        return self._get_sub_dict('derived')
+
     def _get_sub_dict(self, key_first_part:str) -> dict:
         """ Return a sub-dictionary of self, with keys that contain key_first_part.
             The first part of the keys are removed, e.g.:
@@ -62,11 +70,12 @@ class TeamConfiguration(dict):
             }
 
     def _load(self):
-        """ Load the contents of TeamConfiguration from the csv file.
+        """ Load the contents of TeamConfiguration from the csv files.
 
-            In this method, we parse the first two line of the csv file: these lines are the
-            identifiers for each column of the file. NB: first line is the identifier of a group
-            of columns. We transform the information in the two first lines as keys for the
+            In this method, we parse the first two line of the csv configuration_file.
+            These lines are the identifiers for each column of the file.
+            NB: first line is the identifier of a group of columns.
+            We transform the information in the two first lines as keys for the
             dictionary, so that the key is in the form :
                 'first_line_identifier.second_line_identifier'
 
@@ -75,8 +84,16 @@ class TeamConfiguration(dict):
                 'analysis.multiple_testing_correction'
                 'categorized_for_analysis.smoothing_coef'
                 ...
+
+            Furthermore, we parse the csv derived_configuration_file.
+            The first line of this file being already a second level identifier,
+            the firest level identifier will always be 'derived'.
+
+            This gives -for example- the following key for the dictionary:
+                'derived.n_participants'
         """
 
+        # Parsing first file : self.configuration_file
         with open(self.configuration_file, newline='', encoding='utf-8') as csv_file:
             # Prepare first line (whose elements are first part of the keys)
             first_line = csv_file.readline().lower().replace('\n','').split('\t')
@@ -95,13 +112,42 @@ class TeamConfiguration(dict):
                 )
 
             # Update self with the key/value pairs from the corresponding line of the file
+            found = False
             for row in reader:
                 if row['general.teamID'] == self.team_id:
+                    found = True
                     self.update(row)
-                    return
-    
+                    break
+
             # If team id was not found in the file
-            raise AttributeError(f'Team {self.team_id} was not found in the configuration.')
+            if not found:
+                raise AttributeError(f'Team {self.team_id} was not found in the configuration.')
+
+        # Parsing second file : self.derived_configuration_file
+        with open(self.derived_configuration_file, newline='', encoding='utf-8') as csv_file:
+            # Prepare first line (whose elements are second part of the keys)
+            first_line = csv_file.readline().replace('\n','').split('\t')
+
+            # Read the rest of the file as a dict
+            reader = DictReader(
+                csv_file,
+                fieldnames = ['derived.' + k2 for k2 in first_line],
+                delimiter = '\t'
+                )
+
+            # Update self with the key/value pairs from the file
+            found = False
+            for row in reader:
+                if row['derived.teamID'] == self.team_id:
+                    found = True
+                    row.pop('derived.teamID', None) # Remove useless 'derived.teamID' key
+                    self.update(row)
+                    break
+
+            # If team id was not found in the file
+            if not found:
+                raise AttributeError(f'Team {self.team_id}\
+                    was not found in the derived configuration.')
 
 if __name__ == '__main__':
 
@@ -110,7 +156,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID')
     parser.add_argument('-d', '--dictionary', type=str, required=False,
-        choices=['general', 'exclusions', 'preprocessing', 'analysis', 'categorized_for_analysis'],
+        choices=[
+            'general',
+            'exclusions',
+            'preprocessing',
+            'analysis',
+            'categorized_for_analysis',
+            'derived'
+            ],
         help='the sub dictionary of team information')
     arguments = parser.parse_args()
 
@@ -127,5 +180,7 @@ if __name__ == '__main__':
         print(dumps(information.analysis, indent = 4))
     elif arguments.dictionary == 'categorized_for_analysis':
         print(dumps(information.categorized_for_analysis, indent = 4))
+    elif arguments.dictionary == 'derived':
+        print(dumps(information.derived, indent = 4))
     else:
         print(dumps(information, indent = 4))

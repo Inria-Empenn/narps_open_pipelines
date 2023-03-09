@@ -1,25 +1,41 @@
-from narps_open.utils import return_team_config
+#!/usr/bin/python
+# coding: utf-8
 
+""" Tests of the 'narps_open.utils' module.
 
-def test_return_team_config():
+Launch this test with PyTest
 
-    team_ID = "9Q6R"
-    cfg = return_team_config(team_ID)
+Usage:
+======
+    pytest -q test_utils.py
+    pytest -q test_utils.py -k <selected_test>
+"""
 
-    assert cfg["teamID"] == "9Q6R"
-    assert cfg["excluded_participants"] == ["018", "030", "088", "100"]
-    assert cfg["func_fwhm"] == 5
-    assert cfg["directories"]["output"] == "NARPS-9Q6R-reproduced"
+from narps_open.utils import get_all_participants, get_participants
 
-    assert "018" not in cfg["subject_list"]
+class TestUtils:
+    """ A class that contains all the unit tests for the utils module."""
 
+    @staticmethod
+    def test_get_all_participants():
+        """ Test the get_all_participants function """
+        participants_list = get_all_participants()
+        assert len(participants_list) == 108
+        assert '001' in participants_list
+        assert '105' in participants_list
+        assert '123' in participants_list
 
-def test_return_team_config_default():
+    @staticmethod
+    def test_get_participants():
+        """ Test the get_participants function """
 
-    team_ID = None
-    cfg = return_team_config(team_ID)
+        # Team 2T6S includes all participants
+        participants_list = get_participants('2T6S')
+        assert len(participants_list) == 108
 
-    assert cfg["teamID"] is None
-    assert cfg["excluded_participants"] is None
-    assert cfg["func_fwhm"] is None
-    assert cfg["directories"]["output"] == "NARPS-None-reproduced"
+        # Team C88N excludes some participants
+        participants_list = get_participants('C88N')
+        assert len(participants_list) == 106
+        assert '001' in participants_list
+        assert '076' not in participants_list
+        assert '117' not in participants_list
