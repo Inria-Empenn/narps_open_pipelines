@@ -5,10 +5,10 @@ name: test_changes
 
 # Define when it runs (on PR when a test changes)
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'tests/**'
-  workflow_dispatch:
 
 # Jobs that define the workflow
 jobs:

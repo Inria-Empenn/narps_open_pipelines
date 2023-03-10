@@ -5,10 +5,10 @@ name: code_quality
 
 # Define when it runs (on pushes when python files change)
 on:
+  workflow_dispatch:
   push:
     paths:
       - '**.py'
-  workflow_dispatch:
 
 # Jobs that define the workflow
 jobs:

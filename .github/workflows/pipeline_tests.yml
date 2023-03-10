@@ -5,10 +5,10 @@ name: pipeline_tests
 
 # Define when it runs (on PR when code for a pipeline changes)
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'narps_open/pipelines/**'
-  workflow_dispatch:
 
 # Jobs that define the workflow
 jobs:
