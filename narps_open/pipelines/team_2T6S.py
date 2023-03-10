@@ -3,8 +3,6 @@
 
 """ Write the work of NARPS' team 2T6S using Nipype """
 
-# TODO : remove this comment
-
 from os.path import join
 
 from nipype import Workflow, Node, MapNode
