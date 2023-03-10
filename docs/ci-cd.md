@@ -39,6 +39,10 @@ For now, the following workflows are set up:
 | [test_changes](/.github/workflows/test_changes.yml) | It runs all the changed tests for the project. | For every pull request, if a test file changed inside `tests/`. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
 | [unit_testing](/.github/workflows/unit_testing.yml) | It runs all the unit tests for the project (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every push, if a file changed inside `narps_open/`. | On GitHub servers. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
 
+### Cache
+
+In order to avoid downloading dependencies at each package install launched by a CI workflow, the dependencies installed via pip are cached by GitHub, using the [cache action](https://github.com/actions/cache). The hash of the `setup.py` file is part of the cache name, allowing to create an new cache for each new version of the file (hence for each change of dependencies).
+
 ### Security
 
 We take these precautions following [GitHub good security practices](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions), and in order to avoid malicious code to be run through GitHub Actions workflows.
