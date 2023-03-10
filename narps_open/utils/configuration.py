@@ -3,6 +3,8 @@
 
 """ Accessing information about teams from the analysis_pipelines_full_configuration.tsv file """
 
+# TODO : remove this comment
+
 from os.path import join
 from csv import DictReader
 from argparse import ArgumentParser
