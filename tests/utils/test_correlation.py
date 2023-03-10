@@ -11,8 +11,6 @@ Usage:
     pytest -q test_correlation.py -k <selected_test>
 """
 
-# TODO : remove this comment
-
 from os import remove
 from os.path import exists
 from math import isclose
