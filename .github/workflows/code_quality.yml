@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - '**.py'
+  workflow_dispatch:
 
 # Jobs that define the workflow
 jobs:
