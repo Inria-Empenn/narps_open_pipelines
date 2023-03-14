@@ -136,20 +136,22 @@ class TestPipelineRunner:
             assert isinstance(subject, str)
             assert len(subject) == 3
             assert int(subject) > 0
-            assert int(subject) < 109
+            assert int(subject) < 125
 
         # 2 - fixed list
         # Check subject ids too high
         with raises(AttributeError):
-            runner.subjects = ['120', '042']
+            runner.subjects = ['125', '043']
+        with raises(AttributeError):
+            runner.subjects = ['120', '048']
 
         # Check duplicate subject ids are removed
-        runner.subjects = ['043', '042', '042', '045']
-        assert runner.subjects == ['043', '042', '045']
+        runner.subjects = ['043', '022', '022', '045']
+        assert runner.subjects == ['043', '022', '045']
 
         # Check formatting
-        runner.subjects = [42, '00042', '0043', 45]
-        assert runner.subjects == ['042', '043', '045']
+        runner.subjects = [22, '00022', '0043', 45]
+        assert runner.subjects == ['022', '043', '045']
 
     @staticmethod
     def test_start_nok():
