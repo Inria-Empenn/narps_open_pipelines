@@ -43,7 +43,6 @@ def test_pipeline(
     """
 
     # Initialize the pipeline
-    """
     runner = PipelineRunner(team_id)
     runner.random_nb_subjects = nb_subjects
     runner.pipeline.directories.dataset_dir = dataset_dir
@@ -51,16 +50,14 @@ def test_pipeline(
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
     runner.start()
-    """
 
     # Retrieve the paths to the computed files
     output_files = [
         join(
-            #runner.pipeline.directories.output_dir,
-            '/home/bclenet/output',
+            runner.pipeline.directories.output_dir,
             'NARPS-reproduction',
-            f'team_2T6S_nsub_{nb_subjects}_hypo{hypothesis}_unthresholded.nii')
-            #f'team-2T6S_nsub-{nb_subjects}_hypo-{hypothesis}_unthresholded.nii')
+            f'team-2T6S_nsub-{nb_subjects}_hypo-{hypothesis}_unthresholded.nii'
+            )
         for hypothesis in range(1, 10)
         ]
 
@@ -69,7 +66,8 @@ def test_pipeline(
         join(
             references_dir,
             f'NARPS-{team_id}',
-            f'hypo{hypothesis}_unthresholded.nii.gz')
+            f'hypo{hypothesis}_unthresholded.nii.gz'
+            )
         for hypothesis in range(1, 10)
         ]
 
