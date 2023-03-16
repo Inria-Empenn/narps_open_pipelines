@@ -3,11 +3,15 @@
 # Name the workflow
 name: unit_testing
 
-# Define when it runs (on pushes when narps_open files change)
+# Define when it runs
 on:
-  push:
+  [push, pull_request]:
     paths:
       - 'narps_open/**'
+      - 'setup.py'
+      - 'setup.cfg'
+      - 'pytest.ini'
+      - 'tests/conftest.py'
 
 # Jobs that define the workflow
 jobs:

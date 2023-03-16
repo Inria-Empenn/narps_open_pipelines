@@ -3,11 +3,11 @@
 # Name the workflow
 name: test_changes
 
-# Define when it runs (on PR when a test changes)
+# Define when it runs
 on:
-  pull_request:
+  [push, pull_request]:
     paths:
-      - 'tests/**'
+      - 'tests/**/test_*.py'
 
 # Jobs that define the workflow
 jobs:

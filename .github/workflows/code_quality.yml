@@ -3,9 +3,9 @@
 # Name the workflow
 name: code_quality
 
-# Define when it runs (on pushes when python files change)
+# Define when it runs
 on:
-  push:
+  [push, pull_request]:
     paths:
       - '**.py'
 

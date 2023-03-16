@@ -3,9 +3,9 @@
 # Name the workflow
 name: pipeline_tests
 
-# Define when it runs (on PR when code for a pipeline changes)
+# Define when it runs
 on:
-  pull_request:
+  [push, pull_request]:
     paths:
       - 'narps_open/pipelines/team**'
 
