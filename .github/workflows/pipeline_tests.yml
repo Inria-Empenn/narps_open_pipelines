@@ -35,6 +35,8 @@ jobs:
         # Loop through modified files
         for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
         do
+          # echo each file
+          echo $file
           # List team id corresponding to team_* files
           if [[ "$file" =~ .*"narps_open/pipelines/team_".* ]]; then
             echo "Modified pipeline = $file"

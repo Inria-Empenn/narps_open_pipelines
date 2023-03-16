@@ -45,8 +45,8 @@ jobs:
         # Loop through modified files
         for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
         do
-          # List files corresponding to *test_*
-          if [[ "$file" =~ .*"test_".* ]]; then
+          # List files corresponding to tests/**/test_**.py
+          if [[ "$file" =~ .*"tests".*"test_".*".py" ]]; then
             test_files="$test_files $file"
           fi
         done
