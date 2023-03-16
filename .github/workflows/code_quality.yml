@@ -5,7 +5,10 @@ name: code_quality
 
 # Define when it runs
 on:
-  [push, pull_request]:
+  push:
+    paths:
+      - '**.py'
+  pull_request:
     paths:
       - '**.py'
 

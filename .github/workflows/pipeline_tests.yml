@@ -5,7 +5,10 @@ name: pipeline_tests
 
 # Define when it runs
 on:
-  [push, pull_request]:
+  push:
+    paths:
+      - 'narps_open/pipelines/team**'
+  pull_request:
     paths:
       - 'narps_open/pipelines/team**'
 

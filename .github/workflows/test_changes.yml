@@ -5,7 +5,10 @@ name: test_changes
 
 # Define when it runs
 on:
-  [push, pull_request]:
+  push:
+    paths:
+      - 'tests/**/test_*.py'
+  pull_request:
     paths:
       - 'tests/**/test_*.py'
 

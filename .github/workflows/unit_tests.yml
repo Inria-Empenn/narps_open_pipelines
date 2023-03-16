@@ -5,7 +5,14 @@ name: unit_testing
 
 # Define when it runs
 on:
-  [push, pull_request]:
+  push:
+    paths:
+      - 'narps_open/**'
+      - 'setup.py'
+      - 'setup.cfg'
+      - 'pytest.ini'
+      - 'tests/conftest.py'
+  pull_request:
     paths:
       - 'narps_open/**'
       - 'setup.py'
