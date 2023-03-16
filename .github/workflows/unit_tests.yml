@@ -5,13 +5,13 @@ name: unit_testing
 
 # Define when it runs (on pushes when narps_open files change)
 on:
-  workflow_dispatch:
   push:
     paths:
       - 'narps_open/**'
 
 # Jobs that define the workflow
 jobs:
+
   # Name of the job running unit tests
   pytest:
 

@@ -5,7 +5,6 @@ name: test_changes
 
 # Define when it runs (on PR when a test changes)
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'tests/**'
@@ -43,7 +42,17 @@ jobs:
     - name: Create a list of tests for changed tests
       id: identify
       run: |
-        echo "tests=$(git diff --name-only remotes/origin/main...$GITHUB_SHA)" >> $GITHUB_OUTPUT
+        # Loop through modified files
+        for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
+        do
+          # List files corresponding to *test_*
+          if [[ "$file" =~ .*"test_".* ]]; then
+            test_files="$test_files $file"
+          fi
+        done
+        # Send the test list as step output
+        echo $test_files
+        echo "tests=$test_files" >> $GITHUB_OUTPUT
 
     - name: Install dependencies
       run: |
