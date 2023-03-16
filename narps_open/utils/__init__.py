@@ -7,7 +7,7 @@ from os.path import join, abspath, dirname, realpath
 
 import pandas as pd
 
-from narps_open.utils.configuration import TeamConfiguration
+from narps_open.utils.description import TeamDescription
 
 def participants_tsv():
 
@@ -42,8 +42,8 @@ def get_participants(team_id: str) -> list:
 
     Returns: a list of participants labels
     """
-    configuration = TeamConfiguration(team_id)
-    excluded_participants = configuration.derived['excluded_participants'].replace(' ','').split(',')
+    description = TeamDescription(team_id)
+    excluded_participants = description.derived['excluded_participants'].replace(' ','').split(',')
 
     return [p for p in get_all_participants() if p not in excluded_participants]
 
