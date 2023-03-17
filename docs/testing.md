@@ -43,7 +43,7 @@ We use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) t
 
 | Type of test | marker | Description |
 | ----------- | ----------- | ----------- |
-| unit tests | no marker applied (default type of test) | Unitary test a method/function |
+| unit tests | `unit_test` | Unitary test a method/function |
 | pipeline tests | `pieline_test` | These tests compute whole pipeline one or several times making them time and resources consuming. |
 
 ## Writing tests
