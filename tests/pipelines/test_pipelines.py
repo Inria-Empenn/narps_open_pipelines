@@ -11,7 +11,7 @@ Usage:
     pytest -q test_pipelines.py -k <selected_test>
 """
 
-from pytest import raises
+from pytest import raises, mark
 
 from narps_open.pipelines import (
     PipelineDirectories,

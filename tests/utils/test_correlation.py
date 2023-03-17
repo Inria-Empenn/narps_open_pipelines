@@ -15,7 +15,7 @@ from os import remove
 from os.path import exists
 from math import isclose
 
-from pytest import raises, fixture
+from pytest import raises, fixture, mark
 from nibabel import Nifti1Image, save
 from numpy import nan, isnan, eye, zeros, full
 
