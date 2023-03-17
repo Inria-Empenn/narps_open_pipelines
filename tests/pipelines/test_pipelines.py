@@ -47,6 +47,7 @@ class TestPipelineDirectories:
     """ A class that contains all the unit tests for the PipelineDirectories class."""
 
     @staticmethod
+    @mark.unit_test
     def test_create():
         """ Test the creation of a PipelineDirectories object """
 
@@ -67,6 +68,7 @@ class TestPipelineDirectories:
         assert pipeline_dir.output_dir == 'test_o'
 
     @staticmethod
+    @mark.unit_test
     def test_alternative_setters():
         """ Test the alternatives setters of PipelineDirectories """
 
@@ -92,6 +94,7 @@ class TestPipelines:
     """ A class that contains all the unit tests for the Pipeline class."""
 
     @staticmethod
+    @mark.unit_test
     def test_create():
         """ Test the creation of a Pipeline object """
 
@@ -125,6 +128,7 @@ class TestUtils:
     """ A class that contains all the unit tests for the utils in module pipelines."""
 
     @staticmethod
+    @mark.unit_test
     def test_utils():
         """ Test the utils methods of PipelineRunner """
         # 1 - Get number of not implemented pipelines

@@ -19,6 +19,7 @@ class TestUtilsDescription:
     """ A class that contains all the unit tests for the description module."""
 
     @staticmethod
+    @mark.unit_test
     def test_creation():
         """ Test the creation of a TeamDescription object """
 
@@ -34,6 +35,7 @@ class TestUtilsDescription:
         assert TeamDescription('2T6S') is not None
 
     @staticmethod
+    @mark.unit_test
     def test_arguments_properties():
         """ Test the arguments and properties of a TeamDescription object """
 

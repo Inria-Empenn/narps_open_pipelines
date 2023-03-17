@@ -22,6 +22,7 @@ class TestPipelinesTeam2T6S:
     """ A class that contains all the unit tests for the PipelineTeam2T6S class."""
 
     @staticmethod
+    @mark.unit_test
     def test_create():
         """ Test the creation of a PipelineTeam2T6S object """
 

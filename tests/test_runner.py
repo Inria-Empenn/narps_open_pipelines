@@ -95,6 +95,7 @@ class TestPipelineRunner:
     """ A class that contains all the unit tests for the PipelineRunner class."""
 
     @staticmethod
+    @mark.unit_test
     def test_create():
         """ Test the creation of a PipelineRunner object """
 
@@ -120,6 +121,7 @@ class TestPipelineRunner:
             runner.team_id = '08MQ'
 
     @staticmethod
+    @mark.unit_test
     def test_subjects():
         """ Test the PipelineRunner features of building subject lists """
         runner = PipelineRunner('2T6S')
@@ -154,6 +156,7 @@ class TestPipelineRunner:
         assert runner.subjects == ['022', '043', '045']
 
     @staticmethod
+    @mark.unit_test
     def test_start_nok():
         """ Test error cases for the start method of PipelineRunner """
         # 1 - test starting a pipeline with no subject settings
@@ -180,6 +183,7 @@ class TestPipelineRunner:
             runner.start()
 
     @staticmethod
+    @mark.unit_test
     def test_start_ok():
         """ Test normal usecases of PipelineRunner """
         # 1 - test starting a pipeline where everything ok
