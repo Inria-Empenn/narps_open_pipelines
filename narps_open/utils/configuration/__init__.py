@@ -3,41 +3,60 @@
 
 """ Allow access to the configuration for the narps_open project. """
 
-from os import path
-from configparser import ConfigParser, ExtendedInterpolation
+from os.path import join
 from importlib_resources import files
+
+from tomli import load
 
 from narps_open.utils.singleton import SingletonMeta
 
-class Configuration(metaclass=SingletonMeta):
+class Configuration(dict, metaclass=SingletonMeta):
     """ This class allows to access project configuration files """
 
-    def __init__(self):
+    def __init__(self, config_type: str = 'default'):
         super().__init__()
 
-        # Import configuration
-        self._configuration = ConfigParser(interpolation=ExtendedInterpolation())
-        self._configuration_type = config_type
+        # Set configuration type
+        self._config_type = config_type
 
-        # Select configuration file
+        # Select configuration file from config_type
         file_name = ''
-        if self._configuration_type == 'testing':
-            file_name = 'test_config.ini'
-        elif self._configuration_type == 'preproduction':
-            file_name = 'preprod_config.ini'
-        elif self._configuration_type == 'production':
-            file_name = 'prod_config.ini'
+        self._project_config_path = files('narps_open.utils.configuration')
+        if self._config_type == 'default':
+            file_name = join(self._project_config_path, 'default_config.toml')
+        elif self._config_type == 'testing':
+            file_name = join(self._project_config_path, 'testing_config.toml')
+        elif self._config_type == 'custom':
+            # a configuration file must be passed at execution time
+            pass
         else:
-            raise AttributeError(f'{self._configuration_type} is not a valid configuration type.')
+            raise AttributeError(f'Unknown configuration type: {self._config_type}')
 
-        # Parse configuration file
-        file = files('narps_open.utils.configuration').joinpath(file_name)
-        self._configuration.read(file, encoding = 'utf8')
+        if file_name != '':
+            # It is important to use the property setter here, so that the dict self is updated
+            self.config_file = file_name
 
-    def get(self, *args, **kwargs):
-        """ Using ConfigParser's get() method """
-        return self._configuration.get(*args, **kwargs)
+    @property
+    def config_type(self) -> str:
+        """ Getter for property config_type """
+        return self._config_type
 
-    def getboolean(self, *args, **kwargs):
-        """ Using ConfigParser's getboolean() method """
-        return self._configuration.getboolean(*args, **kwargs)
+    @config_type.setter
+    def config_type(self, value: str) -> None:
+        """ Setter for property config_type """
+        self._config_type = value
+
+    @property
+    def config_file(self) -> str:
+        """ Getter for property config_file """
+        return self._config_file
+
+    @config_file.setter
+    def config_file(self, value: str) -> None:
+        """ Setter for property config_file """
+        self._config_file = value
+
+        # Update configuration using this new file
+        with open(self._config_file, 'rb') as file:
+            self.clear()
+            self.update(load(file))
