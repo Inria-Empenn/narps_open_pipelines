@@ -23,6 +23,9 @@ from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
 class MockupPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
+    def __init__(self):
+        super().__init__()
+
     def get_preprocessing(self):
         node_1 = Node(
             Split(),
@@ -55,6 +58,9 @@ class MockupPipeline(Pipeline):
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
+    def __init__(self):
+        super().__init__()
+
     def get_preprocessing(self):
         return 'Wrong_workflow_type'
 
@@ -69,6 +75,9 @@ class MockupWrongPipeline(Pipeline):
 
 class MockupWrongPipeline2(Pipeline):
     """ A simple Pipeline class for test purposes """
+
+    def __init__(self):
+        super().__init__()
 
     def get_preprocessing(self):
         return ['Wrong_workflow_type', 'Wrong_workflow_type']
