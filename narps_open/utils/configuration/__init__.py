@@ -20,21 +20,19 @@ class Configuration(dict, metaclass=SingletonMeta):
         self._config_type = config_type
 
         # Select configuration file from config_type
-        file_name = ''
         self._project_config_path = files('narps_open.utils.configuration')
         if self._config_type == 'default':
-            file_name = join(self._project_config_path, 'default_config.toml')
+            self._config_file = join(self._project_config_path, 'default_config.toml')
         elif self._config_type == 'testing':
-            file_name = join(self._project_config_path, 'testing_config.toml')
+            self._config_file = join(self._project_config_path, 'testing_config.toml')
         elif self._config_type == 'custom':
             # a configuration file must be passed at execution time
-            pass
+            return
         else:
             raise AttributeError(f'Unknown configuration type: {self._config_type}')
 
-        if file_name != '':
-            # It is important to use the property setter here, so that the dict self is updated
-            self.config_file = file_name
+        # Load configuration file
+        self.load_configuration(self._config_file)
 
     @property
     def config_type(self) -> str:
@@ -53,10 +51,19 @@ class Configuration(dict, metaclass=SingletonMeta):
 
     @config_file.setter
     def config_file(self, value: str) -> None:
-        """ Setter for property config_file """
-        self._config_file = value
+        """ Setter for property config_file.
+            This is only available if config_type is 'custom'
+        """
+        if self.config_type == 'custom':
+            self._config_file = value
+            self.load_configuration(self._config_file)
+        else:
+            raise AttributeError(f'Loading a custom configuration\
+                file in another config_type ({self.config_type}) than custom')
 
+    def load_configuration(self, file_name):
+        """ Load the configuration from the TOML file at self.config_file """
         # Update configuration using this new file
-        with open(self._config_file, 'rb') as file:
+        with open(file_name, 'rb') as file:
             self.clear()
             self.update(load(file))

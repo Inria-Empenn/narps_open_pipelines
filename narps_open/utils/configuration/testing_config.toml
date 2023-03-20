@@ -5,4 +5,4 @@ config_type = "testing"
 [directories]
 dataset = ""
 results = ""
-
+test_data = "tests/test_data/"

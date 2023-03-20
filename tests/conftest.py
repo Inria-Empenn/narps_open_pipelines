@@ -12,6 +12,10 @@ from pytest import helpers
 
 from narps_open.runner import PipelineRunner
 from narps_open.utils.correlation import get_correlation_coefficient
+from narps_open.utils.configuration import Configuration
+
+# Init configuration, to ensure it is in testing mode
+Configuration(config_type='testing')
 
 @helpers.register
 def test_pipeline(

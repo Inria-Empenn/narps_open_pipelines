@@ -22,6 +22,16 @@ def reload_module():
     """
     reload(cfg)
 
+@fixture(scope='function', autouse=False)
+def get_testing_configuration():
+    """ Get a copy of the testing configuration, to be able to access it
+        while manipulating other configuration types.
+    """
+    config = cfg.Configuration('testing')
+    reload(cfg)
+
+    return config
+
 class TestConfiguration():
     """ A class that contains all the unit tests."""
     # TODO test cases where configuration files are not found / loaded
@@ -64,3 +74,42 @@ class TestConfiguration():
         obj1 = cfg.Configuration()
         assert obj1.config_type == 'default'
         assert obj1['general']['config_type'] == 'default'
+
+    @staticmethod
+    @mark.unit_test
+    def test_custom_wrong_case_1(get_testing_configuration):
+        """ Check loading custom config file.
+            Error case : trying to load a custom file, not in custom mode
+        """
+        # Get test_data from testing_configuration (loaded by the get_testing_configuration fixture
+        test_data_dir = get_testing_configuration['directories']['test_data']
+
+        obj1 = cfg.Configuration('default')
+        with raises(AttributeError):
+            obj1.config_file = test_data_dir+'utils/configuration/custom_config.toml'
+
+    @staticmethod
+    @mark.unit_test
+    def test_custom_wrong_case_3():
+        """ Check loading custom config file.
+            Error case : trying to load a custom file that doesn't exist
+        """
+        obj1 = cfg.Configuration('custom')
+        with raises(FileNotFoundError):
+            obj1.config_file = '/path/to/custom/config_file'
+
+    @staticmethod
+    @mark.unit_test
+    def test_custom(get_testing_configuration):
+        """ Check loading custom config file."""
+
+        # Get test_data from testing_configuration (loaded by the get_testing_configuration fixture
+        test_data_dir = get_testing_configuration['directories']['test_data']
+
+        # Load custom file
+        obj1 = cfg.Configuration('custom')
+        obj1.config_file = test_data_dir+'utils/configuration/custom_config.toml'
+
+        assert obj1['general']['config_type'] == 'custom'
+        assert obj1['tests']['parameter_1'] == 125
+        assert obj1['tests']['parameter_2'] == 'value'

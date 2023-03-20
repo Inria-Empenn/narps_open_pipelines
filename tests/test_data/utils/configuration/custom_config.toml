@@ -1,0 +1,11 @@
+[general]
+title = "Custom configuration file, for test puropse"
+config_type = "custom"
+
+[tests]
+parameter_1 = 125
+parameter_2 = "value"
+
+[directories]
+dataset = ""
+results = ""
