@@ -15,7 +15,7 @@ from setuptools import setup, find_packages
 
 requires = [
     'importlib_resources>=5.10.2,<5.11',
-    'tomli>=2.0.1,<2.1'
+    'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
     'nipype',
     'pandas'
