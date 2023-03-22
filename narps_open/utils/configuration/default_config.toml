@@ -4,4 +4,5 @@ config_type = "default"
 
 [directories]
 dataset = ""
-results = ""
+reproduced_results = ""
+narps_results = ""

@@ -4,5 +4,6 @@ config_type = "testing"
 
 [directories]
 dataset = ""
-results = ""
+reproduced_results = ""
+narps_results = "data/narps_results"
 test_data = "tests/test_data/"

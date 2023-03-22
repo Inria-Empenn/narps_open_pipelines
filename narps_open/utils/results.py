@@ -3,7 +3,7 @@
 
 """ This module allows to get Neurovault corresponding to results from teams involed in NARPS """
 
-from os import remove
+from os import remove, makedirs
 from os.path import join
 from zipfile import ZipFile
 from urllib.request import urlretrieve
@@ -44,13 +44,17 @@ def download_result_collection(team_id: str):
     description = TeamDescription(team_id = team_id)
     url = description.general['NV_collection_link'] + '/download'
 
+    # Create download directory if not existing
+    download_directory = Configuration()['directories']['narps_results']
+    makedirs(download_directory, exist_ok = True)
+
     # Download dataset
     print('Collecting results for team', team_id)
-    zip_filename = join(Configuration()., 'NARPS-'+team_id+'.zip')
+    zip_filename = join(download_directory, 'NARPS-'+team_id+'.zip')
     urlretrieve(url, zip_filename, show_progress)
 
     # Unzip file
-    zip_extact_folder = join(Configuration().)
+    zip_extact_folder = join(download_directory)
     with ZipFile(zip_filename, 'r') as zip_file:
         zip_file.extractall(zip_extact_folder)
 

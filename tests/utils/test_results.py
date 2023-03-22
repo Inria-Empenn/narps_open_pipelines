@@ -11,9 +11,14 @@ Usage:
     pytest -q test_results.py -k <selected_test>
 """
 
+from os.path import isdir, join
+from shutil import rmtree
+
+from checksumdir import dirhash
 from pytest import raises, mark
 
 from narps_open.utils.results import show_progress, download_result_collection
+from narps_open.utils.configuration import Configuration
 
 class TestUtilsResults:
     """ A class that contains all the unit tests for the results module."""
@@ -39,3 +44,15 @@ class TestUtilsResults:
     @mark.unit_test
     def test_download_result_collection():
         """ Test the download_result_collection function """
+
+        download_result_collection('2T6S')
+
+        # Collection should be downloaded in the results directory
+        expected_dir = join(Configuration()['directories']['narps_results'], 'NARPS-2T6S')
+
+        # Test presence of the download
+        assert isdir(expected_dir)
+        assert dirhash(expected_dir) == '26af20dc7847bcb14d4452239ea458e8'
+
+        # Remove folder
+        rmtree(expected_dir)
