@@ -48,7 +48,7 @@ class TestUtilsResults:
         download_result_collection('2T6S')
 
         # Collection should be downloaded in the results directory
-        expected_dir = join(Configuration()['directories']['narps_results'], 'NARPS-2T6S')
+        expected_dir = join(Configuration()['directories']['narps_results'], 'orig', '4881_2T6S')
 
         # Test presence of the download
         assert isdir(expected_dir)

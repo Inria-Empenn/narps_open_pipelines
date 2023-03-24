@@ -40,23 +40,30 @@ def download_result_collection(team_id: str):
         Arguments:
         - team_id: team corresponding to the requested collection
     """
-    # Get collection url
+    # Get collection url and id
     description = TeamDescription(team_id = team_id)
-    url = description.general['NV_collection_link'] + '/download'
+    collection_id = description.general['NV_collection_link'].split('/')[-2]
+    collection_url = description.general['NV_collection_link'] + '/download'
 
     # Create download directory if not existing
-    download_directory = Configuration()['directories']['narps_results']
+    download_directory = join(
+        Configuration()['directories']['narps_results'],
+        'orig',
+        collection_id+'_'+team_id
+        )
     makedirs(download_directory, exist_ok = True)
 
     # Download dataset
     print('Collecting results for team', team_id)
     zip_filename = join(download_directory, 'NARPS-'+team_id+'.zip')
-    urlretrieve(url, zip_filename, show_progress)
+    urlretrieve(collection_url, zip_filename, show_progress)
 
-    # Unzip file
-    zip_extact_folder = join(download_directory)
+    # Unzip files directly in the download directory
     with ZipFile(zip_filename, 'r') as zip_file:
-        zip_file.extractall(zip_extact_folder)
+        for zip_info in zip_file.infolist():
+            zip_info.filename = zip_info.filename.split('/')[-1]
+            zip_info.filename = join(download_directory, zip_info.filename)
+            zip_file.extract(zip_info)
 
     # Remove zip file
     remove(zip_filename)

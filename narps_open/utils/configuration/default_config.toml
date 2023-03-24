@@ -3,6 +3,6 @@ title = "Default configuration for the NARPS open pipelines project"
 config_type = "default"
 
 [directories]
-dataset = ""
-reproduced_results = ""
-narps_results = ""
+dataset = "data/original/ds001734/"
+reproduced_results = "data/reproduced/"
+narps_results = "data/results/"
