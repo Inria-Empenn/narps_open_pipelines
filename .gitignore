@@ -1,6 +1,6 @@
 
 # to avoid commiting data
-data/derived
+data/
 
 # neuro user in docker image
 neuro
