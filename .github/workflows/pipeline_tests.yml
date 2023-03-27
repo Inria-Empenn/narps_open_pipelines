@@ -79,4 +79,4 @@ jobs:
         pip install .[tests]
 
     - name: Collect tests with pytest
-      run: pytest --collect-only -q -m "pipeline_tests" ${{ needs.identify-tests.outputs.tests }}
+      run: pytest --collect-only -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
