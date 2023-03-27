@@ -364,13 +364,12 @@ class PipelineTeam2T6S(Pipeline):
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subset_contrasts(file_list, method, subject_list, participants_file):
+    def get_subset_contrasts(file_list, subject_list, participants_file):
         '''
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
         - participants_file: str, file containing participants caracteristics
-        - method: str, one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns :
         - TODO
@@ -401,7 +400,14 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def reorganize_results(team_id, nb_sub, output_dir, results_dir):
-        """ Reorganize the results to analyze them. """
+        """ Reorganize the results to analyze them.
+
+        Parameters:
+            - result_dir: str, directory where results will be stored
+            - output_dir: str, name of the sub-directory for final results
+            - n_sub: float, number of subject used for the analysis
+            - team_ID: str, ID of the team to reorganize results
+        """
         from os import mkdir
         from os.path import join, isdir
         from shutil import copyfile
@@ -512,14 +518,13 @@ class PipelineTeam2T6S(Pipeline):
         # Function node get_subset_contrasts - select subset of contrasts
         sub_contrasts = Node(Function(
             function = self.get_subset_contrasts,
-            input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
+            input_names = ['file_list', 'subject_list', 'participants_file'],
             output_names = [
                 'equalIndifference_id',
                 'equalRange_id',
                 'equalIndifference_files',
                 'equalRange_files']),
             name = 'sub_contrasts')
-        sub_contrasts.inputs.method = method
 
         # Estimate model
         estimate_model = Node(EstimateModel(
@@ -537,6 +542,7 @@ class PipelineTeam2T6S(Pipeline):
             height_threshold = 0.001, height_threshold_type = 'p-value',
             force_activation = True),
             name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
+        threshold.synchronize = True
 
         l2_analysis = Workflow(
             base_dir = self.directories.working_dir,
@@ -549,7 +555,8 @@ class PipelineTeam2T6S(Pipeline):
             (selectfiles_groupanalysis, sub_contrasts, [
                 ('contrast', 'file_list'),
                 ('participants', 'participants_file')]),
-            (estimate_model, estimate_contrast, [('spm_mat_file', 'spm_mat_file'),
+            (estimate_model, estimate_contrast, [
+                ('spm_mat_file', 'spm_mat_file'),
                 ('residual_image', 'residual_image'),
                 ('beta_images', 'beta_images')]),
             (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),
@@ -565,11 +572,9 @@ class PipelineTeam2T6S(Pipeline):
 
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
-
             threshold.inputs.contrast_index = [1, 2]
-            threshold.synchronize = True
 
-            ## Specify design matrix
+            # Specify design matrix
             one_sample_t_test_design = Node(OneSampleTTestDesign(),
                 name = 'one_sample_t_test_design')
 
@@ -580,11 +585,9 @@ class PipelineTeam2T6S(Pipeline):
         elif method == 'groupComp':
             contrasts = [
                 ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1])]
-
             threshold.inputs.contrast_index = [1]
-            threshold.synchronize = True
 
-            # Node for the design matrix
+            # Specify design matrix
             two_sample_t_test_design = Node(TwoSampleTTestDesign(),
                 name = 'two_sample_t_test_design')
 
