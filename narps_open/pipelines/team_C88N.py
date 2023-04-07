@@ -526,7 +526,7 @@ class PipelineTeamC88N(Pipeline):
             }
 
         selectfiles_groupanalysis = Node(SelectFiles(
-            templates, base_directory = self.directories.result_dir, force_list= True),
+            templates, base_directory = self.directories.results_dir, force_list= True),
             name = 'selectfiles_groupanalysis')
 
         # Datasink - save important files
