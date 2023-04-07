@@ -43,7 +43,7 @@ def download_result_collection(team_id: str):
     # Get collection url and id
     description = TeamDescription(team_id = team_id)
     collection_id = description.general['NV_collection_link'].split('/')[-2]
-    collection_url = description.general['NV_collection_link'] + '/download'
+    collection_url = description.general['NV_collection_link'] + 'download'
 
     # Create download directory if not existing
     download_directory = join(
