@@ -20,27 +20,27 @@ Configuration(config_type='testing')
 @helpers.register
 def test_pipeline(
     team_id: str,
-    references_dir: str,
-    dataset_dir: str,
     results_dir: str,
+    dataset_dir: str,
+    reproduced_dir: str,
     nb_subjects: int = 4
     ):
     """ This pytest helper allows to launch a pipeline over a given number of subjects
 
     Arguments:
         - team_id: str, the ID of the team (allows to identify which pipeline to run)
-        - references_dir: str, the path to the directory where results from the teams are
+        - results_dir: str, the path to the directory where results from the NARPS teams are
         - dataset_dir: str, the path to the ds001734 dataset
-        - results_dir: str, the path where to store the results
+        - reproduced_dir: str, the path where to store the results from the pipeline computations
         - nb_subjects: int, the number of subject to run the pipeline with
 
     Returns:
         - list(float) the correlation coefficients between the following
-        (reference and computed) files:
+        (result and reproduced) files:
 
     This function can be used as follows:
-        results = pytest.helpers.test_pipeline('2T6S', '/references/', '/data/', '/output/', 4)
-        assert statistics.mean(results) > .003
+        reproduced = pytest.helpers.test_pipeline('2T6S', '/references/', '/data/', '/output/', 4)
+        assert statistics.mean(reproduced) > .003
 
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
         - keep intermediate levels : boolean in PipelineRunner
