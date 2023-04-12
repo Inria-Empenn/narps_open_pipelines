@@ -12,6 +12,7 @@ from nipype import Workflow
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
 from narps_open.utils import get_all_participants, get_participants
+from narps_open.utils.configuration import Configuration
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -82,6 +83,8 @@ class PipelineRunner():
         print('Starting pipeline for team: '+
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
+        nb_procs = Configuration()['runner']['nb_procs']
+
         for workflow in [
             self._pipeline.get_preprocessing(),
             self._pipeline.get_run_level_analysis(),
@@ -94,13 +97,19 @@ class PipelineRunner():
                 for sub_workflow in workflow:
                     if not isinstance(sub_workflow, Workflow):
                         raise AttributeError('Workflow must be of type nipype.Workflow')
-                    sub_workflow.run('MultiProc', plugin_args={'n_procs': 8})
-                    #sub_workflow.run()
+                    
+                    if nb_procs > 1:
+                        sub_workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
+                    else:
+                        sub_workflow.run()
             else:
                 if not isinstance(workflow, Workflow):
                     raise AttributeError('Workflow must be of type nipype.Workflow')
-                workflow.run('MultiProc', plugin_args={'n_procs': 8})
-                #workflow.run()
+
+                    if nb_procs > 1:
+                        workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
+                    else:
+                        workflow.run()
 
 if __name__ == '__main__':
 
