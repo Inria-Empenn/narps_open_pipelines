@@ -26,7 +26,6 @@ class PipelineTeamC88N(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = 'C88N'
-        self.contrast_list = ['0001', '0002', '0003', '0004']
         self.model_list = ['gain', 'loss']
 
     def get_preprocessing(self):
