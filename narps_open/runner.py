@@ -76,21 +76,41 @@ class PipelineRunner():
             implemented_pipelines[self._team_id])
         self._pipeline = class_type()
 
-    def start(self) -> None:
+    def start(self, first_level_only: bool = False, group_level_only: bool = False) -> None:
         """
         Start the pipeline
+
+        Arguments:
+            - first_level_only: bool (False by default), run the first level workflows only,
+                (= preprocessing + run level + subject_level)
+            - group_level_only: bool (False by default), run the group level workflows only
         """
         print('Starting pipeline for team: '+
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
+        if first_level_only and group_level_only:
+            raise AttributeError('first_level_only and group_level_only cannot both be True')
+        if first_level_only:
+            workflow_list = [
+                self._pipeline.get_preprocessing(),
+                self._pipeline.get_run_level_analysis(),
+                self._pipeline.get_subject_level_analysis(),
+            ]
+        elif group_level_only:
+            workflow_list = [
+                self._pipeline.get_group_level_analysis()
+            ]
+        else:
+            workflow_list = [
+                self._pipeline.get_preprocessing(),
+                self._pipeline.get_run_level_analysis(),
+                self._pipeline.get_subject_level_analysis(),
+                self._pipeline.get_group_level_analysis()
+            ]
+
         nb_procs = Configuration()['runner']['nb_procs']
 
-        for workflow in [
-            self._pipeline.get_preprocessing(),
-            self._pipeline.get_run_level_analysis(),
-            self._pipeline.get_subject_level_analysis(),
-            self._pipeline.get_group_level_analysis()
-        ]:
+        for workflow in workflow_list:
             if workflow is None:
                 pass
             elif isinstance(workflow, list):
@@ -117,28 +137,30 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID')
-    parser.add_argument('-d', '--dataset', type=Path, required=True,
-        help='the path to the ds001734 dataset')
-    parser.add_argument('-o', '--output', type=Path, required=True,
-        help='the path to store the output files')
     subjects = parser.add_mutually_exclusive_group(required=True)
     subjects.add_argument('-r', '--random', type=str,
         help='the number of subjects to be randomly selected')
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
         help='a list of subjects')
+    levels = parser.add_mutually_exclusive_group(required=False)
+    levels.add_argument('-g', '--group', action='store_true', default=False,
+        help='run the group level only')
+    levels.add_argument('-f', '--first', action='store_true', default=False,
+        help='run the first levels only (preprocessing + subjects + runs)')
     arguments = parser.parse_args()
 
     # Initialize a PipelineRunner
     runner = PipelineRunner(team_id = arguments.team)
-    runner.pipeline.directories.dataset_dir = arguments.dataset
-    runner.pipeline.directories.results_dir = arguments.output
+    runner.pipeline.directories.dataset_dir = Configuration()['directories']['dataset']
+    runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(arguments.team)
     runner.pipeline.directories.set_working_dir_with_team_id(arguments.team)
 
+    # Handle subject
     if arguments.subjects is not None:
         runner.subjects = arguments.subjects
     else:
         runner.random_nb_subjects = int(arguments.random)
 
-    # Start the runner
-    runner.start()
+    # Handle levels and start the runner
+    runner.start(arguments.first, arguments.group)
