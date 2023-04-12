@@ -487,9 +487,23 @@ class PipelineTeamC88N(Pipeline):
         Returns;
             - a list of nipype.WorkFlow
         """
+        return_list = []
 
-        methods = ['equalRange', 'equalIndifference', 'groupComp']
-        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
+        self.model_list = ['gain', 'loss']
+        self.contrast_list = ['0001']
+        return_list.append(self.get_group_level_analysis_sub_workflow('equalRange'))
+        return_list.append(self.get_group_level_analysis_sub_workflow('equalIndifference'))
+
+        self.model_list = ['loss']
+        self.contrast_list = ['0001']
+        return_list.append(self.get_group_level_analysis_sub_workflow('groupComp'))
+
+        self.model_list = ['loss']
+        self.contrast_list = ['0002']
+        return_list.append(self.get_group_level_analysis_sub_workflow('equalRange'))
+        return_list.append(self.get_group_level_analysis_sub_workflow('equalIndifference'))
+
+        return return_list
 
     def get_group_level_analysis_sub_workflow(self, method):
         """
