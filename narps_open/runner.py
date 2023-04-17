@@ -117,7 +117,7 @@ class PipelineRunner():
                 for sub_workflow in workflow:
                     if not isinstance(sub_workflow, Workflow):
                         raise AttributeError('Workflow must be of type nipype.Workflow')
-                    
+
                     if nb_procs > 1:
                         sub_workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
                     else:
@@ -126,10 +126,10 @@ class PipelineRunner():
                 if not isinstance(workflow, Workflow):
                     raise AttributeError('Workflow must be of type nipype.Workflow')
 
-                    if nb_procs > 1:
-                        workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
-                    else:
-                        workflow.run()
+                if nb_procs > 1:
+                    workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
+                else:
+                    workflow.run()
 
 if __name__ == '__main__':
 

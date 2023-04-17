@@ -7,6 +7,7 @@ dataset = "tests/data/original/ds001734/"
 reproduced_results = "tests/data/reproduced/"
 narps_results = "tests/data/results/"
 test_data = "tests/test_data/"
+test_runs = "run/"
 
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
