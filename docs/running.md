@@ -24,6 +24,12 @@ runner.subjects = ['001', '006', '020', '100']
 
 # Start the runner
 runner.start()
+
+# Or start the first level only (preprocessing + run level + subject level)
+runner.start(True, False)
+
+# Or start the second level only (group level)
+runner.start(True, True)
 ```
 
 ## Using the runner application
@@ -31,14 +37,22 @@ runner.start()
 The `narps_open.runner` module also allows to run pipelines from the command line :
 
 ```bash
-python narps_open/runner.py
-	usage: runner.py [-h] -t TEAM -d DATASET -o OUTPUT (-r RANDOM | -s SUBJECTS [SUBJECTS ...])
+python narps_open/runner.py -h
+	usage: runner.py [-h] -t TEAM (-r RANDOM | -s SUBJECTS [SUBJECTS ...]) [-g | -f]
 
-python narps_open/runner.py -t 2T6S -d /data/ds001734/ -o /output/ -s 001 006 020 100
-python narps_open/runner.py -t 2T6S -d /data/ds001734/ -o /output/ -r 4
+	Run the pipelines from NARPS.
+
+	options:
+	  -h, --help            show this help message and exit
+	  -t TEAM, --team TEAM  the team ID
+	  -r RANDOM, --random RANDOM the number of subjects to be randomly selected
+	  -s SUBJECTS [SUBJECTS ...], --subjects SUBJECTS [SUBJECTS ...] a list of subjects
+	  -g, --group           run the group level only
+	  -f, --first           run the first levels only (preprocessing + subjects + runs)
+
+python narps_open/runner.py -t 2T6S -s 001 006 020 100
+python narps_open/runner.py -t 2T6S -r 4
+python narps_open/runner.py -t 2T6S -r 4 -f
 ```
 
-* `-t` lets you set the team ID
-* `-d` lets you set the dataset directory
-* `-o` lets you set the output directory
-* `-s` lets you set the list of subjects, alternatively, `-r` for a random number of subjects
+In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
