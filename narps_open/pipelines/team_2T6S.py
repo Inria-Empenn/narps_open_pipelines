@@ -371,12 +371,18 @@ class PipelineTeam2T6S(Pipeline):
             - a list of filenames (str)
         """
         # Contrat maps
-        return_list = [join('l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+        return_list = [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
         # SPM.mat file
-        return_list += [join('l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+        return_list += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
         # spmT maps
-        return_list += [join('l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+        return_list += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
 
         return return_list
@@ -635,16 +641,18 @@ class PipelineTeam2T6S(Pipeline):
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
                 'spmT_0001.nii', 'spmT_0002.nii',
                 join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
-                ]
+                ],
+            'nb_subjects' : ['{nb_subjects}']
         }
-        parameter_sets = product(parameters.values())
+        parameter_sets = product(*parameters.values())
         template = join(
+            self.directories.output_dir,
             'l2_analysis_{method}_nsub_{nb_subjects}',
             '_contrast_id_{contrast_id}',
             '{file}'
             )
 
-        return_list = [template.format(**dict(zip(parameter_keys, parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
         # Handle groupComp
@@ -654,16 +662,18 @@ class PipelineTeam2T6S(Pipeline):
             'file': [
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
                 join('_threshold0', 'spmT_0001_thr.nii')
-                ]
+                ],
+            'nb_subjects' : ['{nb_subjects}']
         }
-        parameter_sets = product(parameters.values())
+        parameter_sets = product(*parameters.values())
         template = join(
+            self.directories.output_dir,
             'l2_analysis_{method}_nsub_{nb_subjects}',
             '_contrast_id_{contrast_id}',
             '{file}'
             )
 
-        return_list += [template.format(**dict(zip(parameter_keys, parameter_values)))\
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
         return return_list

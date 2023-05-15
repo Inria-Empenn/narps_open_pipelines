@@ -3,6 +3,7 @@
 
 """ This module allows to run pipelines from NARPS open. """
 
+from os.path import isfile
 from importlib import import_module
 from random import choices
 from argparse import ArgumentParser
@@ -139,7 +140,7 @@ class PipelineRunner():
             for template in templates:
                 
                 # Identify keys in the template
-                keys = string.split('{')
+                keys = template.split('{')
                 keys = [k.split('}')[0] for k in keys if '}' in k]
 
                 # Replace keys in the template
@@ -147,9 +148,8 @@ class PipelineRunner():
                     template = template.format(subject_id = subject_id)
 
                 # Get matching file
-                test_file = join(self.pipeline.directories.output_dir, template)
-                if not isfile(test_file):
-                    missing_files.append(test_file)
+                if not isfile(template):
+                    missing_files.append(template)
 
         return missing_files
 
@@ -160,9 +160,18 @@ class PipelineRunner():
         missing_files = []
 
         for template in templates:
-            test_file = join(self.pipeline.directories.output_dir, template)
-            if not isfile(test_file):
-                missing_files.append(test_file)
+
+            # Identify keys in the template
+            keys = template.split('{')
+            keys = [k.split('}')[0] for k in keys if '}' in k]
+
+            # Replace keys in the template
+            if 'nb_subjects' in keys:
+                template = template.format(nb_subjects = len(self._pipeline.subject_list))
+
+            # Get matching file
+            if not isfile(template):
+                missing_files.append(template)
 
         return missing_files
 
@@ -203,11 +212,13 @@ if __name__ == '__main__':
     if arguments.check:
         missing_files = []
         if not arguments.group:
-            missing_files += get_missing_first_level_outputs()
+            missing_files += runner.get_missing_first_level_outputs()
         if not arguments.first:
-            missing_files += get_missing_group_level_outputs()
+            missing_files += runner.get_missing_group_level_outputs()
 
-        print('Missing files')
+        print(
+            'Missing files for team', arguments.team, 'after running',
+            len(runner.pipeline.subject_list), 'subjects:')
         print(missing_files)
 
     # Start the runner    
