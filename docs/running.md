@@ -30,6 +30,10 @@ runner.start(True, False)
 
 # Or start the second level only (group level)
 runner.start(True, True)
+
+# Get the list of missing files (if any) after the pipeline finished
+runner.get_missing_first_level_outputs()
+runner.get_missing_group_level_outputs()
 ```
 
 ## Using the runner application
@@ -49,10 +53,12 @@ python narps_open/runner.py -h
 	  -s SUBJECTS [SUBJECTS ...], --subjects SUBJECTS [SUBJECTS ...] a list of subjects
 	  -g, --group           run the group level only
 	  -f, --first           run the first levels only (preprocessing + subjects + runs)
+	  -c, --check           check pipeline outputs (runner is not launched)
 
 python narps_open/runner.py -t 2T6S -s 001 006 020 100
 python narps_open/runner.py -t 2T6S -r 4
 python narps_open/runner.py -t 2T6S -r 4 -f
+python narps_open/runner.py -t 2T6S -r 4 -f -c # Check the output files without launching the runner
 ```
 
 In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
