@@ -211,16 +211,13 @@ if __name__ == '__main__':
     # Check data
     if arguments.check:
         missing_files = []
-        if not arguments.group:
-            missing_files += runner.get_missing_first_level_outputs()
-        if not arguments.first:
-            missing_files += runner.get_missing_group_level_outputs()
-
-        print(
-            'Missing files for team', arguments.team, 'after running',
+        print('Missing files for team', arguments.team, 'after running',
             len(runner.pipeline.subject_list), 'subjects:')
-        print(missing_files)
-
+        if not arguments.group:
+            print('First level:', runner.get_missing_first_level_outputs())
+        if not arguments.first:
+            print('Group level:', runner.get_missing_group_level_outputs())
+        
     # Start the runner    
     else:
         runner.start(arguments.first, arguments.group)
