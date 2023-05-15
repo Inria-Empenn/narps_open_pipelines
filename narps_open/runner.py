@@ -130,50 +130,17 @@ class PipelineRunner():
 
     def get_missing_first_level_outputs(self):
         """ Return the list of missing files after computations of the first level """
-        templates = self._pipeline.get_preprocessing_outputs()
-        templates += self._pipeline.get_run_level_outputs()
-        templates += self._pipeline.get_subject_level_outputs()
+        files = self._pipeline.get_preprocessing_outputs()
+        files += self._pipeline.get_run_level_outputs()
+        files += self._pipeline.get_subject_level_outputs()
 
-        missing_files = []
-
-        for subject_id in self._pipeline.subject_list:
-            for template in templates:
-                
-                # Identify keys in the template
-                keys = template.split('{')
-                keys = [k.split('}')[0] for k in keys if '}' in k]
-
-                # Replace keys in the template
-                if 'subject_id' in keys:
-                    template = template.format(subject_id = subject_id)
-
-                # Get matching file
-                if not isfile(template):
-                    missing_files.append(template)
-
-        return missing_files
+        return [f for f in files if not isfile(f)]
 
     def get_missing_group_level_outputs(self):
         """ Return the list of missing files after computations of the group level """
-        templates = self._pipeline.get_group_level_outputs()
+        files = self._pipeline.get_group_level_outputs()
 
-        missing_files = []
-
-        for template in templates:
-
-            # Identify keys in the template
-            keys = template.split('{')
-            keys = [k.split('}')[0] for k in keys if '}' in k]
-
-            # Replace keys in the template
-            if 'nb_subjects' in keys:
-                template = template.format(nb_subjects = len(self._pipeline.subject_list))
-
-            # Get matching file
-            if not isfile(template):
-                missing_files.append(template)
-
-        return missing_files
+        return [f for f in files if not isfile(f)]
 
 if __name__ == '__main__':
 

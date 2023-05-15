@@ -364,26 +364,29 @@ class PipelineTeam2T6S(Pipeline):
         return l1_analysis
 
     def get_subject_level_outputs(self):
-        """
-        Return all name templates for the files the subject level analysis is supposed to generate.
-        Names are relative from the root of the output directory.
-        Returns;
-            - a list of filenames (str)
-        """
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
         # Contrat maps
-        return_list = [join(
+        templates = [join(
             self.directories.output_dir,
             'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
+
         # SPM.mat file
-        return_list += [join(
+        templates += [join(
             self.directories.output_dir,
             'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+
         # spmT maps
-        return_list += [join(
+        templates += [join(
             self.directories.output_dir,
             'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
 
         return return_list
 
@@ -626,12 +629,7 @@ class PipelineTeam2T6S(Pipeline):
         return l2_analysis
 
     def get_group_level_outputs(self):
-        """
-        Return all name templates for the files the group level analysis is supposed to generate.
-        Names are relative from the root of the self.directories.output_dir.
-        Returns;
-            - a list of filenames (str)
-        """
+        """ Return all names for the files the group level analysis is supposed to generate. """
 
         # Handle equalRange and equalIndifference
         parameters = {
@@ -642,7 +640,7 @@ class PipelineTeam2T6S(Pipeline):
                 'spmT_0001.nii', 'spmT_0002.nii',
                 join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
                 ],
-            'nb_subjects' : ['{nb_subjects}']
+            'nb_subjects' : [str(len(self.subject_list))]
         }
         parameter_sets = product(*parameters.values())
         template = join(
@@ -663,7 +661,7 @@ class PipelineTeam2T6S(Pipeline):
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
                 join('_threshold0', 'spmT_0001_thr.nii')
                 ],
-            'nb_subjects' : ['{nb_subjects}']
+            'nb_subjects' : [str(len(self.subject_list))]
         }
         parameter_sets = product(*parameters.values())
         template = join(
