@@ -6,7 +6,6 @@
 from importlib import import_module
 from random import choices
 from argparse import ArgumentParser
-from pathlib import Path
 
 from nipype import Workflow
 
@@ -90,26 +89,23 @@ class PipelineRunner():
 
         if first_level_only and group_level_only:
             raise AttributeError('first_level_only and group_level_only cannot both be True')
-        if first_level_only:
-            workflow_list = [
+
+        # Generate workflow list
+        workflow_list = []
+        if not group_level_only:
+            workflow_list += [
                 self._pipeline.get_preprocessing(),
                 self._pipeline.get_run_level_analysis(),
                 self._pipeline.get_subject_level_analysis(),
             ]
-        elif group_level_only:
-            workflow_list = [
-                self._pipeline.get_group_level_analysis()
-            ]
-        else:
-            workflow_list = [
-                self._pipeline.get_preprocessing(),
-                self._pipeline.get_run_level_analysis(),
-                self._pipeline.get_subject_level_analysis(),
+        if not first_level_only:
+            workflow_list += [
                 self._pipeline.get_group_level_analysis()
             ]
 
         nb_procs = Configuration()['runner']['nb_procs']
 
+        # Launch workflows
         for workflow in workflow_list:
             if workflow is None:
                 pass
@@ -131,6 +127,45 @@ class PipelineRunner():
                 else:
                     workflow.run()
 
+    def get_missing_first_level_outputs(self):
+        """ Return the list of missing files after computations of the first level """
+        templates = self._pipeline.get_preprocessing_outputs()
+        templates += self._pipeline.get_run_level_outputs()
+        templates += self._pipeline.get_subject_level_outputs()
+
+        missing_files = []
+
+        for subject_id in self._pipeline.subject_list:
+            for template in templates:
+                
+                # Identify keys in the template
+                keys = string.split('{')
+                keys = [k.split('}')[0] for k in keys if '}' in k]
+
+                # Replace keys in the template
+                if 'subject_id' in keys:
+                    template = template.format(subject_id = subject_id)
+
+                # Get matching file
+                test_file = join(self.pipeline.directories.output_dir, template)
+                if not isfile(test_file):
+                    missing_files.append(test_file)
+
+        return missing_files
+
+    def get_missing_group_level_outputs(self):
+        """ Return the list of missing files after computations of the group level """
+        templates = self._pipeline.get_group_level_outputs()
+
+        missing_files = []
+
+        for template in templates:
+            test_file = join(self.pipeline.directories.output_dir, template)
+            if not isfile(test_file):
+                missing_files.append(test_file)
+
+        return missing_files
+
 if __name__ == '__main__':
 
     # Parse arguments
@@ -147,6 +182,8 @@ if __name__ == '__main__':
         help='run the group level only')
     levels.add_argument('-f', '--first', action='store_true', default=False,
         help='run the first levels only (preprocessing + subjects + runs)')
+    parser.add_argument('-c', '--check', action='store_true', required=False,
+        help='check pipeline outputs (runner is not launched)')
     arguments = parser.parse_args()
 
     # Initialize a PipelineRunner
@@ -162,5 +199,17 @@ if __name__ == '__main__':
     else:
         runner.random_nb_subjects = int(arguments.random)
 
-    # Handle levels and start the runner
-    runner.start(arguments.first, arguments.group)
+    # Check data
+    if arguments.check:
+        missing_files = []
+        if not arguments.group:
+            missing_files += get_missing_first_level_outputs()
+        if not arguments.first:
+            missing_files += get_missing_group_level_outputs()
+
+        print('Missing files')
+        print(missing_files)
+
+    # Start the runner    
+    else:
+        runner.start(arguments.first, arguments.group)

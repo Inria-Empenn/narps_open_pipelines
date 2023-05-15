@@ -4,6 +4,7 @@
 """ Write the work of NARPS' team 2T6S using Nipype """
 
 from os.path import join
+from itertools import product
 
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
@@ -362,6 +363,24 @@ class PipelineTeam2T6S(Pipeline):
 
         return l1_analysis
 
+    def get_subject_level_outputs(self):
+        """
+        Return all name templates for the files the subject level analysis is supposed to generate.
+        Names are relative from the root of the output directory.
+        Returns;
+            - a list of filenames (str)
+        """
+        # Contrat maps
+        return_list = [join('l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+        # SPM.mat file
+        return_list += [join('l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+        # spmT maps
+        return_list += [join('l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        return return_list
+
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_subset_contrasts(file_list, method, subject_list, participants_file):
@@ -599,3 +618,52 @@ class PipelineTeam2T6S(Pipeline):
         estimate_contrast.inputs.contrasts = contrasts
 
         return l2_analysis
+
+    def get_group_level_outputs(self):
+        """
+        Return all name templates for the files the group level analysis is supposed to generate.
+        Names are relative from the root of the self.directories.output_dir.
+        Returns;
+            - a list of filenames (str)
+        """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ]
+        }
+        parameter_sets = product(parameters.values())
+        template = join(
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameter_keys, parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ]
+        }
+        parameter_sets = product(parameters.values())
+        template = join(
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameter_keys, parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
