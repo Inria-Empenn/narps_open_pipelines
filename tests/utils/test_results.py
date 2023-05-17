@@ -15,7 +15,7 @@ from os.path import isdir, join
 from shutil import rmtree
 
 from checksumdir import dirhash
-from pytest import raises, mark
+from pytest import mark
 
 from narps_open.utils.results import show_progress, download_result_collection
 from narps_open.utils.configuration import Configuration

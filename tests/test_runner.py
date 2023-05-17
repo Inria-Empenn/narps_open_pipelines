@@ -41,6 +41,7 @@ class MockupPipeline(Pipeline):
         if isfile(self.test_file):
             remove(self.test_file)
 
+    @staticmethod
     def write_to_file(_, text_to_write: str, file_path: str):
         """ Method used inside a nipype Node, to write a line in a test file """
         with open(file_path, 'a', encoding = 'utf-8') as file:
@@ -186,7 +187,7 @@ class TestPipelineRunner:
 
         # 4 - Instanciate a runner with an implemented team id
         runner = PipelineRunner('2T6S')
-        assert isinstance(runner._pipeline, PipelineTeam2T6S)
+        assert isinstance(runner.pipeline, PipelineTeam2T6S)
         assert runner.team_id == '2T6S'
 
         # 5 - Modify team id for an existing runner (with a not implemented team id)
@@ -243,21 +244,21 @@ class TestPipelineRunner:
 
         # 2 - test starting a pipeline with wrong worflow type
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupWrongPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupWrongPipeline() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start()
 
         # 2b - test starting a pipeline with wrong worflow type
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupWrongPipeline2() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupWrongPipeline2() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start()
 
         # 2b - test starting a pipeline with wrong options (fist_level_only + group_level_only)
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start(True, True)
@@ -268,7 +269,7 @@ class TestPipelineRunner:
         """ Test normal usecases of PipelineRunner """
         # 1 - test starting a pipeline where everything ok
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.start()
 
         # 1 - read results of the pipeline
@@ -285,7 +286,7 @@ class TestPipelineRunner:
 
         # 2 - test starting a pipeline partly (group_level_only)
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.start(False, True)
 
         # 2 - read results of the pipeline
@@ -299,7 +300,7 @@ class TestPipelineRunner:
 
         # 3 - test starting a pipeline partly (first_level_only)
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.start(True, False)
 
         # 4 - read results of the pipeline
@@ -320,7 +321,7 @@ class TestPipelineRunner:
 
         # 1a - Instantiate a pipeline
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.subjects = ['001']
 
         # 1b - Remove previously generated files
@@ -357,7 +358,7 @@ class TestPipelineRunner:
 
         # 1a - Instantiate a pipeline
         runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.subjects = ['001', '002', '003', '004']
 
         # 1b - Remove previously generated files

@@ -13,7 +13,7 @@ Usage:
 
 from statistics import mean
 
-from pytest import raises, helpers, mark
+from pytest import helpers, mark
 from nipype import Workflow
 
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
@@ -54,7 +54,7 @@ class TestPipelinesTeam2T6S:
         assert len(pipeline.get_subject_level_outputs()) == 9
         assert len(pipeline.get_group_level_outputs()) == 84
 
-        # 2 - 1 suject outputs
+        # 2 - 4 sujects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
         assert len(pipeline.get_preprocessing_outputs()) == 0
         assert len(pipeline.get_run_level_outputs()) == 0

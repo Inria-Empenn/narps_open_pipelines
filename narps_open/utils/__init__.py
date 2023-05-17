@@ -11,9 +11,9 @@ from narps_open.utils.description import TeamDescription
 
 def participants_tsv():
 
-    participants_tsv = join(directories()["exp"], "participants.tsv")
+    participants = join(directories()["exp"], "participants.tsv")
 
-    return pd.read_csv(participants_tsv, sep="\t")
+    return pd.read_csv(participants, sep="\t")
 
 def get_all_participants() -> list:
     """ Return a list of all participants included in NARPS """
