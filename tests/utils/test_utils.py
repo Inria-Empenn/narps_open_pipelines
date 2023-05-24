@@ -11,12 +11,15 @@ Usage:
     pytest -q test_utils.py -k <selected_test>
 """
 
+from pytest import mark
+
 from narps_open.utils import get_all_participants, get_participants
 
 class TestUtils:
     """ A class that contains all the unit tests for the utils module."""
 
     @staticmethod
+    @mark.unit_test
     def test_get_all_participants():
         """ Test the get_all_participants function """
         participants_list = get_all_participants()
@@ -26,6 +29,7 @@ class TestUtils:
         assert '123' in participants_list
 
     @staticmethod
+    @mark.unit_test
     def test_get_participants():
         """ Test the get_participants function """
 

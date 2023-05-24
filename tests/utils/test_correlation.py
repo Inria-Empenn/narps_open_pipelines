@@ -15,7 +15,7 @@ from os import remove
 from os.path import exists
 from math import isclose
 
-from pytest import raises, fixture
+from pytest import raises, fixture, mark
 from nibabel import Nifti1Image, save
 from numpy import nan, isnan, eye, zeros, full
 
@@ -41,6 +41,7 @@ class TestUtilsCorrelation:
     """ A class that contains all the unit tests for the correlation module."""
 
     @staticmethod
+    @mark.unit_test
     def test_mask_nan():
         """ Test the mask_using_nan function """
         # 1 - Create an image
@@ -65,6 +66,7 @@ class TestUtilsCorrelation:
         assert isnan(out_image_data[1, 1, 1])
 
     @staticmethod
+    @mark.unit_test
     def test_mask_zeros():
         """ Test the mask_using_zeros function """
         # 1 - Create an image
@@ -89,6 +91,7 @@ class TestUtilsCorrelation:
         assert isclose(out_image_data[1, 1, 1], 0.0)
 
     @staticmethod
+    @mark.unit_test
     def test_correlation(remove_temporary_files):
         """ Test the get_correlation_coefficient function, normal usecases """
         # 1 - Create an image & save it to the working directory
@@ -128,6 +131,7 @@ class TestUtilsCorrelation:
             0.08787495503274935)
 
     @staticmethod
+    @mark.unit_test
     def test_correlation_wrong(remove_temporary_files):
         """ Test the get_correlation_coefficient function, error cases """
         # 1 - Create an image & save it to the working directory

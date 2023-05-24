@@ -1,86 +1,115 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Tests of the 'narps_open.utils.configuration' module.
+"""Tests of the narps_open.utils.configuration module.
 
 Launch this test with PyTest
 
 Usage:
 ======
     pytest -q test_configuration.py
-    pytest -q test_configuration.py -k <selected_test>
 """
 
-from pytest import raises
+from importlib import reload
+from pytest import fixture, mark, raises
 
-from narps_open.utils.configuration import TeamConfiguration
+import narps_open.utils.configuration as cfg
 
-class TestUtilsConfiguration:
-    """ A class that contains all the unit tests for the configuration module."""
+@fixture(scope='function', autouse=True)
+def reload_module():
+    """ Reload module narps_open.utils.configuration between each test
+        so that the Configuration singleton is reset.
+    """
+    reload(cfg)
+
+@fixture(scope='function', autouse=False)
+def get_testing_configuration():
+    """ Get a copy of the testing configuration, to be able to access it
+        while manipulating other configuration types.
+    """
+    config = cfg.Configuration('testing')
+    reload(cfg)
+
+    return config
+
+class TestConfiguration():
+    """ A class that contains all the unit tests."""
+    # TODO test cases where configuration files are not found / loaded
 
     @staticmethod
-    def test_creation():
-        """ Test the creation of a TeamConfiguration object """
+    @mark.unit_test
+    def test_accessing():
+        """ Check that configuration is reachable """
 
-        # Instantiation with no parameters
-        with raises(TypeError):
-            TeamConfiguration()
+        cfg.Configuration(config_type='testing')
+        assert cfg.Configuration()['general']['config_type'] == 'testing'
 
-        # Instantiation with wrong team id
+    @staticmethod
+    @mark.unit_test
+    def test_singleton():
+        """ Check that configuration type is set at a class level by the
+        first instance."""
+
+        obj1 = cfg.Configuration(config_type='testing')
+        obj2 = cfg.Configuration(config_type='default')
+
+        assert obj1.config_type == 'testing'
+        assert obj1['general']['config_type'] == 'testing'
+        assert obj2.config_type == 'testing'
+        assert obj2['general']['config_type'] == 'testing'
+
+    @staticmethod
+    @mark.unit_test
+    def test_unknown_config_type():
+        """ Check loading config with an unknown type raises an exception."""
+
         with raises(AttributeError):
-            TeamConfiguration('wrong_id')
-
-        # Instatiation is ok
-        assert TeamConfiguration('2T6S') is not None
+            cfg.Configuration(config_type='wrong_type')
 
     @staticmethod
-    def test_arguments_properties():
-        """ Test the arguments and properties of a TeamConfiguration object """
+    @mark.unit_test
+    def test_defaults():
+        """ Check loading default config by default."""
 
-        # 1 - Create a TeamConfiguration
-        configuration = TeamConfiguration('2T6S')
+        obj1 = cfg.Configuration()
+        assert obj1.config_type == 'default'
+        assert obj1['general']['config_type'] == 'default'
 
-        # 2 - Check arguments
-        assert configuration.team_id == '2T6S'
+    @staticmethod
+    @mark.unit_test
+    def test_custom_wrong_case_1(get_testing_configuration):
+        """ Check loading custom config file.
+            Error case : trying to load a custom file, not in custom mode
+        """
+        # Get test_data from testing_configuration (loaded by the get_testing_configuration fixture
+        test_data_dir = get_testing_configuration['directories']['test_data']
 
-        # 3 - Check access as dict
-        assert configuration['general.softwares'] == 'SPM12 , \nfmriprep 1.1.4'
-        assert configuration['exclusions.n_participants'] == '108'
-        assert configuration['preprocessing.motion'] == '6'
-        assert configuration['analysis.RT_modeling'] == 'duration'
-        assert configuration['categorized_for_analysis.analysis_SW_with_version'] == 'SPM12'
-        assert configuration['derived.func_fwhm'] == '8'
+        obj1 = cfg.Configuration('default')
+        with raises(AttributeError):
+            obj1.config_file = test_data_dir+'utils/configuration/custom_config.toml'
 
-        # 4 - Check properties
-        assert isinstance(configuration.general, dict)
-        assert isinstance(configuration.exclusions, dict)
-        assert isinstance(configuration.preprocessing, dict)
-        assert isinstance(configuration.analysis, dict)
-        assert isinstance(configuration.categorized_for_analysis, dict)
-        assert isinstance(configuration.derived, dict)
+    @staticmethod
+    @mark.unit_test
+    def test_custom_wrong_case_3():
+        """ Check loading custom config file.
+            Error case : trying to load a custom file that doesn't exist
+        """
+        obj1 = cfg.Configuration('custom')
+        with raises(FileNotFoundError):
+            obj1.config_file = '/path/to/custom/config_file'
 
-        assert list(configuration.general.keys()) == [
-            'teamID',
-            'NV_collection_link',
-            'results_comments',
-            'preregistered',
-            'link_preregistration_form',
-            'regions_definition',
-            'softwares',
-            'general_comments'
-            ]
+    @staticmethod
+    @mark.unit_test
+    def test_custom(get_testing_configuration):
+        """ Check loading custom config file."""
 
-        # 5 - Check properties values
-        assert configuration.general['softwares'] == 'SPM12 , \nfmriprep 1.1.4'
-        assert configuration.exclusions['n_participants'] == '108'
-        assert configuration.preprocessing['motion'] == '6'
-        assert configuration.analysis['RT_modeling'] == 'duration'
-        assert configuration.categorized_for_analysis['analysis_SW_with_version'] == 'SPM12'
-        assert configuration.derived['func_fwhm'] == '8'
+        # Get test_data from testing_configuration (loaded by the get_testing_configuration fixture
+        test_data_dir = get_testing_configuration['directories']['test_data']
 
-        # 6 - Test another team
-        configuration = TeamConfiguration('9Q6R')
-        assert configuration.team_id == '9Q6R'
-        assert configuration['general.softwares'] == 'FSL 5.0.11, MRIQC, FMRIPREP'
-        assert isinstance(configuration.general, dict)
-        assert configuration.general['softwares'] == 'FSL 5.0.11, MRIQC, FMRIPREP'
+        # Load custom file
+        obj1 = cfg.Configuration('custom')
+        obj1.config_file = test_data_dir+'utils/configuration/custom_config.toml'
+
+        assert obj1['general']['config_type'] == 'custom'
+        assert obj1['tests']['parameter_1'] == 125
+        assert obj1['tests']['parameter_2'] == 'value'

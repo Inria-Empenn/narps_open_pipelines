@@ -34,8 +34,9 @@ Tests can be launched manually or while using CI (Continuous Integration).
 
 ## Configuration files for testing
 
-* `pytest.ini` is a global configuration files for using pytest (see reference [here](https://docs.pytest.org/en/7.1.x/reference/customize.html)). It allows to [register markers](https://docs.pytest.org/en/7.1.x/example/markers.html) that help to better identify tests.
+* `pytest.ini` is a global configuration files for using pytest (see reference [here](https://docs.pytest.org/en/7.1.x/reference/customize.html)). It allows to [register markers](https://docs.pytest.org/en/7.1.x/example/markers.html) that help to better identify tests. Note that `pytest.ini` could be replaced by data inside `pyproject.toml` in the next versions.
 * `tests/conftest.py` defines common functions, parameters, and [helpers](https://pytest-helpers-namespace.readthedocs.io/en/latest/) that are later available to all tests
+* `narps_open/utils/configuration/testing_config.toml` sets the parameters for the `testing` configuration type (see how the [configuration](/docs/configuration.md) works). This configuration type is automatically used for testing (as defined in `tests/conftest.py`).
 
 ## Types of tests
 
@@ -43,7 +44,7 @@ We use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) t
 
 | Type of test | marker | Description |
 | ----------- | ----------- | ----------- |
-| unit tests | no marker applied (default type of test) | Unitary test a method/function |
+| unit tests | `unit_test` | Unitary test a method/function |
 | pipeline tests | `pieline_test` | These tests compute whole pipeline one or several times making them time and resources consuming. |
 
 ## Writing tests

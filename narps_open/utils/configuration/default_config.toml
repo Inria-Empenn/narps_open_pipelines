@@ -1,0 +1,7 @@
+[general]
+title = "Default configuration for the NARPS open pipelines project"
+config_type = "default"
+
+[directories]
+dataset = ""
+results = ""

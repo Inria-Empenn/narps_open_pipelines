@@ -1,0 +1,8 @@
+[general]
+title = "Testing configuration for the NARPS open pipelines project"
+config_type = "testing"
+
+[directories]
+dataset = ""
+results = ""
+test_data = "tests/test_data/"
