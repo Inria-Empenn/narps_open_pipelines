@@ -15,7 +15,18 @@ from setuptools import setup, find_packages
 
 requires = [
     'importlib_resources>=5.10.2,<5.11',
+    'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
+    'nipype',
+    'pandas'
 ]
+extras_require = {
+    'tests': [
+        'pylint',
+        'pytest',
+        'pytest-cov',
+        'pytest-helpers-namespace'
+        ]
+}
 
 setup(
     name = 'narps_open',
@@ -27,9 +38,11 @@ setup(
     author = '',
     author_email = '',
     url = 'https://github.com/Inria-Empenn/narps_open_pipelines',
+
     include_package_data = True,
-    python_requires = '>=3.8,<3.11',
+    python_requires = '>=3.8,<3.12',
     install_requires = requires,
+    extras_require = extras_require,
     classifiers = [
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',

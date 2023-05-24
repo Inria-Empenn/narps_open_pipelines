@@ -11,8 +11,9 @@ Usage:
     pytest -q test_team_2T6S.py -k <selected_test>
 """
 
-from pytest import raises
+from statistics import mean
 
+from pytest import raises, helpers, mark
 from nipype import Workflow
 
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
@@ -39,3 +40,15 @@ class TestPipelinesTeam2T6S:
         assert len(group_level) == 3
         for sub_workflow in group_level:
             assert isinstance(sub_workflow, Workflow)
+
+    @staticmethod
+    @mark.pipeline_test
+    def test_execution():
+        """ Test the execution of a PipelineTeam2T6S and compare results """
+        results_4_subjects = helpers.test_pipeline(
+            '2T6S',
+            '/references/',
+            '/data/',
+            '/output/',
+            4)
+        assert mean(results_4_subjects) > .003

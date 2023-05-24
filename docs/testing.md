@@ -17,19 +17,36 @@ It is also a good idea to use [*black*](https://github.com/psf/black) to automat
 
 * Run the command on any source file you want to lint : `black ./narps_open` or `black ./narps_open/runner.py` 
 
-Use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage.
+Use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage. Furthermore, [*pytest-helpers-namespace*](https://pypi.org/project/pytest-helpers-namespace/) enables to register helper functions.
 
 > The pytest framework makes it easy to write small tests, yet scales to support complex functional testing for applications and libraries.
 
+## Launching tests
+
 Tests can be launched manually or while using CI (Continuous Integration).
 
-* To run the tests : `pytest ./tests`
+* To run the tests : `pytest ./tests` or `pytest`
 * To specify a test file to run : `pytest test_file.py`
 * To specify a test -for which the name contains 'test_pattern'- inside a test file : `pytest test_file.py -k "test_pattern"`
+* To run a tests with a given mark 'mark' : `pytest -m 'mark'`
 * [CI] to output a xml JUnit test report, use the option : `--junit-xml=pytest_report.xml`
 * To create code coverage data : `coverage run -m pytest ./tests` then `coverage report` to see the code coverage result or `coverage xml` to output a .xml report file
 
-## Writing unit tests
+## Configuration files for testing
+
+* `pytest.ini` is a global configuration files for using pytest (see reference [here](https://docs.pytest.org/en/7.1.x/reference/customize.html)). It allows to [register markers](https://docs.pytest.org/en/7.1.x/example/markers.html) that help to better identify tests.
+* `tests/conftest.py` defines common functions, parameters, and [helpers](https://pytest-helpers-namespace.readthedocs.io/en/latest/) that are later available to all tests
+
+## Types of tests
+
+We use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to identify the different types of test. Currently, the following types are available :
+
+| Type of test | marker | Description |
+| ----------- | ----------- | ----------- |
+| unit tests | no marker applied (default type of test) | Unitary test a method/function |
+| pipeline tests | `pieline_test` | These tests compute whole pipeline one or several times making them time and resources consuming. |
+
+## Writing tests
 
 The main idea is to create one test file per source module (eg.: *tests/pipelines/test_pipelines.py* contains all the unit tests for the module `narps_open.pipelines`).
 

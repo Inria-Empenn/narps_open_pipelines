@@ -1,9 +1,14 @@
+## Disclaimer - This GitHub Actions workflow performs a static analysis of the python code.
+
 # Name the workflow
 name: code_quality
 
-# Define when it runs (on pushes when python files change)
+# Define when it runs
 on:
   push:
+    paths:
+      - '**.py'
+  pull_request:
     paths:
       - '**.py'
 
@@ -12,21 +17,25 @@ jobs:
   # Name of the job running pylint
   pylint:
 
-    # Define the OS and the python versions to use
+    # Define the OS
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.9', '3.10']
 
     # Steps that define the job
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.9
+
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-pylint
+        restore-keys: |
+          ${{ runner.os }}-pip-pylint
 
     - name: Install dependencies
       run: |
@@ -41,7 +50,7 @@ jobs:
     - name: Archive pylint results
       uses: actions/upload-artifact@v3
       with:
-        name: pylint-reports-python${{ matrix.python-version }}
+        name: pylint-reports-python
         path: |
           pylint_report_narps_open.txt
           pylint_report_tests.txt

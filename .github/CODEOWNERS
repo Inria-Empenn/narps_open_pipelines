@@ -1,0 +1,7 @@
+# CODEOWNERS - This file allows to assign owners to files of the repository.
+# Each line consists in is a file pattern followed by one or more owners, or a team.
+# See reference here : https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Files for CI-CD workflow management
+.github/workflows/* @Inria-Empenn/narps_open_pipelines_admin
+.gitlab-ci.yml @Inria-Empenn/narps_open_pipelines_admin
