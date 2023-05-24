@@ -3,6 +3,7 @@ title = "Testing configuration for the NARPS open pipelines project"
 config_type = "testing"
 
 [directories]
-dataset = ""
-results = ""
+dataset = "tests/data/original/ds001734/"
+reproduced_results = "tests/data/reproduced/"
+narps_results = "tests/data/results/"
 test_data = "tests/test_data/"

@@ -1,18 +1,17 @@
 # THE OPEN PIPELINE PROJECT
 
 <p align="center">
-	<img src="https://github.com/elodiegermani/narps_open_pipelines/blob/main/static/images/project_illustration.png"/> 
+	<img src="assets/images/project_illustration.png"/> 
 </p>
 
 ## Table of contents
-- [Table of contents](#table-of-contents)
+
 - [Project presentation](#project-presentation)
 - [Getting Started](#getting-started)
 	- [Contents overview](#contents-overview)
 	- [Installation](#installation)
 	- [Contributing](#contributing)
 - [References](#references)
-
 
 ## Project presentation
 
@@ -26,20 +25,7 @@ We also created a shared spreadsheet that can be use to add comments on pipeline
 
 ## Getting Started
 
-[Fork and clone](https://docs.github.com/en/get-started/quickstart/fork-a-repo) this repository to your local machine. 
-
-```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
-```
-
-If you are using [Datalad](INSTALL.md#data-download-instructions),
-because the NARPS data is "bundled" in this repository as 
-[datalad subdataset](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html), 
-you may want to use datalad to clone your fork of the repository by doing:
-
-```bash
-datalad install --recursive https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
-```
+Follow the instructions of [INSTALL.md](INSTALL.md) to start with the NARPS open pipelines project.
 
 ### Contents overview
 
@@ -51,7 +37,11 @@ This directory contains the Python package with all the pipelines logic.
 
 This directory is made to contain data that will be used by the pipelines, as well as the (intermediate or final) results data.
 
-Instructions to download data are available [in `INSTALL.md`](INSTALL.md#data-download-instructions).
+Instructions to download data are available in [INSTALL.md](INSTALL.md#data-download-instructions).
+
+#### `docs` :blue_book:
+
+This directory the documentation for the project. Start browsing it with the entry point [docs/README.md](docs/README.md)
 
 #### `examples` :orange_book:
 
@@ -67,7 +57,7 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 
 ### Contributing 
 
-Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md)
+:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) if you wish to get involed !
 
 ## References
 
@@ -77,4 +67,5 @@ Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md)
 4. [Ioannidis, J.P.A. (2008), ‘Why Most Discovered True Associations Are Inflated’, Epidemiology.](https://pubmed.ncbi.nlm.nih.gov/18633328/)
 
 ## Funding
+
 This project is supported by Région Bretagne (Boost MIND). 

@@ -3,8 +3,8 @@
 	url = https://github.com/OpenNeuroDatasets/ds001734.git
 	datalad-id = ca05bc10-29a0-11e9-9a7b-0242ac13000d
 	datalad-url = https://github.com/OpenNeuroDatasets/ds001734.git
-[submodule "data/neurovault"]
-	path = data/neurovault
-	url = git@gin.g-node.org:/RemiGau/neurovault_narps_open_pipeline.git
-	datalad-url = git@gin.g-node.org:/RemiGau/neurovault_narps_open_pipeline.git
+[submodule "data/results"]
+	path = data/results
+	url = https://gin.g-node.org/RemiGau/neurovault_narps_open_pipeline.git
+	datalad-url = https://gin.g-node.org/RemiGau/neurovault_narps_open_pipeline.git
 	datalad-id = b7b70790-7b0c-40d3-976f-c7dd49df3b86

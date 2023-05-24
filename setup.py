@@ -25,7 +25,8 @@ extras_require = {
         'pylint',
         'pytest',
         'pytest-cov',
-        'pytest-helpers-namespace'
+        'pytest-helpers-namespace',
+        'checksumdir'
         ]
 }
 
