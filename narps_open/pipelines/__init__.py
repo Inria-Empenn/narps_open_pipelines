@@ -279,3 +279,19 @@ class Pipeline(ABC):
     @abstractmethod
     def get_group_level_analysis(self):
         """ Return a Nipype worflow describing the group level analysis part of the pipeline """
+
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+        return []
+
+    def get_run_level_outputs(self):
+        """ Return the names of the files the run level analysis is supposed to generate. """
+        return []
+
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+        return []
+
+    def get_group_level_outputs(self):
+        """ Return the names of the files the group level analysis is supposed to generate. """
+        return []

@@ -3,10 +3,10 @@
 
 """ This module allows to run pipelines from NARPS open. """
 
+from os.path import isfile
 from importlib import import_module
 from random import choices
 from argparse import ArgumentParser
-from pathlib import Path
 
 from nipype import Workflow
 
@@ -90,26 +90,23 @@ class PipelineRunner():
 
         if first_level_only and group_level_only:
             raise AttributeError('first_level_only and group_level_only cannot both be True')
-        if first_level_only:
-            workflow_list = [
+
+        # Generate workflow list
+        workflow_list = []
+        if not group_level_only:
+            workflow_list += [
                 self._pipeline.get_preprocessing(),
                 self._pipeline.get_run_level_analysis(),
                 self._pipeline.get_subject_level_analysis(),
             ]
-        elif group_level_only:
-            workflow_list = [
-                self._pipeline.get_group_level_analysis()
-            ]
-        else:
-            workflow_list = [
-                self._pipeline.get_preprocessing(),
-                self._pipeline.get_run_level_analysis(),
-                self._pipeline.get_subject_level_analysis(),
+        if not first_level_only:
+            workflow_list += [
                 self._pipeline.get_group_level_analysis()
             ]
 
         nb_procs = Configuration()['runner']['nb_procs']
 
+        # Launch workflows
         for workflow in workflow_list:
             if workflow is None:
                 pass
@@ -131,6 +128,20 @@ class PipelineRunner():
                 else:
                     workflow.run()
 
+    def get_missing_first_level_outputs(self):
+        """ Return the list of missing files after computations of the first level """
+        files = self._pipeline.get_preprocessing_outputs()
+        files += self._pipeline.get_run_level_outputs()
+        files += self._pipeline.get_subject_level_outputs()
+
+        return [f for f in files if not isfile(f)]
+
+    def get_missing_group_level_outputs(self):
+        """ Return the list of missing files after computations of the group level """
+        files = self._pipeline.get_group_level_outputs()
+
+        return [f for f in files if not isfile(f)]
+
 if __name__ == '__main__':
 
     # Parse arguments
@@ -147,6 +158,8 @@ if __name__ == '__main__':
         help='run the group level only')
     levels.add_argument('-f', '--first', action='store_true', default=False,
         help='run the first levels only (preprocessing + subjects + runs)')
+    parser.add_argument('-c', '--check', action='store_true', required=False,
+        help='check pipeline outputs (runner is not launched)')
     arguments = parser.parse_args()
 
     # Initialize a PipelineRunner
@@ -162,5 +175,16 @@ if __name__ == '__main__':
     else:
         runner.random_nb_subjects = int(arguments.random)
 
-    # Handle levels and start the runner
-    runner.start(arguments.first, arguments.group)
+    # Check data
+    if arguments.check:
+        missing_files = []
+        print('Missing files for team', arguments.team, 'after running',
+            len(runner.pipeline.subject_list), 'subjects:')
+        if not arguments.group:
+            print('First level:', runner.get_missing_first_level_outputs())
+        if not arguments.first:
+            print('Group level:', runner.get_missing_group_level_outputs())
+        
+    # Start the runner    
+    else:
+        runner.start(arguments.first, arguments.group)
