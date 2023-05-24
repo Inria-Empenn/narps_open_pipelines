@@ -6,3 +6,6 @@ config_type = "default"
 dataset = "data/original/ds001734/"
 reproduced_results = "data/reproduced/"
 narps_results = "data/results/"
+
+[runner]
+nb_procs = 8 # Maximum number of threads executed by the runner
