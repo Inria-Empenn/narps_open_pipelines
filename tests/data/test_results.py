@@ -17,35 +17,37 @@ from shutil import rmtree
 from checksumdir import dirhash
 from pytest import mark
 
-from narps_open.data.results import show_progress, download_result_collection
+from narps_open.data.results import ResultsCollection
 from narps_open.utils.configuration import Configuration
 
-class TestUtilsResults:
-    """ A class that contains all the unit tests for the results module."""
+class TestResultsCollection:
+    """ A class that contains all the unit tests for the ResultsCollection class."""
 
     @staticmethod
     @mark.unit_test
-    def test_show_progress(capfd): # using pytest's capfd fixture to get stdout
-        """ Test the show_progress function """
+    def test_create():
+        """ Test the creation of a ResultsCollection object """
 
-        show_progress(25,1,100)
-        captured = capfd.readouterr()
-        assert captured.out == 'Downloading 25 %\r'
+        collection = ResultsCollection('2T6S')
+        assert collection.team_id == '2T6S'
+        assert collection.id == '4881'
+        assert collection.url == 'https://neurovault.org/collections/4881/download'
+        assert 'results/orig/4881_2T6S' in collection.directory
+        assert collection.result_names['hypo3_thresh.nii.gz'] == 'hypo3_thresholded_revised.nii.gz'
 
-        show_progress(26,2,200)
-        captured = capfd.readouterr()
-        assert captured.out == 'Downloading 26 %\r'
-
-        show_progress(25,50,-1)
-        captured = capfd.readouterr()
-        assert captured.out == 'Downloading ⣽\r'
+        collection = ResultsCollection('C88N')
+        assert collection.team_id == 'C88N'
+        assert collection.id == '4812'
+        assert collection.url == 'https://neurovault.org/collections/4812/download'
+        assert 'results/orig/4812_C88N' in collection.directory
+        assert collection.result_names['hypo3_thresh.nii.gz'] == 'hypo3_thresh.nii.gz'
 
     @staticmethod
     @mark.unit_test
-    def test_download_result_collection():
-        """ Test the download_result_collection function """
+    def test_download():
+        """ Test the download method """
 
-        download_result_collection('2T6S')
+        ResultsCollection('2T6S').download()
 
         # Collection should be downloaded in the results directory
         expected_dir = join(Configuration()['directories']['narps_results'], 'orig', '4881_2T6S')

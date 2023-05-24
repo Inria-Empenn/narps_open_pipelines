@@ -1,78 +1,90 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" This module allows to get Neurovault corresponding to results from teams involed in NARPS """
+""" This module allows to get Neurovault collections corresponding
+    to results from teams involed in NARPS
+"""
 
 from os import remove, makedirs
 from os.path import join
+from json import loads
 from zipfile import ZipFile
 from urllib.request import urlretrieve
 from argparse import ArgumentParser
+from importlib_resources import files
 
 from narps_open.utils.configuration import Configuration
 from narps_open.data.description import TeamDescription
 from narps_open.pipelines import implemented_pipelines
+from narps_open.utils import show_download_progress
 
-def show_progress(count, block_size, total_size):
-    """ A hook function to be passed to urllib.request.urlretrieve in order to
-        print the progress of a download.
-
-        Arguments:
-        - count: int - the number of blocks already downloaded
-        - block_size: int - the size in bytes of a block
-        - total_size: int - the total size in bytes of the download. -1 if not provided.
+class ResultsCollection():
+    """ Represents a Neurovault collections corresponding
+        to results from teams involed in NARPS.
     """
-    if total_size != -1:
-        # Display a percentage
-        display_value = str(int(count * block_size * 100 / total_size))+' %'
-    else:
-        # Draw a pretty cursor
-        cursor = ['⣾','⣽','⣻','⢿','⡿','⣟','⣯','⣷']
-        display_value = cursor[int(count)%len(cursor)]
 
-    # Showing download progress
-    print('Downloading', display_value, end='\r')
+    def __init__(self, team_id: str):
+        self.team_id = team_id
 
-def download_result_collection(team_id: str):
-    """ Download a Neurovault collection corresponding to results from a team involed in NARPS.
-        Unzip it and remove zip file.
+        description = TeamDescription(team_id = self.team_id)
+        self.id = description.general['NV_collection_link'].split('/')[-2]
+        self.url = description.general['NV_collection_link'] + 'download'
+        self.directory = join(
+            Configuration()['directories']['narps_results'],
+            'orig',
+            self.id + '_' + self.team_id
+            )
 
-        Arguments:
-        - team_id: team corresponding to the requested collection
-    """
-    # Get collection url and id
-    description = TeamDescription(team_id = team_id)
-    collection_id = description.general['NV_collection_link'].split('/')[-2]
-    collection_url = description.general['NV_collection_link'] + 'download'
+        results_file = join(
+            files('narps_open.data.results'),
+            'results.json')
 
-    # Create download directory if not existing
-    download_directory = join(
-        Configuration()['directories']['narps_results'],
-        'orig',
-        collection_id+'_'+team_id
-        )
-    makedirs(download_directory, exist_ok = True)
+        with open(results_file, 'r') as file:
+            translations = loads(file.read())
 
-    # Download dataset
-    print('Collecting results for team', team_id)
-    zip_filename = join(download_directory, 'NARPS-'+team_id+'.zip')
-    urlretrieve(collection_url, zip_filename, show_progress)
+        self.result_names = translations[self.team_id]
+        if len(self.result_names) == 0:
+            self.result_names = {
+                "hypo1_thresh.nii.gz" : "hypo1_thresh.nii.gz",
+                "hypo1_unthresh.nii.gz" : "hypo1_unthresh.nii.gz",
+                "hypo2_thresh.nii.gz" : "hypo2_thresh.nii.gz",
+                "hypo2_unthresh.nii.gz" : "hypo2_unthresh.nii.gz",
+                "hypo3_thresh.nii.gz" : "hypo3_thresh.nii.gz",
+                "hypo3_unthresh.nii.gz" : "hypo3_unthresh.nii.gz",
+                "hypo4_thresh.nii.gz" : "hypo4_thresh.nii.gz",
+                "hypo4_unthresh.nii.gz" : "hypo4_unthresh.nii.gz",
+                "hypo5_thresh.nii.gz" : "hypo5_thresh.nii.gz",
+                "hypo5_unthresh.nii.gz" : "hypo5_unthresh.nii.gz",
+                "hypo6_thresh.nii.gz" : "hypo6_thresh.nii.gz",
+                "hypo6_unthresh.nii.gz" : "hypo6_unthresh.nii.gz",
+                "hypo7_thresh.nii.gz" : "hypo7_thresh.nii.gz",
+                "hypo7_unthresh.nii.gz" : "hypo7_unthresh.nii.gz",
+                "hypo8_thresh.nii.gz" : "hypo8_thresh.nii.gz",
+                "hypo8_unthresh.nii.gz" : "hypo8_unthresh.nii.gz",
+                "hypo9_thresh.nii.gz" : "hypo9_thresh.nii.gz",
+                "hypo9_unthresh.nii.gz" : "hypo9_unthresh.nii.gz"
+            }
 
-    # Unzip files directly in the download directory
-    with ZipFile(zip_filename, 'r') as zip_file:
-        for zip_info in zip_file.infolist():
-            zip_info.filename = zip_info.filename.split('/')[-1]
-            zip_info.filename = join(download_directory, zip_info.filename)
-            zip_file.extract(zip_info)
+    def download(self):
+        """ Download the collection, unzip it and remove zip file. """
 
-    # Remove zip file
-    remove(zip_filename)
+        # Create download directory if not existing
+        makedirs(self.directory, exist_ok = True)
 
-def download_all_result_collections():
-    """ Download all Neurovault collections corresponding to results from teams involed in NARPS.
-    """
-    for team_id, _ in implemented_pipelines.items():
-        download_result_collection(team_id)
+        # Download dataset
+        print('Collecting results for team', self.team_id)
+        zip_filename = join(self.directory, 'NARPS-'+self.team_id+'.zip')
+        urlretrieve(self.url, zip_filename, show_download_progress)
+
+        # Unzip files directly in the download directory
+        with ZipFile(zip_filename, 'r') as zip_file:
+            for zip_info in zip_file.infolist():
+                zip_info.filename = zip_info.filename.split('/')[-1]
+                zip_info.filename = join(self.directory, zip_info.filename)
+                zip_file.extract(zip_info)
+
+        # Remove zip file
+        remove(zip_filename)
 
 if __name__ == '__main__':
     # Parse arguments
@@ -84,7 +96,8 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
 
     if arguments.all:
-        download_all_result_collections()
+        for team_id, _ in implemented_pipelines.items():
+            ResultsCollection(team_id).download()
     else:
         for team in arguments.teams:
-            download_result_collection(team)
+            ResultsCollection(team).download()

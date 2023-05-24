@@ -5,6 +5,26 @@
 
 from os.path import join, abspath, dirname, realpath
 
+def show_download_progress(count, block_size, total_size):
+    """ A hook function to be passed to urllib.request.urlretrieve in order to
+        print the progress of a download.
+
+        Arguments:
+        - count: int - the number of blocks already downloaded
+        - block_size: int - the size in bytes of a block
+        - total_size: int - the total size in bytes of the download. -1 if not provided.
+    """
+    if total_size != -1:
+        # Display a percentage
+        display_value = str(int(count * block_size * 100 / total_size))+' %'
+    else:
+        # Draw a pretty cursor
+        cursor = ['⣾','⣽','⣻','⢿','⡿','⣟','⣯','⣷']
+        display_value = cursor[int(count)%len(cursor)]
+
+    # Showing download progress
+    print('Downloading', display_value, end='\r')
+
 def directories(team_id: str) -> dict:
     """
     Args:
