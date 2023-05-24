@@ -10,7 +10,7 @@ from urllib.request import urlretrieve
 from argparse import ArgumentParser
 
 from narps_open.utils.configuration import Configuration
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 from narps_open.pipelines import implemented_pipelines
 
 def show_progress(count, block_size, total_size):

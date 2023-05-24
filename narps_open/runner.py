@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from nipype import Workflow
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
-from narps_open.utils import get_all_participants, get_participants
+from narps_open.data.participants import get_all_participants, get_participants
 from narps_open.utils.configuration import Configuration
 
 class PipelineRunner():

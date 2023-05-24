@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Tests of the 'narps_open.utils.results' module.
+""" Tests of the 'narps_open.data.results' module.
 
 Launch this test with PyTest
 
@@ -17,7 +17,7 @@ from shutil import rmtree
 from checksumdir import dirhash
 from pytest import mark
 
-from narps_open.utils.results import show_progress, download_result_collection
+from narps_open.data.results import show_progress, download_result_collection
 from narps_open.utils.configuration import Configuration
 
 class TestUtilsResults:

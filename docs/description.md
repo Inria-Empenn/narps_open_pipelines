@@ -1,15 +1,15 @@
 # Access the descriptions of NARPS teams pipelines
 
-The file `narps_open/utils/description/analysis_pipelines_full_descriptions.tsv` contains the description provided by each team participating to NARPS.
+The file `narps_open/data/description/analysis_pipelines_full_descriptions.tsv` contains the description provided by each team participating to NARPS.
 It is a convertion into tsv format (tab-separated values) of the [original .xlsx file published in NARPS](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx
 ), which allows easier parsing with python.
 
-The file `narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
+The file `narps_open/data/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
 
-The class `TeamDescription` of module `narps_open.utils.description` acts as a parser for these two files. Here is an example on how to use it:
+The class `TeamDescription` of module `narps_open.data.description` acts as a parser for these two files. Here is an example on how to use it:
 
 ```python
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 description = TeamDescription('2T6S') # Set the id of the team here
 # Access the object as a dict
 print(description)
@@ -39,7 +39,7 @@ description.derived['n_participants']
 You can also use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`.
 
 ```bash
-python narps_open/utils/description -h
+python narps_open/data/description -h
 # usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}]
 #
 # Get description of a NARPS pipeline.
@@ -50,7 +50,7 @@ python narps_open/utils/description -h
 #   -d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}, --dictionary {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}
 #                         the sub dictionary of team description
 
-python narps_open/utils/description -t 2T6S -d general
+python narps_open/data/description -t 2T6S -d general
 # {
 #    "teamID": "2T6S",
 #    "NV_collection_link": "https://neurovault.org/collections/4881/",

@@ -5,48 +5,6 @@
 
 from os.path import join, abspath, dirname, realpath
 
-import pandas as pd
-
-from narps_open.utils.description import TeamDescription
-
-def participants_tsv():
-
-    participants = join(directories()["exp"], "participants.tsv")
-
-    return pd.read_csv(participants, sep="\t")
-
-def get_all_participants() -> list:
-    """ Return a list of all participants included in NARPS """
-    # TODO : parse participants.tsv instead
-    return [
-        '001', '002', '003', '004', '005', '006', '008', '009',
-        '010', '011', '013', '014', '015', '016', '017', '018', '019',
-        '020', '021', '022', '024', '025', '026', '027', '029',
-        '030', '032', '033', '035', '036', '037', '038', '039',
-        '040', '041', '043', '044', '045', '046', '047', '049',
-        '050', '051', '052', '053', '054', '055', '056', '057', '058', '059',
-        '060', '061', '062', '063', '064', '066', '067', '068', '069',
-        '070', '071', '072', '073', '074', '075', '076', '077', '079',
-        '080', '081', '082', '083', '084', '085', '087', '088', '089',
-        '090', '092', '093', '094', '095', '096', '098', '099',
-        '100', '102', '103', '104', '105', '106', '107', '108', '109',
-        '110', '112', '113', '114', '115', '116', '117', '118', '119',
-        '120', '121', '123', '124'
-        ]
-
-def get_participants(team_id: str) -> list:
-    """ Return a list of participants that were taken into account by a given team
-
-    Args:
-        team_id: str, the ID of the team.
-
-    Returns: a list of participants labels
-    """
-    description = TeamDescription(team_id)
-    excluded_participants = description.derived['excluded_participants'].replace(' ','').split(',')
-
-    return [p for p in get_all_participants() if p not in excluded_participants]
-
 def directories(team_id: str) -> dict:
     """
     Args:

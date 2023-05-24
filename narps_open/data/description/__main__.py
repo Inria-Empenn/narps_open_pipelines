@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Provide a command-line interface for the package narps_open.utils.description """
+""" Provide a command-line interface for the package narps_open.data.description """
 
 from argparse import ArgumentParser
 from json import dumps
 
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 
 # Parse arguments
 parser = ArgumentParser(description='Get description of a NARPS pipeline.')

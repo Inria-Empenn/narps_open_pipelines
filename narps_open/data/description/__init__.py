@@ -14,10 +14,10 @@ class TeamDescription(dict):
     """
 
     description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_full_descriptions.tsv')
     derived_description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_derived_descriptions.tsv')
 
     def __init__(self, team_id):

@@ -4,7 +4,7 @@ config_type = "default"
 
 [directories]
 dataset = "data/original/ds001734/"
-reproduced_results = "data/reproduced/"
+reproduced_results = "/home/bclenet/output/"
 narps_results = "data/results/"
 
 [runner]
