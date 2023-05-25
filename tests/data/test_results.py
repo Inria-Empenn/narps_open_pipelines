@@ -33,14 +33,14 @@ class TestResultsCollection:
         assert collection.id == '4881'
         assert collection.url == 'https://neurovault.org/collections/4881/download'
         assert 'results/orig/4881_2T6S' in collection.directory
-        assert collection.result_names['hypo3_thresh.nii.gz'] == 'hypo3_thresholded_revised.nii.gz'
+        assert collection.files['hypo3_thresh.nii.gz'] == 'hypo3_thresholded_revised.nii.gz'
 
         collection = ResultsCollection('C88N')
         assert collection.team_id == 'C88N'
         assert collection.id == '4812'
         assert collection.url == 'https://neurovault.org/collections/4812/download'
         assert 'results/orig/4812_C88N' in collection.directory
-        assert collection.result_names['hypo3_thresh.nii.gz'] == 'hypo3_thresh.nii.gz'
+        assert collection.files['hypo3_thresh.nii.gz'] == 'hypo3_thresh.nii.gz'
 
     @staticmethod
     @mark.unit_test

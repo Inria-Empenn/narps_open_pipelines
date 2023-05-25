@@ -25,6 +25,19 @@ def show_download_progress(count, block_size, total_size):
     # Showing download progress
     print('Downloading', display_value, end='\r')
 
+def get_subject_id(file_name: str) -> str:
+    """ Return the id of the subject corresponding to the passed file name.
+        Return None if the file name is not associated with any subject.
+        TODO : a feature to be handled globaly to parse data in a file name.
+    """
+    key = 'subject_id'
+    if key not in file_name:
+        return None
+
+    position = file_name.find(key) + len(key) + 1
+
+    return file_name[position:position+3]
+
 def directories(team_id: str) -> dict:
     """
     Args:
@@ -67,7 +80,6 @@ def directories(team_id: str) -> dict:
         "result": result_dir,
     }
 
-
 def raw_data_template() -> dict:
     """
     Returns:
@@ -106,7 +118,6 @@ def raw_data_template() -> dict:
         "magnitude": magnitude_file,
         "phasediff": phasediff_file,
     }
-
 
 def fmriprep_data_template() -> dict:
     """

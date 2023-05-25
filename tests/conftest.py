@@ -13,6 +13,7 @@ from pytest import helpers
 from narps_open.runner import PipelineRunner
 from narps_open.utils.correlation import get_correlation_coefficient
 from narps_open.utils.configuration import Configuration
+from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
@@ -20,7 +21,6 @@ Configuration(config_type='testing')
 @helpers.register
 def test_pipeline(
     team_id: str,
-    references_dir: str,
     dataset_dir: str,
     results_dir: str,
     nb_subjects: int = 4
@@ -29,9 +29,8 @@ def test_pipeline(
 
     Arguments:
         - team_id: str, the ID of the team (allows to identify which pipeline to run)
-        - references_dir: str, the path to the directory where results from the teams are
         - dataset_dir: str, the path to the ds001734 dataset
-        - results_dir: str, the path where to store the results
+        - results_dir: str, the path to the directory where results from the teams are stored
         - nb_subjects: int, the number of subject to run the pipeline with
 
     Returns:
@@ -39,7 +38,7 @@ def test_pipeline(
         (reference and computed) files:
 
     This function can be used as follows:
-        results = pytest.helpers.test_pipeline('2T6S', '/references/', '/data/', '/output/', 4)
+        results = pytest.helpers.test_pipeline('2T6S', '/data/', '/output/', 4)
         assert statistics.mean(results) > .003
 
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
@@ -48,45 +47,52 @@ def test_pipeline(
 
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
-    runner.random_nb_subjects = nb_subjects
+    runner.nb_subjects = nb_subjects
     runner.pipeline.directories.dataset_dir = dataset_dir
     runner.pipeline.directories.results_dir = results_dir
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
     runner.start()
 
-    # Retrieve the paths to the computed files
-    output_files = [
-        join(
-            runner.pipeline.directories.output_dir,
-            'NARPS-reproduction',
-            f'team-2T6S_nsub-{nb_subjects}_hypo-{hypothesis}_unthresholded.nii'
-            )
-        for hypothesis in range(1, 10)
-        ]
+    # Check for missing files
+    #for file in runner.get_missing_first_level_outputs():
 
-    # Retrieve the paths to the reference files
-    reference_files = [
-        join(
-            references_dir,
-            f'NARPS-{team_id}',
-            f'hypo{hypothesis}_unthresholded.nii.gz'
-            )
-        for hypothesis in range(1, 10)
-        ]
+    # Retrieve the paths to the reproduced files
+    reproduced_files = runner.pipeline.get_hypotheses_outputs()
 
-    # Add 'revised' to files when needed
-    for index, reference_file in enumerate(reference_files):
-        if not exists(reference_file):
-            reference_files[index] = reference_file.replace('.nii.gz', '_revised.nii.gz')
-        if not exists(reference_files[index]):
-            raise FileNotFoundError(reference_files[index] + ' does not exist.')
+    # Retrieve the paths to the results files
+    collection = ResultsCollection(team_id)
+    results_files = [join(collection.directory, f) for f in collection.files.values()]
 
-    # Example paths for reference data 2T6S
-    #    'https://neurovault.org/collections/4881/NARPS-2T6S/hypo1_unthresh'
+    # Get only unthresholded maps
+    indices = [0, 2, 4, 6, 8, 10, 12, 14, 16]
+    reproduced_files = [reproduced_files[i] for i in indices]
+    results_files = [results_files[i] for i in indices]
 
     # Compute the correlation coefficients
     return [
-        get_correlation_coefficient(output_file, reference_file)
-        for output_file, reference_file in zip(output_files, reference_files)
+        get_correlation_coefficient(reproduced_file, results_file)
+        for reproduced_file, results_file in zip(reproduced_files, results_files)
         ]
+
+@helpers.register
+def test_correlation_results(values: list, nb_subjects: int) -> bool:
+    """ This pytest helper returns True if all values in `values` are greater than
+        expected values. It returns False otherwise.
+
+        Arguments:
+        - values, list of 9 floats: a list of correlation values for the 9 hypotheses of NARPS
+        - nb_subjects, int: the number of subject used to compute the correlation values
+    """
+    if nb_subjects < 21:
+        expected = [0.51, 0.48, 0.51, 0.48, 0.46, 0.36, 0.46, 0.36, 0.18]
+    elif nb_subjects < 41:
+        expected = [0.72, 0.65, 0.72, 0.65, 0.74, 0.51, 0.74, 0.51, 0.02]
+    elif nb_subjects < 61:
+        expected = [0.75, 0.72, 0.75, 0.72, 0.85, 0.63, 0.85, 0.63, 0.11]
+    elif nb_subjects < 81:
+        expected = [0.81, 0.82, 0.81, 0.82, 0.87, 0.67, 0.87, 0.67, 0.06]
+    else:
+        expected = [0.84, 0.88, 0.84, 0.88, 0.89, 0.79, 0.89, 0.79, 0.00]
+
+    return False not in [v>e for v,e in zip(values, expected)]

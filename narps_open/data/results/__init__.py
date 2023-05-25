@@ -24,8 +24,9 @@ class ResultsCollection():
     """
 
     def __init__(self, team_id: str):
-        self.team_id = team_id
 
+        # Initialize attributes
+        self.team_id = team_id
         description = TeamDescription(team_id = self.team_id)
         self.id = description.general['NV_collection_link'].split('/')[-2]
         self.url = description.general['NV_collection_link'] + 'download'
@@ -35,34 +36,32 @@ class ResultsCollection():
             self.id + '_' + self.team_id
             )
 
-        results_file = join(
-            files('narps_open.data.results'),
-            'results.json')
-
-        with open(results_file, 'r') as file:
+        # Parse the results file, containing correspondances between the names given by the
+        # team, and the expected names of the hypotheses files.
+        with open(join(files('narps_open.data.results'),'results.json'), 'r') as file:
             translations = loads(file.read())
 
-        self.result_names = translations[self.team_id]
-        if len(self.result_names) == 0:
-            self.result_names = {
-                "hypo1_thresh.nii.gz" : "hypo1_thresh.nii.gz",
-                "hypo1_unthresh.nii.gz" : "hypo1_unthresh.nii.gz",
-                "hypo2_thresh.nii.gz" : "hypo2_thresh.nii.gz",
-                "hypo2_unthresh.nii.gz" : "hypo2_unthresh.nii.gz",
-                "hypo3_thresh.nii.gz" : "hypo3_thresh.nii.gz",
-                "hypo3_unthresh.nii.gz" : "hypo3_unthresh.nii.gz",
-                "hypo4_thresh.nii.gz" : "hypo4_thresh.nii.gz",
-                "hypo4_unthresh.nii.gz" : "hypo4_unthresh.nii.gz",
-                "hypo5_thresh.nii.gz" : "hypo5_thresh.nii.gz",
-                "hypo5_unthresh.nii.gz" : "hypo5_unthresh.nii.gz",
-                "hypo6_thresh.nii.gz" : "hypo6_thresh.nii.gz",
-                "hypo6_unthresh.nii.gz" : "hypo6_unthresh.nii.gz",
-                "hypo7_thresh.nii.gz" : "hypo7_thresh.nii.gz",
-                "hypo7_unthresh.nii.gz" : "hypo7_unthresh.nii.gz",
-                "hypo8_thresh.nii.gz" : "hypo8_thresh.nii.gz",
-                "hypo8_unthresh.nii.gz" : "hypo8_unthresh.nii.gz",
-                "hypo9_thresh.nii.gz" : "hypo9_thresh.nii.gz",
-                "hypo9_unthresh.nii.gz" : "hypo9_unthresh.nii.gz"
+        self.files = translations[self.team_id]
+        if len(self.files) == 0:
+            self.files = {
+                'hypo1_thresh.nii.gz' : 'hypo1_thresh.nii.gz',
+                'hypo1_unthresh.nii.gz' : 'hypo1_unthresh.nii.gz',
+                'hypo2_thresh.nii.gz' : 'hypo2_thresh.nii.gz',
+                'hypo2_unthresh.nii.gz' : 'hypo2_unthresh.nii.gz',
+                'hypo3_thresh.nii.gz' : 'hypo3_thresh.nii.gz',
+                'hypo3_unthresh.nii.gz' : 'hypo3_unthresh.nii.gz',
+                'hypo4_thresh.nii.gz' : 'hypo4_thresh.nii.gz',
+                'hypo4_unthresh.nii.gz' : 'hypo4_unthresh.nii.gz',
+                'hypo5_thresh.nii.gz' : 'hypo5_thresh.nii.gz',
+                'hypo5_unthresh.nii.gz' : 'hypo5_unthresh.nii.gz',
+                'hypo6_thresh.nii.gz' : 'hypo6_thresh.nii.gz',
+                'hypo6_unthresh.nii.gz' : 'hypo6_unthresh.nii.gz',
+                'hypo7_thresh.nii.gz' : 'hypo7_thresh.nii.gz',
+                'hypo7_unthresh.nii.gz' : 'hypo7_unthresh.nii.gz',
+                'hypo8_thresh.nii.gz' : 'hypo8_thresh.nii.gz',
+                'hypo8_unthresh.nii.gz' : 'hypo8_unthresh.nii.gz',
+                'hypo9_thresh.nii.gz' : 'hypo9_thresh.nii.gz',
+                'hypo9_unthresh.nii.gz' : 'hypo9_unthresh.nii.gz'
             }
 
     def download(self):

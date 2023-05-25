@@ -11,7 +11,11 @@ from argparse import ArgumentParser
 from nipype import Workflow
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
-from narps_open.data.participants import get_all_participants, get_participants
+from narps_open.data.participants import (
+    get_all_participants,
+    get_participants,
+    get_participants_subset
+    )
 from narps_open.utils.configuration import Configuration
 
 class PipelineRunner():
@@ -52,6 +56,12 @@ class PipelineRunner():
         """ Setter for property random_nb_subjects """
         # Generate a random list of subjects
         self._pipeline.subject_list = choices(get_participants(self.team_id), k = value)
+
+    @subjects.setter
+    def nb_subjects(self, value: int) -> None:
+        """ Setter for property nb_subjects """
+        # Get a subset of participants
+        self._pipeline.subject_list = get_participants_subset(value)
 
     @property
     def team_id(self) -> str:

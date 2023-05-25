@@ -17,6 +17,7 @@ from pytest import helpers, mark
 from nipype import Workflow
 
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
+from narps_open.utils.configuration import Configuration
 
 class TestPipelinesTeam2T6S:
     """ A class that contains all the unit tests for the PipelineTeam2T6S class."""
@@ -53,6 +54,7 @@ class TestPipelinesTeam2T6S:
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 9
         assert len(pipeline.get_group_level_outputs()) == 84
+        assert len(pipeline.get_hypotheses_outputs()) == 18
 
         # 2 - 4 sujects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
@@ -60,15 +62,19 @@ class TestPipelinesTeam2T6S:
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 36
         assert len(pipeline.get_group_level_outputs()) == 84
+        assert len(pipeline.get_hypotheses_outputs()) == 18
 
     @staticmethod
     @mark.pipeline_test
     def test_execution():
         """ Test the execution of a PipelineTeam2T6S and compare results """
-        results_4_subjects = helpers.test_pipeline(
-            '2T6S',
-            '/references/',
-            '/data/',
-            '/output/',
-            4)
-        assert mean(results_4_subjects) > .003
+
+        for subjects in [4]: #[20, 40, 60, 80, 108]:
+            print(f'Testing pipeline 2T6S with {subjects} subjects')
+            results = helpers.test_pipeline(
+                '2T6S',
+                Configuration()['directories']['dataset'],
+                Configuration()['directories']['narps_results'],
+                subjects
+            )
+            assert helpers.test_correlation_results(results, subjects)
