@@ -159,10 +159,12 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID')
     subjects = parser.add_mutually_exclusive_group(required=True)
-    subjects.add_argument('-r', '--random', type=str,
+    subjects.add_argument('-r', '--rsubjects', type=str,
         help='the number of subjects to be randomly selected')
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
         help='a list of subjects')
+    subjects.add_argument('-n', '--nsubjects', type=str,
+        help='the number of subjects to be randomly selected')
     levels = parser.add_mutually_exclusive_group(required=False)
     levels.add_argument('-g', '--group', action='store_true', default=False,
         help='run the group level only')
@@ -182,8 +184,10 @@ if __name__ == '__main__':
     # Handle subject
     if arguments.subjects is not None:
         runner.subjects = arguments.subjects
+    elif arguments.rsubjects is not None:
+        runner.random_nb_subjects = int(arguments.rsubjects)
     else:
-        runner.random_nb_subjects = int(arguments.random)
+        runner.nb_subjects = int(arguments.nsubjects)
 
     # Check data
     if arguments.check:
