@@ -20,6 +20,21 @@ class TestParticipants:
 
     @staticmethod
     @mark.unit_test
+    def test_get_participants_information():
+        """ Test the get_participants_information function """
+        """p_info = part.get_participants_information()
+        assert len(p_info) == 108
+        assert p_info.at[5, 'participant_id'] == 'sub-006'
+        assert p_info.at[5, 'group'] == 'equalRange'
+        assert p_info.at[5, 'gender'] == 'M'
+        assert p_info.at[5, 'age'] == 30
+        assert p_info.at[12, 'participant_id'] == 'sub-015'
+        assert p_info.at[12, 'group'] == 'equalIndifference'
+        assert p_info.at[12, 'gender'] == 'F'
+        assert p_info.at[12, 'age'] == 26"""
+
+    @staticmethod
+    @mark.unit_test
     def test_get_all_participants():
         """ Test the get_all_participants function """
         participants_list = part.get_all_participants()

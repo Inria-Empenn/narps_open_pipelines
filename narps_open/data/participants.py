@@ -10,8 +10,8 @@ from pandas import read_csv
 from narps_open.data.description import TeamDescription
 from narps_open.utils.configuration import Configuration
 
-def participants_tsv():
-    """ Get a list of participants from the tsv file from NARPS """
+def get_participants_information():
+    """ Get a list of participants information from the tsv file from NARPS """
     return read_csv(join(Configuration()['directories']['dataset'], 'participants.tsv'), sep='\t')
 
 def get_all_participants() -> list:
