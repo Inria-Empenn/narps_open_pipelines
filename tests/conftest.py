@@ -6,7 +6,7 @@ conftest.py file will be automatically launched before running
 pytest on (a) test file(s) in the same directory.
 """
 
-from os.path import join, exists
+from os.path import join
 
 from pytest import helpers
 
@@ -21,16 +21,12 @@ Configuration(config_type='testing')
 @helpers.register
 def test_pipeline(
     team_id: str,
-    dataset_dir: str,
-    results_dir: str,
     nb_subjects: int = 4
     ):
     """ This pytest helper allows to launch a pipeline over a given number of subjects
 
     Arguments:
         - team_id: str, the ID of the team (allows to identify which pipeline to run)
-        - dataset_dir: str, the path to the ds001734 dataset
-        - results_dir: str, the path to the directory where results from the teams are stored
         - nb_subjects: int, the number of subject to run the pipeline with
 
     Returns:
@@ -38,7 +34,7 @@ def test_pipeline(
         (reference and computed) files:
 
     This function can be used as follows:
-        results = pytest.helpers.test_pipeline('2T6S', '/data/', '/output/', 4)
+        results = pytest.helpers.test_pipeline('2T6S', 4)
         assert statistics.mean(results) > .003
 
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
@@ -48,8 +44,8 @@ def test_pipeline(
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
     runner.nb_subjects = nb_subjects
-    runner.pipeline.directories.dataset_dir = dataset_dir
-    runner.pipeline.directories.results_dir = results_dir
+    runner.pipeline.directories.dataset_dir = Configuration()['directories']['dataset']
+    runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
     runner.start()
@@ -64,7 +60,7 @@ def test_pipeline(
     collection = ResultsCollection(team_id)
     results_files = [join(collection.directory, f) for f in collection.files.values()]
 
-    # Get only unthresholded maps
+    # Get unthresholded maps only
     indices = [0, 2, 4, 6, 8, 10, 12, 14, 16]
     reproduced_files = [reproduced_files[i] for i in indices]
     results_files = [results_files[i] for i in indices]

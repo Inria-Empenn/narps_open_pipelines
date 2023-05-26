@@ -43,6 +43,9 @@ class InheritingPipeline(Pipeline):
     def get_group_level_analysis(self):
         return 'c'
 
+    def get_hypotheses_outputs(self):
+        return ['h1', 'h2']
+
 class TestPipelineDirectories:
     """ A class that contains all the unit tests for the PipelineDirectories class."""
 
@@ -123,6 +126,7 @@ class TestPipelines:
         assert pipeline.get_preprocessing() == 'a'
         assert pipeline.get_subject_level_analysis() == 'b'
         assert pipeline.get_group_level_analysis() == 'c'
+        assert pipeline.get_hypotheses_outputs()[0] == 'h1'
 
 class TestUtils:
     """ A class that contains all the unit tests for the utils in module pipelines."""

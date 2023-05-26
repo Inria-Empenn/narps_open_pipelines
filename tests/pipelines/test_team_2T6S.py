@@ -11,8 +11,6 @@ Usage:
     pytest -q test_team_2T6S.py -k <selected_test>
 """
 
-from statistics import mean
-
 from pytest import helpers, mark
 from nipype import Workflow
 
@@ -70,11 +68,14 @@ class TestPipelinesTeam2T6S:
         """ Test the execution of a PipelineTeam2T6S and compare results """
 
         for subjects in [4]: #[20, 40, 60, 80, 108]:
-            print(f'Testing pipeline 2T6S with {subjects} subjects')
-            results = helpers.test_pipeline(
-                '2T6S',
-                Configuration()['directories']['dataset'],
-                Configuration()['directories']['narps_results'],
-                subjects
-            )
-            assert helpers.test_correlation_results(results, subjects)
+            results = helpers.test_pipeline('2T6S', subjects)
+            filename = join(
+                Configuration()['directories']['reproduced_results'],
+                'test_executions.txt'
+                )
+            passed = helpers.test_correlation_results(results, subjects)
+
+            with open(filename, 'a') as file:
+                file.write(f'test_execution 2T6S | {subjects} subjects | {results} | {passed}\n')
+
+            assert passed

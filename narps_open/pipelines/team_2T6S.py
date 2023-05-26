@@ -682,23 +682,23 @@ class PipelineTeam2T6S(Pipeline):
         """ Return all hypotheses output file names. """
         nb_sub = len(self.subject_list)
         files = [
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04','spmT_0002.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04','spmT_0002.nii', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04','spmT_0002.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04','spmT_0002.nii', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04','spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04','spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_03','spmT_0001.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_03','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii')
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004','spmT_0002.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004','spmT_0002.nii', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004','spmT_0002.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004','spmT_0002.nii', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004','spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004','spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003','spmT_0001.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003','spmT_0001.nii', '_threshold0', 'spmT_0001_thr.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]

@@ -11,6 +11,8 @@ Usage:
     pytest -q test_utils.py -k <selected_test>
 """
 
+from pytest import mark
+
 from narps_open.utils import show_download_progress
 
 class TestUtils:

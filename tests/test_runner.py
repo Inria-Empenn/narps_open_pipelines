@@ -129,6 +129,12 @@ class MockupPipeline(Pipeline):
             ]
         return [t.format(nb_subjects = len(self.subject_list)) for t in  templates]
 
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS.
+        """
+        template = join(Configuration()['directories']['test_runs'], 'hypothesis_{id}.md')
+        return [template.format(id = i) for i in range(1,18)]
+
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
@@ -147,6 +153,9 @@ class MockupWrongPipeline(Pipeline):
     def get_group_level_analysis(self):
         return None
 
+    def get_hypotheses_outputs(self):
+        return None
+
 class MockupWrongPipeline2(Pipeline):
     """ A simple Pipeline class for test purposes """
 
@@ -163,6 +172,9 @@ class MockupWrongPipeline2(Pipeline):
         return None
 
     def get_group_level_analysis(self):
+        return None
+
+    def get_hypotheses_outputs(self):
         return None
 
 class TestPipelineRunner:
