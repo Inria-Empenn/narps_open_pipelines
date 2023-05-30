@@ -11,6 +11,7 @@ from os.path import join
 from pytest import helpers
 
 from narps_open.runner import PipelineRunner
+from narps_open.utils import get_subject_id
 from narps_open.utils.correlation import get_correlation_coefficient
 from narps_open.utils.configuration import Configuration
 from narps_open.data.results import ResultsCollection
@@ -48,10 +49,30 @@ def test_pipeline(
     runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
-    runner.start()
+    runner.start(True, False)
 
-    # Check for missing files
-    #for file in runner.get_missing_first_level_outputs():
+    # Run as long as there are missing files after first level (with a max number of trials)
+    # TODO : this is a workaround
+    for _ in range(Configuration()['runner']['nb_trials']):
+
+        # Get missing subjects
+        missing_subjects = set()
+        for file in runner.get_missing_first_level_outputs():
+            missing_subjects.append(get_subject_id(file))
+
+        # Restart pipeline
+        runner.subjects = missing_subjects
+        runner.start(True, False)
+
+    # Check missing files for the last time
+    missing_files = runner.get_missing_first_level_outputs()
+    if missing_files:
+        print('Missing files:', missing_files)
+        raise Exception('There are missing files for first level analysis.')
+
+    # Start pipeline for the group level only
+    runner.nb_subjects = nb_subjects
+    runner.start(False, True)
 
     # Retrieve the paths to the reproduced files
     reproduced_files = runner.pipeline.get_hypotheses_outputs()
