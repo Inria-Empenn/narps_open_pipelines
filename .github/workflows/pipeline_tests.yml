@@ -45,13 +45,15 @@ jobs:
             echo "Modified pipeline = $file"
             tmp=${file#*"team_"} # remove prefix ending in "team_"
             team_id=${tmp%".py"*}   # remove suffix starting with ".py"
-            # Populate the list of test files
+            # Populate the lists of test files and teams
             test_files="$test_files tests/pipelines/test_team_$team_id.py"
+            teams="$teams $team_id"
           fi
         done
         # Send the test list as job output
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
+        echo "teams=$teams" >> $GITHUB_OUTPUT
 
   # A job to run the identified tests
   pytest:
@@ -78,5 +80,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[tests]
 
+    - name: Remove test reports if any existing
+      run: rm -f test_pipeline-*.txt
+
     - name: Collect tests with pytest
       run: pytest --collect-only -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
+
+    - name: Report results on GitHub
+      run: |
+        # Start report
+        echo "# Correlation values" >> $GITHUB_STEP_SUMMARY
+        echo "Unthresholded maps, reproduced vs. results" >> $GITHUB_STEP_SUMMARY
+        echo "Correlation values are sorted from hypotheses 1 to 9" >> $GITHUB_STEP_SUMMARY
+
+        # Start report table
+        echo "| Team    | Number of subjects | Test status | Correlation values |" >> $GITHUB_STEP_SUMMARY
+        echo "| -------- | ------- | ------- | ------- |" >> $GITHUB_STEP_SUMMARY
+
+        # Loop through test report files
+        for team in ${{ needs.identify-tests.outputs.teams }}
+        do
+          cat test_pipeline-$team.txt >> $GITHUB_STEP_SUMMARY
+        done

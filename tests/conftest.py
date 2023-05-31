@@ -75,17 +75,16 @@ def test_pipeline_execution(
     runner.nb_subjects = nb_subjects
     runner.start(False, True)
 
+    # Keys to the unthresholded maps
+    keys = [f'hypo{i}_unthresh.nii.gz' for i in range(1, 10)]
+
     # Retrieve the paths to the reproduced files
     reproduced_files = runner.pipeline.get_hypotheses_outputs()
+    reproduced_files = [reproduced_files[k] for k in keys]
 
-    # Retrieve the paths to the results files
+    # Retrieve the paths to the results files 
     collection = ResultsCollection(team_id)
-    results_files = [join(collection.directory, f) for f in collection.files.values()]
-
-    # Get unthresholded maps only
-    indices = [1, 3, 5, 7, 9, 11, 13, 15, 17]
-    reproduced_files = [reproduced_files[i] for i in indices]
-    results_files = [results_files[i] for i in indices]
+    results_files = [join(collection.directory, collection.files[k]) for k in keys]
 
     # Compute the correlation coefficients
     return [
@@ -138,8 +137,8 @@ def test_pipeline_evaluation(team_id: str):
 
         # Write values in a file
         with open(file_name, 'a', encoding = 'utf-8') as file:
-            file.write(f'{team_id} | {subjects} subjects | ')
+            file.write(f'| {team_id} | {subjects} subjects | ')
             file.write('success' if passed else 'failure')
-            file.write(f' | {[round(i, 2) for i in results]}\n')
+            file.write(f' | {[round(i, 2) for i in results]} |\n')
 
         assert passed
