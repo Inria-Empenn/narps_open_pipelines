@@ -35,34 +35,35 @@ class ResultsCollection():
             'orig',
             self.id + '_' + self.team_id
             )
+        self.files = {
+            'hypo1_thresh.nii.gz' : 'hypo1_thresh.nii.gz',
+            'hypo1_unthresh.nii.gz' : 'hypo1_unthresh.nii.gz',
+            'hypo2_thresh.nii.gz' : 'hypo2_thresh.nii.gz',
+            'hypo2_unthresh.nii.gz' : 'hypo2_unthresh.nii.gz',
+            'hypo3_thresh.nii.gz' : 'hypo3_thresh.nii.gz',
+            'hypo3_unthresh.nii.gz' : 'hypo3_unthresh.nii.gz',
+            'hypo4_thresh.nii.gz' : 'hypo4_thresh.nii.gz',
+            'hypo4_unthresh.nii.gz' : 'hypo4_unthresh.nii.gz',
+            'hypo5_thresh.nii.gz' : 'hypo5_thresh.nii.gz',
+            'hypo5_unthresh.nii.gz' : 'hypo5_unthresh.nii.gz',
+            'hypo6_thresh.nii.gz' : 'hypo6_thresh.nii.gz',
+            'hypo6_unthresh.nii.gz' : 'hypo6_unthresh.nii.gz',
+            'hypo7_thresh.nii.gz' : 'hypo7_thresh.nii.gz',
+            'hypo7_unthresh.nii.gz' : 'hypo7_unthresh.nii.gz',
+            'hypo8_thresh.nii.gz' : 'hypo8_thresh.nii.gz',
+            'hypo8_unthresh.nii.gz' : 'hypo8_unthresh.nii.gz',
+            'hypo9_thresh.nii.gz' : 'hypo9_thresh.nii.gz',
+            'hypo9_unthresh.nii.gz' : 'hypo9_unthresh.nii.gz'
+        }
 
-        # Parse the results file, containing correspondances between the names given by the
-        # team, and the expected names of the hypotheses files.
-        with open(join(files('narps_open.data.results'),'results.json'), 'r') as file:
-            translations = loads(file.read())
+        # Make correspondences between the names given by the
+        # team in neurovault collections, and the expected names of the hypotheses files.
+        if Configuration()['results']['neurovault_naming']:
+            with open(join(files('narps_open.data.results'),'results.json'), 'r') as file:
+                neurovault_files = loads(file.read())[self.team_id]
 
-        self.files = translations[self.team_id]
-        if len(self.files) == 0:
-            self.files = {
-                'hypo1_thresh.nii.gz' : 'hypo1_thresh.nii.gz',
-                'hypo1_unthresh.nii.gz' : 'hypo1_unthresh.nii.gz',
-                'hypo2_thresh.nii.gz' : 'hypo2_thresh.nii.gz',
-                'hypo2_unthresh.nii.gz' : 'hypo2_unthresh.nii.gz',
-                'hypo3_thresh.nii.gz' : 'hypo3_thresh.nii.gz',
-                'hypo3_unthresh.nii.gz' : 'hypo3_unthresh.nii.gz',
-                'hypo4_thresh.nii.gz' : 'hypo4_thresh.nii.gz',
-                'hypo4_unthresh.nii.gz' : 'hypo4_unthresh.nii.gz',
-                'hypo5_thresh.nii.gz' : 'hypo5_thresh.nii.gz',
-                'hypo5_unthresh.nii.gz' : 'hypo5_unthresh.nii.gz',
-                'hypo6_thresh.nii.gz' : 'hypo6_thresh.nii.gz',
-                'hypo6_unthresh.nii.gz' : 'hypo6_unthresh.nii.gz',
-                'hypo7_thresh.nii.gz' : 'hypo7_thresh.nii.gz',
-                'hypo7_unthresh.nii.gz' : 'hypo7_unthresh.nii.gz',
-                'hypo8_thresh.nii.gz' : 'hypo8_thresh.nii.gz',
-                'hypo8_unthresh.nii.gz' : 'hypo8_unthresh.nii.gz',
-                'hypo9_thresh.nii.gz' : 'hypo9_thresh.nii.gz',
-                'hypo9_unthresh.nii.gz' : 'hypo9_unthresh.nii.gz'
-            }
+            if neurovault_files:
+                self.files = neurovault_files
 
     def download(self):
         """ Download the collection, unzip it and remove zip file. """

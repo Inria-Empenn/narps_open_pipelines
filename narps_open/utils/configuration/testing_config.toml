@@ -12,3 +12,6 @@ test_runs = "run/"
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
 nb_trials = 3 # Maximum number of executions to have the pipeline executed completely
+
+[results]
+neurovault_naming = true # true if results files are saved using the neurovault naming, false if they use naming of narps
