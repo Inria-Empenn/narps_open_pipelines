@@ -131,7 +131,7 @@ def test_pipeline_evaluation(team_id: str):
 
     for subjects in [4]: #[20, 40, 60, 80, 108]:
         # Execute pipeline
-        results = helpers.test_pipeline(team_id, subjects)
+        results = helpers.test_pipeline_execution(team_id, subjects)
 
         # Compute correlation with results
         passed = helpers.test_correlation_results(results, subjects)
