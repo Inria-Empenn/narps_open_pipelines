@@ -11,6 +11,8 @@ Usage:
     pytest -q test_team_2T6S.py -k <selected_test>
 """
 
+from os.path import join
+
 from pytest import helpers, mark
 from nipype import Workflow
 
@@ -75,7 +77,7 @@ class TestPipelinesTeam2T6S:
                 )
             passed = helpers.test_correlation_results(results, subjects)
 
-            with open(filename, 'a') as file:
+            with open(filename, 'a', encoding = 'utf-8') as file:
                 file.write(f'test_execution 2T6S | {subjects} subjects | {results} | {passed}\n')
 
             assert passed
