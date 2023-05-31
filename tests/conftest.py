@@ -129,7 +129,7 @@ def test_pipeline_evaluation(team_id: str):
     if isfile(file_name):
         remove(file_name)
 
-    for subjects in [20]: #, 40, 60, 80, 108]:
+    for subjects in [20, 40, 60, 80, 108]:
         # Execute pipeline
         results = helpers.test_pipeline_execution(team_id, subjects)
 
@@ -138,6 +138,8 @@ def test_pipeline_evaluation(team_id: str):
 
         # Write values in a file
         with open(file_name, 'a', encoding = 'utf-8') as file:
-            file.write(f'{team_id} | {subjects} subjects | {results} | {passed}\n')
+            file.write(f'{team_id} | {subjects} subjects | ')
+            file.write('success' if passed else 'failure')
+            file.write(f' | {[round(i, 2) for i in results]}\n')
 
         assert passed
