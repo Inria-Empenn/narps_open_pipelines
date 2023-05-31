@@ -129,7 +129,7 @@ def test_pipeline_evaluation(team_id: str):
     if isfile(file_name):
         remove(file_name)
 
-    for subjects in [4]: #[20, 40, 60, 80, 108]:
+    for subjects in [20]: #, 40, 60, 80, 108]:
         # Execute pipeline
         results = helpers.test_pipeline_execution(team_id, subjects)
 
