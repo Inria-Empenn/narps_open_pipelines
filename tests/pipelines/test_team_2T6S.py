@@ -68,16 +68,4 @@ class TestPipelinesTeam2T6S:
     @mark.pipeline_test
     def test_execution():
         """ Test the execution of a PipelineTeam2T6S and compare results """
-
-        for subjects in [4]: #[20, 40, 60, 80, 108]:
-            results = helpers.test_pipeline('2T6S', subjects)
-            filename = join(
-                Configuration()['directories']['reproduced_results'],
-                'test_executions.txt'
-                )
-            passed = helpers.test_correlation_results(results, subjects)
-
-            with open(filename, 'a', encoding = 'utf-8') as file:
-                file.write(f'test_execution 2T6S | {subjects} subjects | {results} | {passed}\n')
-
-            assert passed
+        helpers.test_pipeline_evaluation('2T6S')

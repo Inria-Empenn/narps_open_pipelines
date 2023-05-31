@@ -6,7 +6,8 @@ conftest.py file will be automatically launched before running
 pytest on (a) test file(s) in the same directory.
 """
 
-from os.path import join
+from os import remove
+from os.path import join, isfile
 
 from pytest import helpers
 
@@ -20,7 +21,7 @@ from narps_open.data.results import ResultsCollection
 Configuration(config_type='testing')
 
 @helpers.register
-def test_pipeline(
+def test_pipeline_execution(
     team_id: str,
     nb_subjects: int = 4
     ):
@@ -102,14 +103,41 @@ def test_correlation_results(values: list, nb_subjects: int) -> bool:
         - nb_subjects, int: the number of subject used to compute the correlation values
     """
     if nb_subjects < 21:
-        expected = [0.51, 0.48, 0.51, 0.48, 0.46, 0.36, 0.46, 0.36, 0.18]
+        expected = [0.30 for _ in range(9)]
     elif nb_subjects < 41:
-        expected = [0.72, 0.65, 0.72, 0.65, 0.74, 0.51, 0.74, 0.51, 0.02]
+        expected = [0.70 for _ in range(9)]
     elif nb_subjects < 61:
-        expected = [0.75, 0.72, 0.75, 0.72, 0.85, 0.63, 0.85, 0.63, 0.11]
+        expected = [0.80 for _ in range(9)]
     elif nb_subjects < 81:
-        expected = [0.81, 0.82, 0.81, 0.82, 0.87, 0.67, 0.87, 0.67, 0.06]
+        expected = [0.85 for _ in range(9)]
     else:
-        expected = [0.84, 0.88, 0.84, 0.88, 0.89, 0.79, 0.89, 0.79, 0.00]
+        expected = [0.93 for _ in range(9)]
 
-    return False not in [v>e for v,e in zip(values, expected)]
+    return False not in [v > e for v, e in zip(values, expected)]
+
+@helpers.register
+def test_pipeline_evaluation(team_id: str):
+    """ Test the execution of a Pipeline and compare with results.
+        Arguments:
+        - team_id, str: the id of the team for which to test the pipeline
+
+        Return: True if the correlation coefficients between reproduced data and results
+            meet the expectations, False otherwise.
+    """
+
+    file_name = f'test_pipeline-{team_id}.txt'
+    if isfile(file_name):
+        remove(file_name)
+
+    for subjects in [4]: #[20, 40, 60, 80, 108]:
+        # Execute pipeline
+        results = helpers.test_pipeline(team_id, subjects)
+
+        # Compute correlation with results
+        passed = helpers.test_correlation_results(results, subjects)
+
+        # Write values in a file
+        with open(file_name, 'a', encoding = 'utf-8') as file:
+            file.write(f'{team_id} | {subjects} subjects | {results} | {passed}\n')
+
+        assert passed
