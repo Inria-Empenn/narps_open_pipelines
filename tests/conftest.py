@@ -82,7 +82,7 @@ def test_pipeline(
     results_files = [join(collection.directory, f) for f in collection.files.values()]
 
     # Get unthresholded maps only
-    indices = [1, 3, 5, 7, 8, 11, 13, 15, 17]
+    indices = [1, 3, 5, 7, 9, 11, 13, 15, 17]
     reproduced_files = [reproduced_files[i] for i in indices]
     results_files = [results_files[i] for i in indices]
 
