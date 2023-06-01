@@ -8,6 +8,7 @@ pytest on (a) test file(s) in the same directory.
 
 from os import remove
 from os.path import join, isfile
+from shutil import rmtree
 
 from pytest import helpers
 
@@ -123,6 +124,13 @@ def test_pipeline_evaluation(team_id: str):
         Return: True if the correlation coefficients between reproduced data and results
             meet the expectations, False otherwise.
     """
+
+    # Remove previous computations
+    reproduced_dir = join(
+        Configuration()['directories']['reproduced_results'],
+        f'NARPS-{team_id}-reproduced'
+        )
+    rmtree(reproduced_dir, ignore_errors=True)
 
     file_name = f'test_pipeline-{team_id}.txt'
     if isfile(file_name):
