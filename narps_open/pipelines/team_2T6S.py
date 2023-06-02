@@ -427,56 +427,6 @@ class PipelineTeam2T6S(Pipeline):
 
         return equal_indifference_id, equal_range_id, equal_indifference_files, equal_range_files
 
-    # @staticmethod # Starting python 3.10, staticmethod should be used here
-    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def reorganize_results(team_id, nb_sub, output_dir, results_dir):
-        """ Reorganize the results to analyze them. """
-        from os import mkdir
-        from os.path import join, isdir
-        from shutil import copyfile
-
-        hypotheses = [
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_03')
-        ]
-
-        # Build lists of files for unthresholded and thresholded maps
-        repro_unthresh = []
-        repro_thresh = []
-        for file_id, filename in enumerate(hypotheses):
-            if file_id in [4,5]:
-                repro_unthresh.append(join(filename, 'spmT_0002.nii'))
-                repro_thresh.append(join(filename, '_threshold1', 'spmT_0002_thr.nii'))
-            else:
-                repro_unthresh.append(join(filename, 'spmT_0001.nii'))
-                repro_thresh.append(join(filename, '_threshold0', 'spmT_0001_thr.nii'))
-
-        if not isdir(join(results_dir, 'NARPS-reproduction')):
-            mkdir(join(results_dir, 'NARPS-reproduction'))
-
-        for file_id, filename in enumerate(repro_unthresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_unthresholded.nii')
-            copyfile(f_in, f_out)
-
-        for file_id, filename in enumerate(repro_thresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_thresholded.nii')
-            copyfile(f_in, f_out)
-
-        print(f'Results files of team {team_id} reorganized.')
-
     def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
@@ -527,16 +477,6 @@ class PipelineTeam2T6S(Pipeline):
             base_directory = str(self.directories.output_dir)
             ),
             name = 'datasink_groupanalysis')
-
-        # Function node reorganize_results - organize results once computed
-        reorganize_res = Node(Function(
-            function = self.reorganize_results,
-            input_names = ['team_id', 'nb_subjects', 'results_dir', 'output_dir']),
-            name = 'reorganize_res')
-        reorganize_res.inputs.team_id = self.team_id
-        reorganize_res.inputs.nb_subjects = nb_subjects
-        reorganize_res.inputs.results_dir = self.directories.results_dir
-        reorganize_res.inputs.output_dir = self.directories.output_dir
 
         # Function node get_subset_contrasts - select subset of contrasts
         sub_contrasts = Node(Function(
@@ -634,7 +574,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle equalRange and equalIndifference
         parameters = {
-            'contrast_id': ['0001', '0002', '0003'],
+            'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
@@ -656,7 +596,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle groupComp
         parameters = {
-            'contrast_id': ['0001', '0002', '0003'],
+            'contrast_id': self.contrast_list,
             'method': ['groupComp'],
             'file': [
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
@@ -678,7 +618,10 @@ class PipelineTeam2T6S(Pipeline):
         return return_list
 
     def get_hypotheses_outputs(self):
-        """ Return all hypotheses output file names. """
+        """ Return all hypotheses output file names.
+            Note that hypotheses 5 to 8 correspond to the maps given by the team in their results ;
+            but they are not fully consistent with the hypotheses definitions as expected by NARPS.
+        """
         nb_sub = len(self.subject_list)
         files = [
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
@@ -689,12 +632,12 @@ class PipelineTeam2T6S(Pipeline):
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
             join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
