@@ -26,7 +26,7 @@ class PipelineTeam2T6S(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = '2T6S'
-        self.contrast_list = ['0001', '0002', '0003', '0004']
+        self.contrast_list = ['0001', '0002', '0003']
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team 2T6S """
@@ -123,11 +123,10 @@ class PipelineTeam2T6S(Pipeline):
         # Create contrasts
         trial = ('trial', 'T', conditions, [1, 0, 0])
         effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        positive_effect_loss = ('positive_effect_of_loss', 'T', conditions, [0, 0, 1])
-        negative_effect_loss = ('negative_effect_of_loss', 'T', conditions, [0, 0, -1])
+        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
 
         # Return contrast list
-        return [trial, effect_gain, positive_effect_loss, negative_effect_loss]
+        return [trial, effect_gain, effect_loss]
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
@@ -635,7 +634,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle equalRange and equalIndifference
         parameters = {
-            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'contrast_id': ['0001', '0002', '0003'],
             'method': ['equalRange', 'equalIndifference'],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
@@ -657,7 +656,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle groupComp
         parameters = {
-            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'contrast_id': ['0001', '0002', '0003'],
             'method': ['groupComp'],
             'file': [
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
@@ -690,10 +689,10 @@ class PipelineTeam2T6S(Pipeline):
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004', '_threshold1', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0004', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004', '_threshold1', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0004', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
