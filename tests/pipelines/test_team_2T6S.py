@@ -48,20 +48,20 @@ class TestPipelinesTeam2T6S:
     def test_outputs():
         """ Test the expected outputs of a PipelineTeam2T6S object """
         pipeline = PipelineTeam2T6S()
-        # 1 - 1 suject outputs
+        # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
         assert len(pipeline.get_preprocessing_outputs()) == 0
         assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 9
-        assert len(pipeline.get_group_level_outputs()) == 84
+        assert len(pipeline.get_subject_level_outputs()) == 7
+        assert len(pipeline.get_group_level_outputs()) == 63
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
-        # 2 - 4 sujects outputs
+        # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
         assert len(pipeline.get_preprocessing_outputs()) == 0
         assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 36
-        assert len(pipeline.get_group_level_outputs()) == 84
+        assert len(pipeline.get_subject_level_outputs()) == 28
+        assert len(pipeline.get_group_level_outputs()) == 63
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
     @staticmethod

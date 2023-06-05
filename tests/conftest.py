@@ -43,7 +43,6 @@ def test_pipeline_execution(
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
         - keep intermediate levels : boolean in PipelineRunner
     """
-
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
     runner.nb_subjects = nb_subjects
@@ -51,7 +50,6 @@ def test_pipeline_execution(
     runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
-    runner.start(True, False)
 
     # Run as long as there are missing files after first level (with a max number of trials)
     # TODO : this is a workaround
@@ -60,9 +58,13 @@ def test_pipeline_execution(
         # Get missing subjects
         missing_subjects = set()
         for file in runner.get_missing_first_level_outputs():
-            missing_subjects.append(get_subject_id(file))
+            missing_subjects.add(get_subject_id(file))
 
-        # Restart pipeline
+        # Leave if no missing subjects
+        if not missing_subjects:
+            break
+
+        # Start pipeline
         runner.subjects = missing_subjects
         runner.start(True, False)
 
@@ -103,16 +105,17 @@ def test_correlation_results(values: list, nb_subjects: int) -> bool:
         - values, list of 9 floats: a list of correlation values for the 9 hypotheses of NARPS
         - nb_subjects, int: the number of subject used to compute the correlation values
     """
+    scores = Configuration()['testing']['pipelines']['correlation_thresholds']
     if nb_subjects < 21:
-        expected = [0.30 for _ in range(9)]
+        expected = [scores[0] for _ in range(9)]
     elif nb_subjects < 41:
-        expected = [0.70 for _ in range(9)]
+        expected = [scores[1] for _ in range(9)]
     elif nb_subjects < 61:
-        expected = [0.80 for _ in range(9)]
+        expected = [scores[2] for _ in range(9)]
     elif nb_subjects < 81:
-        expected = [0.85 for _ in range(9)]
+        expected = [scores[3] for _ in range(9)]
     else:
-        expected = [0.93 for _ in range(9)]
+        expected = [scores[4] for _ in range(9)]
 
     return False not in [v > e for v, e in zip(values, expected)]
 
