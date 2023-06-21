@@ -4,7 +4,7 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 
 ## Reproduce a pipeline ⌨️
 
-You can have a look on [this table](docs/pipeline_status.md) giving the status of the work on each pipeline. This will help choosing the one that best suits you !
+:thinking: Not sure which one to start with ?  You can have a look on [this table](docs/pipeline_status.md) giving the status of the work on each pipeline. This will help choosing the one that best suits you !
 
 ### If you have experience with NiPype
 
