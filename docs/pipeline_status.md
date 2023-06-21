@@ -1,4 +1,13 @@
-| team_id | status <br>:green_circle: completed <br>:orange_circle: work in progress <br>:red_circle: not started | softwares used | fmriprep used ? | related issues |
+# Work progress status for each pipeline
+
+The *status* column tells whether the work on the pipeline is :
+<br>:green_circle: completed
+<br>:orange_circle: in progress
+<br>:red_circle: not started yet
+
+The *softwares* column gives a simplified version of what can be found in the [team descriptions](docs/description.md) under the `general.software` column.
+
+| team_id | status | softwares | uses fmriprep | related issues |
 | --- |--- | --- | --- | --- |
 | 08MQ | :red_circle: | FSL | No | |
 | 0C7Q | :red_circle: | FSL, AFNI | Yes | |
