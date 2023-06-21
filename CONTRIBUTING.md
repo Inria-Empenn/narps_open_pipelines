@@ -1,13 +1,15 @@
 # HOW TO CONTRIBUTE TO OPEN PIPELINE ? 
 
-General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). 
+General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
 
 ## Reproduce a pipeline ⌨️
+
+You can have a look on [this table](docs/pipeline_status.md) giving the status of the work on each pipeline. This will help choosing the one that best suits you !
 
 ### If you have experience with NiPype
 
 We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `narps_open/pipelines/pipeline_template.py`. 
-Do not hesitate to modify this template if you fill it could be better explained. 
+If you feel it could be better explained, do not hesitate to modify the template or to create an issue about it.
 
 ### If you have experience with the original software package but not with NiPype
 
@@ -48,4 +50,4 @@ Once your Pull Request is ready, you can remove the "[WIP]" from the title.
 
 **Important**: Be careful to respect all items of the Pull Request checklist (available in [Pull Request template](https://github.com/elodiegermani/open_pipeline/blob/main/.github/PULL_REQUEST_TEMPLATE/pull_request_template.md))
 
-**Thank you in advance for contributing to our project!**
+**Thank you in advance for contributing to the project!**
