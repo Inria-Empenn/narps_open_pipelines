@@ -4,16 +4,16 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 
 ## Reproduce a pipeline ⌨️
 
-:thinking: Not sure which one to start with ?  You can have a look on [this table](docs/pipeline_status.md) giving the status of the work on each pipeline. This will help choosing the one that best suits you !
+:thinking: Not sure which one to start with ?  You can have a look on [this table](/docs/pipeline_status.md) giving the status of the work on each pipeline. This will help choosing the one that best suits you !
 
 ### If you have experience with NiPype
 
-We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `narps_open/pipelines/pipeline_template.py`. 
+We created a template with modifications to make and holes to fill to create a pipeline. You can find it on [`narps_open/pipelines/pipeline_template.py`](/narps_open/pipelines/pipeline_template.py). 
 If you feel it could be better explained, do not hesitate to modify the template or to create an issue about it.
 
 ### If you have experience with the original software package but not with NiPype
 
-A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save you NiPype script in a .py file and send it to us in a new issue, we will convert this script to a script which works with our specific parameters. 
+A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save your NiPype script in a .py file and send it as a new issue, we will convert this script to a script which works with our specific parameters. 
 
 ## Find or propose an issue 📋
 
@@ -34,7 +34,7 @@ Some issues are (probably) already open, **don't hesitate to take a look at them
 
 ## Pull Requests 📥
 
-Pull requests are, the best way to get your ideas into this repository and to solve the problems as fast as possible.
+Pull requests are the best way to get your ideas into this repository and to solve the problems as fast as possible.
 
 ### Make A Branch 🌳
 Create a separate branch for each issue you're working on. Do not make changes to the default branch (e.g. master, develop) of your fork.

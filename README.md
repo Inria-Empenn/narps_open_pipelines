@@ -25,7 +25,7 @@ We also created a shared spreadsheet that can be use to add comments on pipeline
 
 ## Getting Started
 
-Follow the instructions of [INSTALL.md](INSTALL.md) to start with the NARPS open pipelines project.
+Follow the instructions of [INSTALL.md](/INSTALL.md) to start with the NARPS open pipelines project.
 
 ### Contents overview
 
@@ -37,11 +37,11 @@ This directory contains the Python package with all the pipelines logic.
 
 This directory is made to contain data that will be used by the pipelines, as well as the (intermediate or final) results data.
 
-Instructions to download data are available in [INSTALL.md](INSTALL.md#data-download-instructions).
+Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
 
 #### `docs` :blue_book:
 
-This directory the documentation for the project. Start browsing it with the entry point [docs/README.md](docs/README.md)
+This directory the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
 
 #### `examples` :orange_book:
 
@@ -53,11 +53,11 @@ This directory contains the tests of the narps_open package.
 
 ### Installation
 
-To get the pipelines running, please follow the installation steps in [INSTALL.md](INSTALL.md)
+To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
 
 ### Contributing 
 
-:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) if you wish to get involed !
+:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involed !
 
 ## References
 
