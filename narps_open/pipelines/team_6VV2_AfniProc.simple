@@ -1,0 +1,51 @@
+#!/bin/tcsh
+
+# set subject and group identifiers
+set subject  = sub-001
+# set data directory
+set datadir = /home/jlefortb/narps_open_pipelines/data/original/ds001734
+set expdir = /home/jlefortb/narps_open_pipelines/outputs_6VV2_test_nipype
+afni_proc.py \
+  -script ${expdir}/proc.${subject}.block \
+  -scr_overwrite \
+  -subj_id ${subject} \
+  -out_dir ${expdir}/${subject}.results.block \
+  -dsets ${datadir}/${subject}/func/${subject}_task-MGT_run-01_bold.nii.gz \
+    ${datadir}/${subject}/func/${subject}_task-MGT_run-02_bold.nii.gz \
+    ${datadir}/${subject}/func/${subject}_task-MGT_run-03_bold.nii.gz \
+    ${datadir}/${subject}/func/${subject}_task-MGT_run-04_bold.nii.gz \
+  -copy_anat ${datadir}/${subject}/anat/${subject}_T1w.nii.gz \
+  -anat_has_skull yes \
+  -blocks despike tshift align tlrc volreg blur mask scale regress \
+  -despike_new yes \
+  -tlrc_base MNI152_T1_2009c+tlrc \
+  -tlrc_NL_warp \
+  -align_opts_aea \
+  -giant_move \
+  -cost lpc+ZZ \
+  -volreg_align_to MIN_OUTLIER \
+  -volreg_tlrc_warp \
+  -volreg_align_e2a \
+  -blur_in_automask \
+  -regress_stim_times \
+    ${datadir}/${subject}/func/times+gain.1D \
+    ${datadir}/${subject}/func/times+loss.1D \
+  -regress_stim_types AM2 \
+  -regress_stim_labels \
+    GAIN \
+    LOSS \
+  -regress_basis \
+    'BLOCK(4,1)' \
+  -mask_apply anat \
+  -regress_motion_per_run \
+  -test_stim_files no \
+  -regress_opts_3dD \
+    -GOFORIT 8 \
+    -jobs 6 \
+  -regress_censor_motion 0.2 \
+  -regress_apply_mot_types demean deriv \
+  -regress_censor_first_trs 3 \
+  -regress_est_blur_errts \
+  -execute
+
+ 
