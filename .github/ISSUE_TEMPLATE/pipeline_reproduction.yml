@@ -1,0 +1,53 @@
+name: Pipeline reproduction
+description: Select this when you are about to start a pipeline reproduction.
+title: "[team_id] Pipeline reproduction"
+labels: ["\U0001F6A6 status: awaiting triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for starting this pipeline reproduction! :tada:
+        Please make sure there is no concurrent issue about it : have a look [here](/docs/pipeline_status.md).
+        Once it's ok, start by changing the `team_id` in the title of this issue, then fill the form.
+
+  - type: textarea
+    id: softwares
+    attributes:
+      label: Softwares
+      description: Which softwares are used by the pipeline ?
+      placeholder: Basically, this is the `general.software` column of the pipeline description.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data
+    attributes:
+      label: Input data
+      description: Which data used the team ?
+      options:
+        - raw data
+        - derivatives (fMRIprep)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any supplementary information you find relevant about the pipeline, that would help reproducing it.
+      placeholder: ex. 
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Please tick the boxes below once you finish the corresponding task. :+1:
+        - [ ] :deciduous_tree: Create a branch on your fork to start the reproduction.
+        - [ ] :sunrise: Create a file `team_{team_id}.py` inside the [`narps_open/pipelines/`](/narps_open/pipelines) directory. You can use the [`narps_open/pipelines/`](narps_open/pipelines/pipeline_template.py) file as a template if needed.
+        - [ ] :brain: Write the code for the pipeline, using Nipype and the file architecture described in [docs/pipelines.md](/docs/pipelines.md).
+        - [ ] :blue_book: Make sure your code is documented enough.
+        - [ ] :snake: Make sure your code is explicit and conforms with PEP8.
+        - [ ] :microscope: Create tests for your pipeline. You can use [`tests/pipelines/test_team_2T6S.py`](/tests/pipelines/test_team_2T6S.py) as an example.
+        - [ ] :microscope: Make sure your code passes all the tests you created as well as the unit tests (see [docs/testing.md](/docs/testing.md)).
+        - [ ] :inbox_tray: create a [pull request](/CONTRIBUTING.md#pull_requests) from your code.
