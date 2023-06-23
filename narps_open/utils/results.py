@@ -83,7 +83,7 @@ if __name__ == '__main__':
     group.add_argument('-a', '--all', action='store_true', help='download results from all teams')
     arguments = parser.parse_args()
 
-    if arguments.all is True:
+    if arguments.all:
         download_all_result_collections()
     else:
         for team in arguments.teams:

@@ -26,6 +26,7 @@ extras_require = {
         'pytest',
         'pytest-cov',
         'pytest-helpers-namespace',
+        'pytest-mock',
         'checksumdir'
         ]
 }
