@@ -1,4 +1,4 @@
-# THE OPEN PIPELINE PROJECT
+# The NARPS Open Pipelines project
 
 <p align="center">
 	<img src="assets/images/project_illustration.png"/> 
