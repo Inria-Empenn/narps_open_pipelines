@@ -84,9 +84,9 @@ class PipelineStatusReport():
         # Create header
         output_markdown = '# Work progress status for each pipeline\n'
         output_markdown += 'The *status* column tells whether the work on the pipeline is :\n'
-        output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:red_circle: not started yet\n'
+        output_markdown += '<br>:orange_circle: in progress\n'
+        output_markdown += '<br>:green_circle: completed\n'
         output_markdown += 'The *softwares* column gives a simplified version of what can be '
         output_markdown += 'found in the [team descriptions](/docs/description.md) under the '
         output_markdown += '`general.software` column.\n'
