@@ -5,7 +5,9 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 ## Reproduce a pipeline :keyboard:
 :thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
 
-[Start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**.
+Need more information ? You can have a look to the pipeline decription [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the description module of the project, as described [in the documentation](/docs/description.md).
+
+When you are ready, [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**!
 
 ### If you have experience with NiPype
 We created a template with modifications to make and holes to fill to create a pipeline. You can find it on [`narps_open/pipelines/pipeline_template.py`](/narps_open/pipelines/pipeline_template.py). 
@@ -38,14 +40,12 @@ Pull requests are the best way to get your ideas into this repository and to sol
 Create a separate branch for each issue you're working on. Do not make changes to the default branch (e.g. master, develop) of your fork.
 
 ### Push Your Code :outbox_tray:
-Push your code as soon and often as you can.
+Push your code as soon as possible.
 
 ### Create the Pull Request (PR) :inbox_tray:
-To learn how to create a PR, visit the GitHub documentation [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
+Once you pushed your first lines of code to the branch in your fork, visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start creating a PR for the NARPS Open Pipelines project. :warning: Please create a **Draft Pull Request** as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the GitHub documentation.
 
-Visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start creating a PR for the NARPS Open Pipelines project. :warning: Please create a **Draft Pull Request** as described in the previous link.
-
-Make sure to respect all the items of the PR checklist.
+Continue writing your code and push to the same branch. Make sure to respect all the items of the PR checklist.
 
 ### Request Review :disguised_face:
 Once your PR is ready, you may add a reviewer to your PR, as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review) in the GitHub documentation.
