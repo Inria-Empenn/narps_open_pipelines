@@ -1,16 +1,24 @@
 # last update: June 2023
-
 from nipype import Node, Function, Workflow,IdentityInterface
 import subprocess
 from nipype.interfaces.io import SelectFiles, DataSink
 from os.path import abspath
 from os.path import join as opj
 import os
+import pathlib
 
-# define environment
+########################################################################
+################## FIRST LEVEL ANALYSIS FOR TEAM 6VV2 ##################
+########################################################################
+
+# define environment for first level analysis
 data_dir = "/home/jlefortb/narps_open_pipelines/data/original/ds001734/"
-results_dir =  "/home/jlefortb/narps_open_pipelines/data/results/"
-working_dir = "/home/jlefortb/narps_open_pipelines/"
+results_dir =  "/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/"
+
+path = pathlib.Path(results_dir)
+path.mkdir(parents=True, exist_ok=True)
+
+
 
 # define subject ids
 dir_list = os.listdir(data_dir)
@@ -22,16 +30,15 @@ for dirs in dir_list:
 
 
 # Infosource Node - To iterate on subjects + get directoris paths
-infosource = Node(interface=IdentityInterface(fields = ['subject_id', 'data_dir', 'results_dir', 'working_dir'],
+infosource = Node(interface=IdentityInterface(fields = ['subject_id', 'data_dir', 'results_dir'],
                     data_dir = data_dir,
-                    results_dir = results_dir,
-                    working_dir = working_dir),
+                    results_dir = results_dir),
                   name = 'infosource')
 
 infosource.iterables = [('subject_id', subject_list)]
 
 
-templates = {'command': abspath('narps_open/pipelines/team_6VV2_AfniProc.simple')}
+templates = {'command': abspath('narps_open/pipelines/team_6VV2.firstlevel')}
 # Create SelectFiles node
 files = Node(SelectFiles(templates),
           name='files')
@@ -83,20 +90,98 @@ def run(command, results_dir, subject, data_dir):
     print("Done")
 
 afni_proc = Node(Function(input_names=["command", "results_dir", "subject", "data_dir"],
-                                    output_names=["Adni_proc_ran"],
+                                    output_names=["Adni_1stLevel"],
                                     function=run),
               name='afni_proc')
 
 
-
 ####### build workflow
-wf_run = Workflow(base_dir = opj(results_dir, working_dir), name="Afni_proc_through_nipype")
+wf_run = Workflow(base_dir = results_dir, name="Afni_proc_through_nipype")
 wf_run.base_dir = '.'
 wf_run.connect([(infosource, create_stimuli, [('subject_id', 'subject')]),
                 (infosource, create_stimuli, [("data_dir", "data_dir")]),
                 (infosource, afni_proc, [('subject_id', 'subject')]),
                 (infosource, afni_proc, [("results_dir", "results_dir")]),
                 (infosource, afni_proc, [("data_dir", "data_dir")]),
+                (files, afni_proc, [("command", "command")])
+                ])
+# wf_run.write_graph()
+wf_run.run()
+
+
+########################################################################
+################## SECOND LEVEL ANALYSIS FOR TEAM 6VV2 #################
+########################################################################
+
+# define environment for second level analysis
+data_dir_firstlevel = "/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/"
+results_dir_second_level =  "/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/secondlevel/"
+path = pathlib.Path(results_dir_second_level)
+path.mkdir(parents=True, exist_ok=True)
+
+# Infosource Node - To iterate on subjects + get directoris paths
+infosource = Node(interface=IdentityInterface(fields = ['results_dir_second_level'],
+                    results_dir_second_level = results_dir_second_level),
+                  name = 'infosource')
+
+templates = {'command': abspath('narps_open/pipelines/team_6VV2.secondlevel')}
+# Create SelectFiles node
+files = Node(SelectFiles(templates),
+          name='files')
+# Location of the dataset folder
+files.inputs.base_directory = '.'
+
+
+# create datatable for afni_proc.py script
+def create_dataTable(data_dir_firstlevel):
+    # subject not analyzed by the team, see pipelines information for more details
+    not_included = ["016","018","030","088","089","100"]
+    df_participant = pd.read_csv("data/original/ds001734/participants.tsv", sep="\t")
+    # replace equalRange and equalIndifference with range and indifference
+    df_participant["group"] = [i[5:].lower() for i in df_participant["group"].values]
+    df_participant["participant_id"] = [i[-3:] for i in df_participant["participant_id"].values]
+    df = pd.DataFrame(columns=["Subj", "cond", "group", "InputFile"])
+    for sub in df_participant["participant_id"].values:
+        if sub in not_included:
+            continue
+        size_df = len(df)
+        sub_group = df_participant["group"][df_participant["participant_id"]==sub].values[0]
+        df.loc[size_df] = [sub, "GAIN", sub_group, "{}sub-{}/sub-{}_GAIN.nii".format(data_dir_firstlevel, sub, sub)]
+        size_df = len(df)
+        df.loc[size_df] = [sub, "LOSS", sub_group, "{}sub-{}/sub-{}_LOSS.nii".format(data_dir_firstlevel, sub, sub)]
+    dataTable = df
+
+    """
+    Should look like 
+
+    Subj cond group InputFile \
+    001 GAIN indiff results/sub-001.results.block/sub-001_GAIN.nii \
+    001 LOSS indiff results/sub-001.results.block/sub-001_LOSS.nii \
+    …
+    124 GAIN range results/sub-124.results.block/sub-124_GAIN.nii \
+    124 LOSS range results/sub-124.results.block/sub-124_LOSS.nii 
+
+
+    """
+    return dataTable
+
+
+# launch afni bash script
+def run_secondlevel(command, results_dir_second_level):
+    import subprocess
+    subprocess.run([command, results_dir_second_level])
+    print("Done")
+
+afni_proc = Node(Function(input_names=["command", "results_dir_second_level"],
+                                    output_names=["Adni_2ndLevel"],
+                                    function=run_secondlevel),
+              name='afni_proc')
+
+
+####### build workflow
+wf_run = Workflow(base_dir = results_dir_second_level, name="Afni_proc_2nd_level_through_nipype")
+wf_run.base_dir = '.'
+wf_run.connect([(infosource, afni_proc, [("results_dir_second_level", "results_dir_second_level")]),
                 (files, afni_proc, [("command", "command")])
                 ])
 # wf_run.write_graph()
