@@ -3,7 +3,7 @@
 General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
 
 ## Reproduce a pipeline :keyboard:
-:thinking: Not sure which one to start with ? You can have a look on [this table](/docs/pipeline_status.md) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
+:thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
 
 [Start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**.
 
