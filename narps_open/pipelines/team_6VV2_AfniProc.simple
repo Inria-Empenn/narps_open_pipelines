@@ -1,10 +1,19 @@
 #!/bin/tcsh
 
-# set subject and group identifiers
-set subject  = sub-001
-# set data directory
-set datadir = /home/jlefortb/narps_open_pipelines/data/original/ds001734
-set expdir = /home/jlefortb/narps_open_pipelines/outputs_6VV2_test_nipype
+# created by team 6VV2, reproduce by Narps reproducibility team
+# creation date: 22 June 2023
+# read and ran by team_6VV2.py script
+
+# Store arguments
+set expdir="$1"
+set subject="$2"
+set datadir="$3"
+
+# set expdir = data/results
+# set subject = sub-082
+# set datadir = data/original/ds001734
+
+
 afni_proc.py \
   -script ${expdir}/proc.${subject}.block \
   -scr_overwrite \
@@ -47,5 +56,8 @@ afni_proc.py \
   -regress_censor_first_trs 3 \
   -regress_est_blur_errts \
   -execute
+
+
+
 
  
