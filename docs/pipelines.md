@@ -91,21 +91,21 @@ def get_group_level_outputs(self):
 You should use other pipeline attributes to generate the lists of outputs dynamically. E.g.:
 
 ```python
-    def get_subject_level_outputs(self):
-        """ Return the names of the files the subject level analysis generates. """
+def get_subject_level_outputs(self):
+    """ Return the names of the files the subject level analysis generates. """
 
-        # Here we create a list of contrat map templates, using a comprehension list
-        # self.directories.output_dir is a pipeline attribute, as well as self.contrast_list
-        # subject_id will be filled later using a formatting string
-        templates = [join(
-            self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
+    # Here we create a list of contrat map templates, using a comprehension list
+    # self.directories.output_dir is a pipeline attribute, as well as self.contrast_list
+    # subject_id will be filled later using a formatting string
+    templates = [join(
+        self.directories.output_dir,
+        'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+        for contrast_id in self.contrast_list]
 
-        # Here we replace the subject_id by actual values for each subject included in the analysis
-        return_list = []
-        for template in templates:
-            return_list += [template.format(subject_id = s) for s in self.subject_list]
+    # Here we replace the subject_id by actual values for each subject included in the analysis
+    return_list = []
+    for template in templates:
+        return_list += [template.format(subject_id = s) for s in self.subject_list]
 
-        return return_list
+    return return_list
 ```
