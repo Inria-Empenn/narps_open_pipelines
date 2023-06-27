@@ -304,7 +304,7 @@ def get_session_infos_fsl(event_file: str):
 # FIXME: THIS FUNCTION CREATES THE CONTRASTS THAT WILL BE ANALYZED IN THE FIRST LEVEL ANALYSIS
 # IT IS ADAPTED FOR A SPECIFIC PIPELINE AND SHOULD BE MODIFIED DEPENDING ON THE PIPELINE
 # YOU ARE TRYING TO REPRODUCE
-def get_contrasts():
+def get_contrasts(subject_id: str):
     """
     Create the list of tuples that represents contrasts.
     Each contrast is in the form :

@@ -68,6 +68,9 @@ l1_analysis.connect([
     ])
 ```
 
+Whenever the interface you need is not available in the Nipype library, you may use the `Function` interface, which is a way to define your custom interface.
+See [details here](https://nipype.readthedocs.io/en/latest/api/generated/nipype.interfaces.utility.wrappers.html#function), and [how to use it](https://miykael.github.io/nipype_tutorial/notebooks/basic_function_interface.html).
+
 ## Implement the output methods
 
 Also implement the output methods, which list all of the files each step of the pipeline is supposed to generate. Use the following signatures:
