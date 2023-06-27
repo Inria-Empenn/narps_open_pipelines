@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-This template can be use to reproduce a pipeline using SPM as main analysis software.
+This template can be use to reproduce a pipeline using SPM as main software.
 
 - Replace all occurences of 48CD by the actual id of the team.
 - All lines beging [INFO], are meant to help you during the reproduction, these can be removed
@@ -131,12 +131,12 @@ class PipelineTeam48CD(Pipeline):
         # [INFO] Here we simply return the created workflow
         return preprocessing
 
-    # [INFO] There was no run level analysis for the pipelines using spm
+    # [INFO] There was no run level analysis for the pipelines using SPM
     def get_run_level_analysis(self):
         """ Return a Nipype worflow describing the run level analysis part of the pipeline """
         return None
 
-    # [INFO] This function is used in the subject level analysis pipelines using spm
+    # [INFO] This function is used in the subject level analysis pipelines using SPM
     # [TODO] Adapt this example to your specific pipeline
     def get_subject_infos(event_files: list, runs: list):
         """
@@ -448,7 +448,7 @@ class PipelineTeam48CD(Pipeline):
             - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns:
-            - l2_analysis: nipype.WorkFlow
+            - group_level_analysis: nipype.WorkFlow
         """
         # [INFO] The following part stays the same for all preprocessing pipelines
 
@@ -469,7 +469,7 @@ class PipelineTeam48CD(Pipeline):
         templates = {
             'contrast': join(
                 self.directories.results_dir,
-                'l1_analysis',
+                'subject_level_analysis',
                 '_subject_id_*',
                 'complete_filename_{contrast_id}_complete_filename.nii',
             ),
