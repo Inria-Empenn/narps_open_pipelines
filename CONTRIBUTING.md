@@ -10,10 +10,19 @@ Need more information ? You can have a look to the pipeline decription [here](ht
 When you are ready, [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**!
 
 ### If you have experience with NiPype
-We created a template with modifications to make and holes to fill to create a pipeline. You can find it on [`narps_open/pipelines/pipeline_template.py`](/narps_open/pipelines/pipeline_template.py). 
-If you feel it could be better explained, do not hesitate to modify the template or to create an issue about it.
+
+We created templates with modifications to make and holes to fill to create a pipeline. You can find them in [`narps_open/pipelines/templates`](/narps_open/pipelines/templates).
+
+If you feel it could be better explained, do not hesitate to suggest modifications for the templates.
+
+Feel free to have a look to the following pipelines, these are examples :
+| team_id | softwares | fmriprep used ? | pipeline file |
+| --- | --- | --- | --- |
+| 2T6S | SPM | Yes | [/narps_open/pipelines/team_2T6S.py](/narps_open/pipelines/team_2T6S.py) |
+| X19V | FSL | Yes | [/narps_open/pipelines/team_X19V.py](/narps_open/pipelines/team_2T6S.py) |
 
 ### If you have experience with the original software package but not with NiPype
+
 A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save your NiPype script in a .py file and send it as a new issue, we will convert this script to a script which works with our specific parameters. 
 
 ## Find or propose an issue :clipboard:
