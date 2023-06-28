@@ -45,10 +45,10 @@ body:
         Please tick the boxes below once the corresponding task is finished. :+1:
         - [ ] :ok_hand: A maintainer of the project approved the issue, by assigning a :checkered_flag:`status: ready for dev` label to it.
         - [ ] :deciduous_tree: Create a branch on your fork to start the reproduction.
-        - [ ] :sunrise: Create a file `team_{team_id}.py` inside the [`narps_open/pipelines/`](/narps_open/pipelines) directory. You can use the [`narps_open/pipelines/`](narps_open/pipelines/pipeline_template.py) file as a template if needed.
+        - [ ] :sunrise: Create a file `team_{team_id}.py` inside the [`narps_open/pipelines/`](/narps_open/pipelines) directory. You can use a file inside [`narps_open/pipelines/templates`](narps_open/pipelines/templates) file as a template if needed.
         - [ ] :brain: Write the code for the pipeline, using Nipype and the file architecture described in [docs/pipelines.md](/docs/pipelines.md).
         - [ ] :blue_book: Make sure your code is documented enough.
         - [ ] :snake: Make sure your code is explicit and conforms with PEP8.
         - [ ] :microscope: Create tests for your pipeline. You can use [`tests/pipelines/test_team_2T6S.py`](/tests/pipelines/test_team_2T6S.py) as an example.
-        - [ ] :microscope: Make sure your code passes all the tests you created as well as the unit tests (see [docs/testing.md](/docs/testing.md)).
+        - [ ] :microscope: Make sure your code passes all the tests you created (see [docs/testing.md](/docs/testing.md)).
         - [ ] :inbox_tray: create a [pull request](/CONTRIBUTING.md#pull_requests) from your code.
