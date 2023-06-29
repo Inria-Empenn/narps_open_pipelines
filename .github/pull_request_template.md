@@ -14,7 +14,7 @@ Checklist:
 - [ ] Targets the `main` branch
 - [ ] Changes are functional
 - [ ] My code is explicit and comments were added to it
-- [ ] Code conforms with 
+- [ ] Code conforms with PEP8
 - [ ] Tests were added for the changes and they complete successfully
 - [ ] Existing tests were updated (if needed) and they complete successfully
 - [ ] Documentation was updated

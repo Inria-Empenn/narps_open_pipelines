@@ -10,6 +10,8 @@ body:
         Please make sure there is no concurrent issue about it : have a look [here](/docs/pipeline_status.md).
         Once it's ok, start by changing the `team_id` in the title of this issue, then fill the form.
 
+        :warning: Please do not reference any other team IDs in the following, unless the issue is actually related these IDs.
+
   - type: textarea
     id: softwares
     attributes:
@@ -52,7 +54,7 @@ body:
         - [ ] :brain: Write the code for the pipeline, using Nipype and the file architecture described in [docs/pipelines.md](/docs/pipelines.md).
         - [ ] :blue_book: Make sure your code is documented enough.
         - [ ] :snake: Make sure your code is explicit and conforms with PEP8.
-        - [ ] :microscope: Create tests for your pipeline. You can use [`tests/pipelines/test_team_2T6S.py`](/tests/pipelines/test_team_2T6S.py) as an example.
+        - [ ] :microscope: Create tests for your pipeline. You can use files in [`tests/pipelines/test_team_*`](/tests/pipelines/) as examples.
         - [ ] :microscope: Make sure your code passes all the tests you created (see [docs/testing.md](/docs/testing.md)).
         - [ ] :inbox_tray: create a [pull request](/CONTRIBUTING.md#pull_requests) from your code.
     validations:
