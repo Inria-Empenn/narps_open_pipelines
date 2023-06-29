@@ -18,7 +18,7 @@ body:
   - type: textarea
     id: reproduction
     attributes:
-      label: Why this is useful
+      label: Reproduction
       description: Describe the steps to reproduce the bug.
       placeholder: |
         1. Go to '...'
