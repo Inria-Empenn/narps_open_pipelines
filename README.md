@@ -4,6 +4,15 @@
 	<img src="assets/images/project_illustration.png"/> 
 </p>
 
+<p align="center">
+    <a href="https://github.com/badges/shields/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/badges/shields" /></a>
+    <a href="https://github.com/badges/shields/pulse" alt="Activity">
+        <img src="https://img.shields.io/github/commit-activity/m/badges/shields" /></a>
+	<a href="https://github.com/badges/shields/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" alt="GitHub issues by-label"> 
+		<img src="https://img.shields.io/github/issues/badges/shields/good%20first%20issue" /></a>
+</p>
+
 ## Table of contents
 
 - [Project presentation](#project-presentation)
@@ -24,17 +33,7 @@ However, different analytical choices can cause variation in the results [(Botvi
 To perform the reproduction, we are lucky to be able to use the description provided by each team available [here](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx). 
 We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing) that can be used to add comments on pipelines (e.g.: identify the ones that are not reproducible with NiPype).
 
-:vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines progresses at first glance. Here is what it looks like:
-
-| team_id | status | softwares used | fmriprep used ? | related issues |
-| --- |:---:| --- | --- | --- |
-| 08MQ | :red_circle: | FSL | No |  |
-| 0C7Q | :red_circle: | FSL, AFNI | Yes |  |
-| 0ED6 | :green_circle: | SPM | No |  |
-| 0H5E | :orange_circle: | SPM | No | [44](https://github.com/Inria-Empenn/narps_open_pipelines/issues/44)  |
-| 0I4U | :orange_circle: | SPM | No | [44](https://github.com/Inria-Empenn/narps_open_pipelines/issues/44), [3](https://github.com/Inria-Empenn/narps_open_pipelines/issues/3),  |
-| ... | | | | |
-
+:vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines work progresses at first glance.
 
 ## Getting Started
 
@@ -44,7 +43,7 @@ We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1F
 - :brain: `data/` contains data that is used by the pipelines, as well as the (intermediate or final) results data. Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
 - :blue_book: `docs/` contains the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
 - :orange_book: `examples/` contains notebooks examples to launch of the reproduced pipelines.
-- :microscope: `tests` contains the tests of the narps_open package.
+- :microscope: `tests/` contains the tests of the narps_open package.
 
 ### Installation
 
