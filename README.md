@@ -6,11 +6,11 @@
 
 <p align="center">
     <a href="https://github.com/Inria-Empenn/narps_open_pipelines/graphs/contributors" alt="Contributors">
-        <img src="https://img.shields.io/github/contributors/badges/shields" /></a>
+        <img src="https://img.shields.io/github/contributors/Inria-Empenn/narps_open_pipelines" /></a>
     <a href="https://github.com/Inria-Empenn/narps_open_pipelines/pulse" alt="Activity">
-        <img src="https://img.shields.io/github/commit-activity/m/badges/shields" /></a>
+        <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
 	<a href="https://github.com/Inria-Empenn/narps_open_pipelines/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" alt="GitHub issues by-label"> 
-		<img src="https://img.shields.io/github/issues/badges/shields/good%20first%20issue" /></a>
+		<img src="https://img.shields.io/github/issues/Inria-Empenn/narps_open_pipelines/good%20first%20issue" /></a>
 </p>
 
 ## Table of contents
