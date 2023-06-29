@@ -55,6 +55,15 @@ Each test file defines a class (in the example: `TestPipelines`), in which each 
 
 Finally we use one or several `assert` ; each one of them making the whole test fail if the assertion is False. One can also use the `raises` method of pytest, writing `with raises(Exception):` to test if a piece of code raised the expected Exception. See the reference [here](https://docs.pytest.org/en/6.2.x/reference.html?highlight=raises#pytest.raises).
 
+## Using downsampled data
+
+Running pipelines over all the subjects is time and resource consuming. Ideally, this should be done only once we are confident that the pipeline is correcly reproduced, just to make sure the final values of correlations between original team results and the reproduced ones are above the expected values.
+
+Most of the time we need to run pipelines earlier in the development process, and for this step we need a (quick) answer whether it is going the right way or not.
+
+This is why we introduced the `narps_open.data.downsampling`
+
+
 ## Non regression testing
 
 Here is a procedure on how to perform a regression test, when modifying the code of a pipeline. In the following we test pipeline 2T6S.
