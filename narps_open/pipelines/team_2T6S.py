@@ -39,7 +39,7 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_subject_infos(event_files, runs):
-        ''' Create Bunchs for specifySPMModel.
+        """ Create Bunchs for specifySPMModel.
 
         Parameters :
         - event_files: list of str, list of events files (one per run) for the subject
@@ -47,7 +47,7 @@ class PipelineTeam2T6S(Pipeline):
 
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
-        '''
+        """
         from nipype.interfaces.base import Bunch
 
         condition_names = ['trial']
@@ -112,11 +112,11 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_contrasts():
-        '''
+        """
         Create a list of tuples that represent contrasts.
         Each contrast is in the form :
         (Name, Stat, [list of condition names],[weights on those conditions])
-        '''
+        """
         # List of condition names
         conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
 
@@ -132,7 +132,7 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_parameters_file(filepaths, subject_id, working_dir):
-        '''
+        """
         Create new tsv files with only desired parameters per subject per run.
 
         Parameters :
@@ -141,7 +141,7 @@ class PipelineTeam2T6S(Pipeline):
 
         Return :
         - parameters_file : paths to new files containing only desired parameters.
-        '''
+        """
         from os import mkdir
         from os.path import join, isdir
 
@@ -392,17 +392,19 @@ class PipelineTeam2T6S(Pipeline):
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subset_contrasts(file_list, method, subject_list, participants_file):
-        '''
+    def get_subset_contrasts(file_list, subject_list, participants_file):
+        """
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
         - participants_file: str, file containing participants caracteristics
-        - method: str, one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns :
-        - TODO
-        '''
+        - equal_indifference_id : a list of subject ids in the equalIndifference group
+        - equal_range_id : a list of subject ids in the equalRange group
+        - equal_indifference_files : a subset of file_list corresponding to subjects in the equalIndifference group
+        - equal_range_files : a subset of file_list corresponding to subjects in the equalRange group
+        """
         equal_indifference_id = []
         equal_range_id = []
         equal_indifference_files = []

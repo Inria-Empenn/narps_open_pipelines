@@ -1,26 +1,20 @@
----
-name: Staff feature request
-about: Staff suggestions.
-title: ''
-labels: "\U0001F512 staff only"
-assignees: ''
+This Pull Request is related to issue [#](add a link to the issue here).
 
----
+Before reviewing this Pull Request, please review Pull Request [#](add a link to the Pull Request here).
 
-**Related to issue #.**
+Changes proposed in this Pull Request:
 
-**Changes proposed in this pull request**:
 - 
 - 
 - 
 
-**Checklist**:
+Checklist:
+
 - [ ] Descriptive title
-- [ ] Targets the `master` branch
-- [ ] Changes are functional 
-- [ ] Tests were added for the changes
-- [ ] Comments were added to the code in ENGLISH 🇬🇧 (if required)
-- [ ] Code is good quality 
-- [ ] Documentation was updated (if required)
-
-@elodiegermani
+- [ ] Targets the `main` branch
+- [ ] Changes are functional
+- [ ] My code is explicit and comments were added to it
+- [ ] Code conforms with 
+- [ ] Tests were added for the changes and they complete successfully
+- [ ] Existing tests were updated (if needed) and they complete successfully
+- [ ] Documentation was updated

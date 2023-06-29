@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an idea for the project!
+title: "[ENH] "
+labels: ["\U0001F6A6 status: awaiting triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting this feature! :raised_hands:
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      description: Please briefly describe the purpose of your request.
+      placeholder: ex. Create a template for pipelines using AFNI.
+    validations:
+      required: true
+  - type: textarea
+    id: why-useful
+    attributes:
+      label: Why this is useful
+      description: Why you think the project could benefit from the feature.
+      placeholder: ex. This would help contributors to start writing pipeline code using AFNI.
+    validations:
+      required: true
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      description: If there are any time limitations for the issue to be resolved, please write it here.
+      placeholder: ex. Must be done before we present the code to the AFNI convention.
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: More specifically
+      description: A clear description of what you want to happen.
+      placeholder: Add any context or screenshots about the feature request here.
+    validations:
+      required: false
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions
+      description: Please fill this part if there are subjects left to discussion for this request. You can also describe alternatives you've considered.
+      placeholder: ex. I'm not sure which version of AFNI tu use.
+    validations:
+      required: false
