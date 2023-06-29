@@ -12,6 +12,7 @@
 	- [Installation](#installation)
 	- [Contributing](#contributing)
 - [References](#references)
+- [Funding](#funding)
 
 ## Project presentation
 
@@ -21,35 +22,29 @@ However, different analytical choices can cause variation in the results [(Botvi
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
 To perform the reproduction, we are lucky to be able to use the description provided by each team available [here](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx). 
-We also created a shared spreadsheet that can be use to add comments on pipelines: the ones that are already reproduced, the ones that are not reproducible with NiPype... You can find it [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing).
+We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing) that can be used to add comments on pipelines (e.g.: identify the ones that are not reproducible with NiPype).
+
+:vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines progresses at first glance. Here is what it looks like:
+
+| team_id | status | softwares used | fmriprep used ? | related issues |
+| --- |:---:| --- | --- | --- |
+| 08MQ | :red_circle: | FSL | No |  |
+| 0C7Q | :red_circle: | FSL, AFNI | Yes |  |
+| 0ED6 | :green_circle: | SPM | No |  |
+| 0H5E | :orange_circle: | SPM | No | [44](https://github.com/Inria-Empenn/narps_open_pipelines/issues/44)  |
+| 0I4U | :orange_circle: | SPM | No | [44](https://github.com/Inria-Empenn/narps_open_pipelines/issues/44), [3](https://github.com/Inria-Empenn/narps_open_pipelines/issues/3),  |
+| ... | | | | |
+
 
 ## Getting Started
 
-Follow the instructions of [INSTALL.md](/INSTALL.md) to start with the NARPS open pipelines project.
-
 ### Contents overview
 
-#### `narps_open` :snake: :package:
-
-This directory contains the Python package with all the pipelines logic.
-
-#### `data` :brain:
-
-This directory is made to contain data that will be used by the pipelines, as well as the (intermediate or final) results data.
-
-Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
-
-#### `docs` :blue_book:
-
-This directory the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
-
-#### `examples` :orange_book:
-
-This directory contains notebooks examples to launch of the reproduced pipelines.
-
-#### `tests` :microscope:
-
-This directory contains the tests of the narps_open package.
+- :snake: :package: `narps_open/` contains the Python package with all the pipelines logic.
+- :brain: `data/` contains data that is used by the pipelines, as well as the (intermediate or final) results data. Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
+- :blue_book: `docs/` contains the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
+- :orange_book: `examples/` contains notebooks examples to launch of the reproduced pipelines.
+- :microscope: `tests` contains the tests of the narps_open package.
 
 ### Installation
 
