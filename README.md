@@ -5,12 +5,14 @@
 </p>
 
 <p align="center">
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/actions/workflows/unit_tests.yml" alt="Unit tests status">
+        <img src="https://img.shields.io/github/actions/workflow/status/Inria-Empenn/narps_open_pipelines/unit_tests.yml?label=unit%20tests" /></a>
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/actions/workflows/code_quality.yml" alt="Code quality status">
+        <img src="https://img.shields.io/github/actions/workflow/status/Inria-Empenn/narps_open_pipelines/code_quality.yml?label=code%20quality" /></a>
     <a href="https://github.com/Inria-Empenn/narps_open_pipelines/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/Inria-Empenn/narps_open_pipelines" /></a>
-    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/pulse" alt="Activity">
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/pulse" alt="Commit activity">
         <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
-	<a href="https://github.com/Inria-Empenn/narps_open_pipelines/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" alt="GitHub issues by-label"> 
-		<img src="https://img.shields.io/github/issues/Inria-Empenn/narps_open_pipelines/good%20first%20issue" /></a>
 </p>
 
 ## Table of contents
@@ -30,7 +32,7 @@ However, different analytical choices can cause variation in the results [(Botvi
 
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
-To perform the reproduction, we are lucky to be able to use the description provided by each team available [here](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx). 
+To perform the reproduction, we are lucky to be able to use the [descriptions provided by the teams](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx).
 We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing) that can be used to add comments on pipelines (e.g.: identify the ones that are not reproducible with NiPype).
 
 :vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines work progresses at first glance.
