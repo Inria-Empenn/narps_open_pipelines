@@ -69,14 +69,18 @@ class PipelineStatusReport():
             self.contents[team_id]['issues'] = issues
 
             # Derive the satus of the pipeline
-            if len(issues) == 0 and pipeline_class is not None:
-                self.contents[team_id]['status'] = 'done'
-            elif len(issues) != 0:
-                self.contents[team_id]['status'] = 'progress'
-            elif team_id in teams_having_pipeline:
-                self.contents[team_id]['status'] = 'progress'
-            else:
+            has_issues = len(issues) > 0
+            is_implemeted = pipeline_class is not None
+            has_file = team_id in teams_having_pipeline
+
+            if is_implemeted and not has_file:
+                raise AttributeError(f'Pipeline {team_id} refered as implemented with no file')
+            elif not is_implemeted and not has_issues and not has_file:
                 self.contents[team_id]['status'] = 'idle'
+            elif is_implemeted and has_file and not has_issues:
+                self.contents[team_id]['status'] = 'done'
+            else:
+                self.contents[team_id]['status'] = 'progress'
 
     def markdown(self):
         """ Return a string representing the report as markdown format """
