@@ -11,7 +11,7 @@ from glob import glob
 from requests import get
 from importlib_resources import files
 
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 from narps_open.pipelines import implemented_pipelines
 
 def get_opened_issues():
@@ -75,7 +75,8 @@ class PipelineStatusReport():
 
             if is_implemeted and not has_file:
                 raise AttributeError(f'Pipeline {team_id} refered as implemented with no file')
-            elif not is_implemeted and not has_issues and not has_file:
+
+            if not is_implemeted and not has_issues and not has_file:
                 self.contents[team_id]['status'] = 'idle'
             elif is_implemeted and has_file and not has_issues:
                 self.contents[team_id]['status'] = 'done'

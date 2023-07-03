@@ -30,14 +30,14 @@ class TestResultsCollection:
 
         collection = ResultsCollection('2T6S')
         assert collection.team_id == '2T6S'
-        assert collection.id == '4881'
+        assert collection.uid == '4881'
         assert collection.url == 'https://neurovault.org/collections/4881/download'
         assert 'results/orig/4881_2T6S' in collection.directory
         assert collection.files['hypo3_thresh.nii.gz'] == 'hypo3_thresholded_revised.nii.gz'
 
         collection = ResultsCollection('C88N')
         assert collection.team_id == 'C88N'
-        assert collection.id == '4812'
+        assert collection.uid == '4812'
         assert collection.url == 'https://neurovault.org/collections/4812/download'
         assert 'results/orig/4812_C88N' in collection.directory
         assert collection.files['hypo3_thresh.nii.gz'] == 'hypo3_thresh.nii.gz'

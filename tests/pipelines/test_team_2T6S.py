@@ -11,13 +11,10 @@ Usage:
     pytest -q test_team_2T6S.py -k <selected_test>
 """
 
-from os.path import join
-
 from pytest import helpers, mark
 from nipype import Workflow
 
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
-from narps_open.utils.configuration import Configuration
 
 class TestPipelinesTeam2T6S:
     """ A class that contains all the unit tests for the PipelineTeam2T6S class."""

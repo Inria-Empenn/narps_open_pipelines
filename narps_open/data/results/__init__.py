@@ -28,12 +28,12 @@ class ResultsCollection():
         # Initialize attributes
         self.team_id = team_id
         description = TeamDescription(team_id = self.team_id)
-        self.id = description.general['NV_collection_link'].split('/')[-2]
+        self.uid = description.general['NV_collection_link'].split('/')[-2]
         self.url = description.general['NV_collection_link'] + 'download'
         self.directory = join(
             Configuration()['directories']['narps_results'],
             'orig',
-            self.id + '_' + self.team_id
+            self.uid + '_' + self.team_id
             )
         self.files = {
             'hypo1_thresh.nii.gz' : 'hypo1_thresh.nii.gz',
@@ -59,7 +59,10 @@ class ResultsCollection():
         # Make correspondences between the names given by the
         # team in neurovault collections, and the expected names of the hypotheses files.
         if Configuration()['results']['neurovault_naming']:
-            with open(join(files('narps_open.data.results'),'results.json'), 'r') as file:
+            with open(
+                join(files('narps_open.data.results'),'results.json'),
+                'r', encoding = 'utf-8'
+                ) as file:
                 neurovault_files = loads(file.read())[self.team_id]
 
             if neurovault_files:

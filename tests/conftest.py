@@ -79,14 +79,14 @@ def test_pipeline_execution(
     runner.start(False, True)
 
     # Indices and keys to the unthresholded maps
-    indices = [i for i in range(1, 18, 2)]
+    indices = list(range(1, 18, 2))
     keys = [f'hypo{i}_unthresh.nii.gz' for i in range(1, 10)]
 
     # Retrieve the paths to the reproduced files
     reproduced_files = runner.pipeline.get_hypotheses_outputs()
     reproduced_files = [reproduced_files[i] for i in indices]
 
-    # Retrieve the paths to the results files 
+    # Retrieve the paths to the results files
     collection = ResultsCollection(team_id)
     results_files = [join(collection.directory, collection.files[k]) for k in keys]
 

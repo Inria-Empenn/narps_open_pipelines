@@ -198,7 +198,7 @@ if __name__ == '__main__':
             print('First level:', runner.get_missing_first_level_outputs())
         if not arguments.first:
             print('Group level:', runner.get_missing_group_level_outputs())
-        
-    # Start the runner    
+
+    # Start the runner
     else:
         runner.start(arguments.first, arguments.group)
