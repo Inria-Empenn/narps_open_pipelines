@@ -41,7 +41,7 @@ class MockupPipeline(Pipeline):
         if isfile(self.test_file):
             remove(self.test_file)
 
-    @staticmethod
+    # @staticmethod
     def write_to_file(_, text_to_write: str, file_path: str):
         """ Method used inside a nipype Node, to write a line in a test file """
         with open(file_path, 'a', encoding = 'utf-8') as file:
