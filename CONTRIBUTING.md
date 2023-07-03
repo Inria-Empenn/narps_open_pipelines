@@ -5,7 +5,7 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 ## Reproduce a pipeline :keyboard:
 :thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
 
-Need more information ? You can have a look to the pipeline decription [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the description module of the project, as described [in the documentation](/docs/description.md).
+Need more information ? You can have a look to the pipeline decription [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md).
 
 When you are ready, [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**!
 

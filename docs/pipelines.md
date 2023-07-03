@@ -116,10 +116,16 @@ def get_subject_level_outputs(self):
 ## Use attributes from the `Pipeline` class
 
 As explained before, all pipeline inherit from the `narps_open.pipelines.Pipeline` class, hence having access to a set of attributes, such as:
-* `directories`
-* `subject_list`
-* `run_list` : the list of runs to use = ['01', '02', '03', '04']
-* `constrast_list` : the list of contrats computed by the first level analysis
-* `team_id` : ID of the team (e.g.: `2T6S`)
-* `fwhm` : full width at half maximum for the smoothing kernel (in mm)
+* `directories` : a set of paths the pipeline needs to access such as the input dataset, the output directory, etc.) ;
+* `subject_list` : the list of participants on which to run the pipeline ;
+* `run_list` : the list of runs to use, e.g.: `['01', '02', '03', '04']` to use all runs ;
+* `constrast_list` : the list of contrats computed by the first level analysis and used in the group level analysis ;
+* `team_id` : ID of the team (e.g.: `2T6S`) ;
+* `fwhm` : full width at half maximum for the smoothing kernel (in mm) :
 * `tr` : repetition time of the fMRI acquisition (equals 1.0s)
+
+## Test your pipeline
+
+First have a look at the [testing topic of the documentation](./docs/testing.md). It explains how testing works for inside project and how you should write the tests related to your pipeline.
+
+Feel free to have a look at [tests/pipelines/test_team_2T6S.py](./tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives a good example.

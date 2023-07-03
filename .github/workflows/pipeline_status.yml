@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - 'narps_open/pipelines/team**'
+      - 'narps_open/utils/status.py'
     branches:
       - main
   issues:

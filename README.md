@@ -4,6 +4,17 @@
 	<img src="assets/images/project_illustration.png"/> 
 </p>
 
+<p align="center">
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/actions/workflows/unit_tests.yml" alt="Unit tests status">
+        <img src="https://img.shields.io/github/actions/workflow/status/Inria-Empenn/narps_open_pipelines/unit_tests.yml?label=unit%20tests" /></a>
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/actions/workflows/code_quality.yml" alt="Code quality status">
+        <img src="https://img.shields.io/github/actions/workflow/status/Inria-Empenn/narps_open_pipelines/code_quality.yml?label=code%20quality" /></a>
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/Inria-Empenn/narps_open_pipelines" /></a>
+    <a href="https://github.com/Inria-Empenn/narps_open_pipelines/pulse" alt="Commit activity">
+        <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
+</p>
+
 ## Table of contents
 
 - [Project presentation](#project-presentation)
@@ -12,6 +23,7 @@
 	- [Installation](#installation)
 	- [Contributing](#contributing)
 - [References](#references)
+- [Funding](#funding)
 
 ## Project presentation
 
@@ -20,36 +32,20 @@ However, different analytical choices can cause variation in the results [(Botvi
 
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
-To perform the reproduction, we are lucky to be able to use the description provided by each team available [here](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx). 
-We also created a shared spreadsheet that can be use to add comments on pipelines: the ones that are already reproduced, the ones that are not reproducible with NiPype... You can find it [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing).
+To perform the reproduction, we are lucky to be able to use the [descriptions provided by the teams](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx).
+We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing) that can be used to add comments on pipelines (e.g.: identify the ones that are not reproducible with NiPype).
+
+:vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines work progresses at first glance.
 
 ## Getting Started
 
-Follow the instructions of [INSTALL.md](/INSTALL.md) to start with the NARPS open pipelines project.
-
 ### Contents overview
 
-#### `narps_open` :snake: :package:
-
-This directory contains the Python package with all the pipelines logic.
-
-#### `data` :brain:
-
-This directory is made to contain data that will be used by the pipelines, as well as the (intermediate or final) results data.
-
-Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
-
-#### `docs` :blue_book:
-
-This directory the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
-
-#### `examples` :orange_book:
-
-This directory contains notebooks examples to launch of the reproduced pipelines.
-
-#### `tests` :microscope:
-
-This directory contains the tests of the narps_open package.
+- :snake: :package: `narps_open/` contains the Python package with all the pipelines logic.
+- :brain: `data/` contains data that is used by the pipelines, as well as the (intermediate or final) results data. Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
+- :blue_book: `docs/` contains the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
+- :orange_book: `examples/` contains notebooks examples to launch of the reproduced pipelines.
+- :microscope: `tests/` contains the tests of the narps_open package.
 
 ### Installation
 
