@@ -1,4 +1,13 @@
-# last update: June 2023
+'''
+created by team 6VV2, reproduced by Narps reproducibility team
+creation date: 22 June 2023
+needs script "team_6VV2.firstlevel" and "team_6VV2.secondlevel"
+the team : AFNI Version 19.0.01 Tiberius
+version afni used by the reproducibility team :AFNI Version 23.0.02 Commodus
+Participants not included 016, 018, 030, 088, 089, 100
+Last update: June 2023
+'''
+
 from nipype import Node, Function, Workflow,IdentityInterface
 import subprocess
 from nipype.interfaces.io import SelectFiles, DataSink
