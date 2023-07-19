@@ -624,7 +624,7 @@ class PipelineTeam48CD(Pipeline):
             ]
         ) # Complete with other links between nodes
 
-        # [INFO] Here whe define the contrasts used for the group level analysis, depending on the
+        # [INFO] Here we define the contrasts used for the group level analysis, depending on the
         # method used.
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
