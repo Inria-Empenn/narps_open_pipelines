@@ -1,5 +1,4 @@
 [codespell]
-# TODO: do go through TSVs and fix there too
-skip = .git,*.pdf,*.svg,*.tsv
+skip = .git,*.pdf,*.svg
 #
-ignore-words-list = te
+ignore-words-list = te,fpr,fwe
