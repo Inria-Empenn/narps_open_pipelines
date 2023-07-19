@@ -17,7 +17,7 @@ jobs:
 
   # A job to list the tests to be run
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
     - name: Checkout main branch for comparison
       uses: actions/checkout@v3
@@ -63,4 +63,4 @@ jobs:
         pip install .[tests]
 
     - name: Collect tests with pytest
-      run: pytest --collect-only -q ${{ steps.identify.outputs.tests }}
+      run: pytest -q ${{ steps.identify.outputs.tests }}
