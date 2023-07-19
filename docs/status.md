@@ -1,7 +1,7 @@
 # Access the work progress status pipelines
 
-The class `PipelineStatusReport` of module `narps_open.utils.status` allows to create a report containing the following informations for each pipeline:
-* the softwares it uses (collected from the `categorized_for_analysis.analysis_SW` of the [team description](/docs/description.md)) ;
+The class `PipelineStatusReport` of module `narps_open.utils.status` allows to create a report containing the following information for each pipeline:
+* the software it uses (collected from the `categorized_for_analysis.analysis_SW` of the [team description](/docs/description.md)) ;
 * whether it uses data from fMRIprep or not ;
 * a list of issues related to it (the opened issues of the project that have the team ID inside their title or description) ;
 * a work progress status : `idle`, `progress`, or `done`.

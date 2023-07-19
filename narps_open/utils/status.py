@@ -55,7 +55,7 @@ class PipelineStatusReport():
 
             self.contents[team_id] = {}
 
-            # Get softwares used in the pipeline, from the team description
+            # Get software used in the pipeline, from the team description
             description = TeamDescription(team_id)
             self.contents[team_id]['softwares'] = \
                 description.categorized_for_analysis['analysis_SW']
