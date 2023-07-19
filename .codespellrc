@@ -1,4 +1,4 @@
 [codespell]
 skip = .git,*.pdf,*.svg
-#
-ignore-words-list = te,fpr,fwe
+# softwares - key in data structures etc
+ignore-words-list = te,fpr,fwe,softwares
