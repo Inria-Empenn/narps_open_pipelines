@@ -149,18 +149,30 @@ coreg2.cost_function = 'nmi'
 coreg2.others = {
     fieldmap.modified_in_files{2} #'distortion corrected EPI time-series', 
     fieldmap.mean_image}
-# ---> output : coregistered_files 
+# ---> output : coregistered_files:  single-band reference EPI was co-registered to the gray matter probability map
 
 # The single-band reference EPI was normalized to the SPM MNI152 template space using the classic Unified Segmentation approach in the Old Segment function in SPM, while mitigating overfitting by setting the warp frequency cutoff to 45 limiting the discrete cosine transform (DCT) bases and setting the sampling distance to 2.
 
+# segment the single-band data
+# TODO parameter cutoff to 45 NOT SET
+seg_singleband = spm.Segment()
+seg_singleband.inputs.data = coreg2.coregistered_files # single-band reference EPI
+# --> output: 
+# transformation_mat 
+
+# The resulting deformation field was applied to the distortion corrected EPI time-series, the mean EPI and the single-band reference EPI.'
 norm = spm.Normalize()
-norm.inputs.parameter_file = seg.transformation_mat
-norm.inputs.source = coreg2.coregistered_files
+norm.inputs.parameter_file = seg_singleband.transformation_mat
+norm.inputs.source = {coreg2.coregistered_files # single-band reference EPI
+    fieldmap.modified_in_files{2} #'distortion corrected EPI time-series', 
+}
+# -->outputs
 
 
-
-
-
+ # 'preprocessing.spatial_smoothing': 'SPM12, 5mm smoothing with a fixed kernel in MNI152 space '
+smooth = spm.Smooth()
+smooth.inputs.in_files = 
+smooth.inputs.fwhm = [5, 5, 5]
 
 
         # [TODO] Add another node for each step of the pipeline
