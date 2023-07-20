@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Tests of the 'narps_open.pipelines.team_2T6S' module.
+""" Tests of the 'narps_open.pipelines.team_1KB2' module.
 
 Launch this test with PyTest
 
