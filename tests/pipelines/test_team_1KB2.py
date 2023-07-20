@@ -16,7 +16,7 @@ from statistics import mean
 from pytest import raises, helpers, mark
 from nipype import Workflow
 
-from narps_open.pipelines.team_1KB2_debug import PipelineTeam1KB2
+from narps_open.pipelines.team_1KB2 import PipelineTeam1KB2
 
 class TestPipelinesTeam1KB2:
     """ A class that contains all the unit tests for the PipelineTeam2T6S class."""
