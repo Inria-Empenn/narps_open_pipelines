@@ -1,14 +1,14 @@
 # :package: Continuous Integration (CI) and Continuous Deployment (CD) for the NARPS open pipelines project
 
-:mega: This file descripes how CI/CD works for the project.
+:mega: This file describes how CI/CD works for the project.
 
 ## :octopus: CI on GitHub
 
 GitHub allows to launch CI workflows using [Actions](https://docs.github.com/en/actions).
 
-See GitHub's documentation on [worflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions) to write your own workflows.
+See GitHub's documentation on [workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions) to write your own workflows.
 
-These worflows are YAML files, located in the `.github/workflows/` directory.
+These workflows are YAML files, located in the `.github/workflows/` directory.
 
 ### CI scheme
 

@@ -70,7 +70,7 @@ class PipelineRunner():
         if implemented_pipelines[self._team_id] is None:
             raise NotImplementedError(f'Pipeline not implemented for team : {self.team_id}')
 
-        # Instanciate the pipeline
+        # Instantiate the pipeline
         class_type = getattr(
             import_module('narps_open.pipelines.team_'+self._team_id),
             implemented_pipelines[self._team_id])

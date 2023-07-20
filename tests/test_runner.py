@@ -47,7 +47,7 @@ class MockupPipeline(Pipeline):
             file.write(text_to_write)
 
     def create_workflow(self, workflow_name: str):
-        """ Return a nipype worflow with two nodes writing in a file """
+        """ Return a nipype workflow with two nodes writing in a file """
         node_1 = Node(Function(
             input_names = ['_', 'text_to_write', 'file_path'],
             output_names = ['_'],
@@ -172,19 +172,19 @@ class TestPipelineRunner:
     def test_create():
         """ Test the creation of a PipelineRunner object """
 
-        # 1 - Instanciate a runner without team id
+        # 1 - Instantiate a runner without team id
         with raises(KeyError):
             PipelineRunner()
 
-        # 2 - Instanciate a runner with wrong team id
+        # 2 - Instantiate a runner with wrong team id
         with raises(KeyError):
             PipelineRunner('wrong_id')
 
-        # 3 - Instanciate a runner with a not implemented team id
+        # 3 - Instantiate a runner with a not implemented team id
         with raises(NotImplementedError):
             PipelineRunner('08MQ')
 
-        # 4 - Instanciate a runner with an implemented team id
+        # 4 - Instantiate a runner with an implemented team id
         runner = PipelineRunner('2T6S')
         assert isinstance(runner._pipeline, PipelineTeam2T6S)
         assert runner.team_id == '2T6S'
@@ -241,14 +241,14 @@ class TestPipelineRunner:
         with raises(Exception):
             runner.start()
 
-        # 2 - test starting a pipeline with wrong worflow type
+        # 2 - test starting a pipeline with wrong workflow type
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupWrongPipeline() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start()
 
-        # 2b - test starting a pipeline with wrong worflow type
+        # 2b - test starting a pipeline with wrong workflow type
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupWrongPipeline2() # hack the runner by setting a test Pipeline
 

@@ -270,7 +270,7 @@ class PipelineTeam2T6S(Pipeline):
         smooth = Node(Smooth(fwhm = self.fwhm),
             name = 'smooth')
 
-        # Funcion node get_subject_infos - get subject specific condition information
+        # Function node get_subject_infos - get subject specific condition information
         subject_infos = Node(Function(
             function = self.get_subject_infos,
             input_names = ['event_files', 'runs'],
@@ -397,7 +397,7 @@ class PipelineTeam2T6S(Pipeline):
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
+        - participants_file: str, file containing participants characteristics
 
         Returns :
         - equal_indifference_id : a list of subject ids in the equalIndifference group

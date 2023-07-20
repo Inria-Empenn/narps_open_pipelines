@@ -102,11 +102,11 @@ class TestPipelines:
         with raises(TypeError):
             pipeline = Pipeline()
 
-        # 2 - check the instanciation of an incomplete class inheriting from Pipeline
+        # 2 - check the instantiation of an incomplete class inheriting from Pipeline
         with raises(TypeError):
             pipeline = InheritingErrorPipeline()
 
-        # 3 - check the instanciation of a class inheriting from Pipeline
+        # 3 - check the instantiation of a class inheriting from Pipeline
         pipeline = InheritingPipeline()
 
         # 4 - check accessing the attributes of Pipeline through an inheriting class

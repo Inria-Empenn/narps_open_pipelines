@@ -1,10 +1,10 @@
 # Access the descriptions of NARPS teams pipelines
 
 The file `narps_open/utils/description/analysis_pipelines_full_descriptions.tsv` contains the description provided by each team participating to NARPS.
-It is a convertion into tsv format (tab-separated values) of the [original .xlsx file published in NARPS](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx
+It is a conversion into tsv format (tab-separated values) of the [original .xlsx file published in NARPS](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx
 ), which allows easier parsing with python.
 
-The file `narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
+The file `narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programmatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
 
 The class `TeamDescription` of module `narps_open.utils.description` acts as a parser for these two files. Here is an example on how to use it:
 

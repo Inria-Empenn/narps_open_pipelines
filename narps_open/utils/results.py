@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" This module allows to get Neurovault corresponding to results from teams involed in NARPS """
+""" This module allows to get Neurovault corresponding to results from teams involved in NARPS """
 
 from os import remove, makedirs
 from os.path import join
@@ -34,7 +34,7 @@ def show_progress(count, block_size, total_size):
     print('Downloading', display_value, end='\r')
 
 def download_result_collection(team_id: str):
-    """ Download a Neurovault collection corresponding to results from a team involed in NARPS.
+    """ Download a Neurovault collection corresponding to results from a team involved in NARPS.
         Unzip it and remove zip file.
 
         Arguments:
@@ -69,7 +69,7 @@ def download_result_collection(team_id: str):
     remove(zip_filename)
 
 def download_all_result_collections():
-    """ Download all Neurovault collections corresponding to results from teams involed in NARPS.
+    """ Download all Neurovault collections corresponding to results from teams involved in NARPS.
     """
     for team_id, _ in implemented_pipelines.items():
         download_result_collection(team_id)

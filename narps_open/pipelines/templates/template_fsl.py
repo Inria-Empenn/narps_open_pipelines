@@ -4,7 +4,7 @@
 """
 This template can be use to reproduce a pipeline using FSL as main software.
 
-- Replace all occurences of 48CD by the actual id of the team.
+- Replace all occurrences of 48CD by the actual id of the team.
 - All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
 eventually.
 - Also remove lines starting with [TODO], once you did what they suggested.
@@ -44,7 +44,7 @@ class PipelineTeam48CD(Pipeline):
         pass
 
     def get_preprocessing(self):
-        """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
+        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
         # [INFO] The following part stays the same for all preprocessing pipelines
 
@@ -92,7 +92,7 @@ class PipelineTeam48CD(Pipeline):
         #   - the name of the variable in which you store the Node object
         #   - the 'name' attribute of the Node
         # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the begining of the file.
+        # at the beginning of the file.
         node_name = Node(
             node_function,
             name='node_name'
@@ -134,7 +134,7 @@ class PipelineTeam48CD(Pipeline):
 
     # [INFO] There was no run level analysis for the pipelines using FSL
     def get_run_level_analysis(self):
-        """ Return a Nipype worflow describing the run level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
     # [INFO] This function is used in the subject level analysis pipelines using FSL
@@ -219,7 +219,7 @@ class PipelineTeam48CD(Pipeline):
         return [trial, effect_gain, effect_loss]
 
     def get_subject_level_analysis(self):
-        """ Return a Nipype worflow describing the subject level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
         # [INFO] The following part stays the same for all pipelines
 
@@ -294,7 +294,7 @@ class PipelineTeam48CD(Pipeline):
         #   - the name of the variable in which you store the Node object
         #   - the 'name' attribute of the Node
         # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the begining of the file.
+        # at the beginning of the file.
         node_name = Node(
             node_function,
             name = 'node_name'
@@ -575,7 +575,7 @@ class PipelineTeam48CD(Pipeline):
         #   - the name of the variable in which you store the Node object
         #   - the 'name' attribute of the Node
         # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the begining of the file.
+        # at the beginning of the file.
         node_name = Node(
             node_function,
             name = 'node_name'

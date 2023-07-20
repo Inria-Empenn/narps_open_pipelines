@@ -68,13 +68,13 @@ class PipelineStatusReport():
                     issues[issue['number']] = issue['html_url']
             self.contents[team_id]['issues'] = issues
 
-            # Derive the satus of the pipeline
+            # Derive the status of the pipeline
             has_issues = len(issues) > 0
             is_implemeted = pipeline_class is not None
             has_file = team_id in teams_having_pipeline
 
             if is_implemeted and not has_file:
-                raise AttributeError(f'Pipeline {team_id} refered as implemented with no file')
+                raise AttributeError(f'Pipeline {team_id} referred as implemented with no file')
             elif not is_implemeted and not has_issues and not has_file:
                 self.contents[team_id]['status'] = 'idle'
             elif is_implemeted and has_file and not has_issues:
