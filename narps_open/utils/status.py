@@ -63,7 +63,9 @@ class PipelineStatusReport():
 
             # Get issues related to the team
             issues = {}
-            for issue in opened_issues:
+            for issue in opened_issues:                
+                if issue['title'] is None or issue['body'] is None:
+                    continue
                 if team_id in issue['title'] or team_id in issue['body']:
                     issues[issue['number']] = issue['html_url']
             self.contents[team_id]['issues'] = issues

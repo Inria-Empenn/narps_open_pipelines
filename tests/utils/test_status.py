@@ -40,6 +40,12 @@ def mock_api_issue(mocker):
                 "number": 2,
                 "title" : "Issue for pipeline C88N",
                 "body" : "Nothing to add here."
+            },
+            {
+                "html_url": "urls",
+                "number": 3,
+                "title" : None,
+                "body" : "Something about 2T6S."
             }
         ]
     response.json = json_func
