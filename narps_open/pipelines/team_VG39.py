@@ -55,6 +55,7 @@ class PipelineTeam2T6S(Pipeline):
         duration = {}
         weights_gain = {}
         weights_loss = {}
+        rt = {}
 
         for run_id in range(len(runs)):
             # Create dictionary items with empty lists
@@ -74,12 +75,22 @@ class PipelineTeam2T6S(Pipeline):
                         val_gain = 'gain_run' + str(run_id + 1) # gain_run1
                         val_loss = 'loss_run' + str(run_id + 1) # loss_run1
                         onset[val].append(float(info[0])) # onsets for trial_run1
-                        if float(info[4]) != 0: # If RT different from 0 -> trial with response
-                            duration[val].append(float(info[4])) # durations for trial (rpz by RT)
-                        else: # trial with no response : duration of 4 s
-                            duration[val].append(float(4))
+                        # "The first predictor in the model was the onset of the gamble event, with a duration of 0"
+                        duration[val].append(float(0))
                         weights_gain[val_gain].append(float(info[2])) # weights gain for trial_run1
                         weights_loss[val_loss].append(-1.0 * float(info[3])) # weights loss for trial_run1
+
+                    # "The second predictor in the model was the reaction time (RT) of the subject to the gamble stimulus."
+                    rt.append(float(info[4]))
+
+            # demeaning
+            # "Specifically, the mean of all gains across the entire task was subtracted from every gain value to find the parametric modulator for each event"
+            weights_gain = weights_gain-np.mean(weights_gain)
+            # "An equivalent demeaning procedure was repeated for the loss parametric modulator"
+            weights_loss = weights_loss-np.mean(weights_loss)
+
+            
+
 
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
@@ -284,6 +295,7 @@ class PipelineTeam2T6S(Pipeline):
             name = 'specify_model')
 
         # Level1Design - generates an SPM design matrix
+        # "Only the canonical HRF was used to build the predictors."
         l1_design = Node(Level1Design(
             bases = {'hrf': {'derivs': [0, 0]}}, timing_units = 'secs',
             interscan_interval = self.tr),
