@@ -162,6 +162,51 @@ class PipelineTeam1KB2(Pipeline):
         # [INFO] Here we simply return the created workflow
         return preprocessing
 
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+
+        templates = [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', '_addmean0',
+            'sub-{subject_id}_'+f'task-MGT_run-{run_id}_bold_dtype_mcf_mask_smooth_mask_gms_tempfilt_maths.nii.gz')\
+            for run_id in self.run_list]
+
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', '_dilatemask0',
+            'sub-{subject_id}_'+f'task-MGT_run-{run_id}_bold_dtype_mcf_bet_thresh_dil.nii.gz')\
+            for run_id in self.run_list]
+
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', '_maskfunc30',
+            'sub-{subject_id}_'+f'task-MGT_run-{run_id}_bold_dtype_mcf_mask_smooth_mask.nii.gz')\
+            for run_id in self.run_list]
+
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', '_realign0',
+            'sub-{subject_id}_'+f'task-MGT_run-{run_id}_bold_dtype_mcf.nii.gz.par')\
+            for run_id in self.run_list]
+
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', 
+            'sub-{subject_id}_'+f'T1w_fieldwarp.nii.gz')]
+
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', 
+            'sub-{subject_id}_'+f'task-MGT_run-{run_id}_bold_dtype_mean_flirt.mat')\
+            for run_id in self.run_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
+
     # [INFO] This function is used in the subject level analysis pipelines using FSL
     def get_subject_infos(event_file: str):
         """
