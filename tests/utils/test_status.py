@@ -11,11 +11,14 @@ Usage:
     pytest -q test_status.py -k <selected_test>
 """
 
+from os.path import join
+
 from requests.models import Response
 from requests.exceptions import HTTPError
 
 from pytest import mark, raises, fixture
 
+from narps_open.utils.configuration import Configuration
 from narps_open.utils.status import (
     get_teams_with_pipeline_files,
     get_opened_issues,
@@ -36,15 +39,28 @@ def mock_api_issue(mocker):
     def json_func():
         return [
             {
-                "html_url": "urls",
+                "html_url": "url_issue_2",
                 "number": 2,
-                "title" : "Issue for pipeline C88N",
+                "title" : "Issue for pipeline UK24",
                 "body" : "Nothing to add here."
             },
             {
-                "html_url": "urls",
+                "html_url": "url_pull_3",
                 "number": 3,
+                "title" : "Pull request for pipeline 2T6S",
+                "pull_request" : {},
+                "body" : "Work has been done."
+            },
+            {
+                "html_url": "url_issue_4",
+                "number": 4,
                 "title" : None,
+                "body" : "This is a malformed issue about C88N."
+            },
+            {
+                "html_url": "url_issue_5",
+                "number": 5,
+                "title" : "Issue about 2T6S",
                 "body" : "Something about 2T6S."
             }
         ]
@@ -52,11 +68,17 @@ def mock_api_issue(mocker):
     mocker.patch('narps_open.utils.status.get', return_value = response)
     mocker.patch(
         'narps_open.utils.status.get_teams_with_pipeline_files',
-        return_value = ['2T6S', 'C88N']
+        return_value = ['2T6S', 'UK24', 'Q6O0']
         )
     mocker.patch.dict(
         'narps_open.utils.status.implemented_pipelines',
-        {'2T6S': 'PipelineTeam2T6S', 'C88N': None, 'Q6O0': None},
+        {
+            '2T6S': 'PipelineTeam2T6S',
+            'C88N': None,
+            'Q6O0': 'PipelineTeamQ6O0',
+            '1KB2': None,
+            'UK24': None
+        },
         clear = True
         )
 
@@ -128,49 +150,80 @@ class TestUtilsStatus:
         # Test the generation
         report = PipelineStatusReport()
         report.generate()
-        print(report)
+
         test_pipeline = report.contents['2T6S']
         assert test_pipeline['softwares'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'Yes'
-        assert test_pipeline['issues'] == {}
-        assert test_pipeline['status'] == 'done'
-        test_pipeline = report.contents['C88N']
+        assert test_pipeline['issues'] == {5: 'url_issue_5'}
+        assert test_pipeline['pulls'] == {3: 'url_pull_3'}
+        assert test_pipeline['status'] == '1-progress'
+        test_pipeline = report.contents['UK24']
         assert test_pipeline['softwares'] == 'SPM'
-        assert test_pipeline['fmriprep'] == 'Yes'
-        assert test_pipeline['issues'] == {2: 'urls'}
-        assert test_pipeline['status'] == 'progress'
+        assert test_pipeline['fmriprep'] == 'No'
+        assert test_pipeline['issues'] == {2: 'url_issue_2'}
+        assert test_pipeline['pulls'] == {}
+        assert test_pipeline['status'] == '1-progress'
         test_pipeline = report.contents['Q6O0']
         assert test_pipeline['softwares'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'Yes'
         assert test_pipeline['issues'] == {}
-        assert test_pipeline['status'] == 'idle'
+        assert test_pipeline['pulls'] == {}
+        assert test_pipeline['status'] == '0-done'
+        test_pipeline = report.contents['1KB2']
+        assert test_pipeline['softwares'] == 'FSL'
+        assert test_pipeline['fmriprep'] == 'No'
+        assert test_pipeline['issues'] == {}
+        assert test_pipeline['pulls'] == {}
+        assert test_pipeline['status'] == '2-idle'
+        test_pipeline = report.contents['C88N']
+        assert test_pipeline['softwares'] == 'SPM'
+        assert test_pipeline['fmriprep'] == 'Yes'
+        assert test_pipeline['issues'] == {}
+        assert test_pipeline['pulls'] == {}
+        assert test_pipeline['status'] == '2-idle'
+
+        # Test the sorting
+        test_list = list(report.contents.keys())
+        assert test_list[0] == 'Q6O0'
+        assert test_list[1] == 'UK24'
+        assert test_list[2] == '2T6S'
+        assert test_list[3] == '1KB2'
+        assert test_list[4] == 'C88N'
 
     @staticmethod
     @mark.unit_test
     def test_markdown(mock_api_issue):
         """ Test writing a PipelineStatusReport as Markdown """
 
+        # Generate markdown from report
         report = PipelineStatusReport()
         report.generate()
         markdown = report.markdown()
-        assert '| 2T6S | :green_circle: | SPM | Yes |  |' in markdown
-        assert '| C88N | :orange_circle: | SPM | Yes | [2](urls),  |' in markdown
-        assert '| Q6O0 | :red_circle: | SPM | Yes |  |' in markdown
+
+        # Compare markdown with test file
+        test_file_path = join(
+            Configuration()['directories']['test_data'],
+            'utils', 'status', 'test_markdown.md'
+            )
+        with open(test_file_path, 'r', encoding = 'utf-8') as file:
+            assert markdown == file.read()
 
     @staticmethod
     @mark.unit_test
     def test_str(mock_api_issue):
         """ Test writing a PipelineStatusReport as JSON """
+
+        # Generate report
         report = PipelineStatusReport()
         report.generate()
-        print(report)
-        test_string = '    "2T6S": {\n        "softwares": "SPM",\n        "fmriprep": "Yes",'
-        test_string += '\n        "issues": {},\n        "status": "done"\n    },'
-        assert test_string in str(report)
-        test_string = '    "C88N": {\n        "softwares": "SPM",\n        "fmriprep": "Yes",'
-        test_string += '\n        "issues": {\n            "2": "urls"\n        },'
-        test_string += '\n        "status": "progress"\n    },'
-        assert test_string in str(report)
+
+        # Compare string version of the report with test file
+        test_file_path = join(
+            Configuration()['directories']['test_data'],
+            'utils', 'status', 'test_str.json'
+            )
+        with open(test_file_path, 'r', encoding = 'utf-8') as file:
+            assert str(report) == file.read()
 
     @staticmethod
     @mark.unit_test
