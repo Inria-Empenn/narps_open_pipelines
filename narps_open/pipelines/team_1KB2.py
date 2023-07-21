@@ -1,17 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
 
-"""
-This template can be use to reproduce a pipeline using FSL as main software.
-
-- Replace all occurences of 48CD by the actual id of the team.
-- All lines beging [INFO], are meant to help you during the reproduction, these can be removed
-eventually.
-- Also remove lines beging with [TODO], once you did what they suggested.
-"""
-
-# [TODO] Only import modules you use further in te code, remove others from the import section
-
 from os.path import join
 
 # [INFO] The import of base objects from Nipype, to create Workflows
@@ -191,7 +180,8 @@ class PipelineTeam1KB2(Pipeline):
         templates += [join(
             self.directories.output_dir,
             'l1_analysis', f'run_id_{run_id}'+'_subject_id_{subject_id}', 
-            'sub-{subject_id}_'+f'T1w_fieldwarp.nii.gz')]
+            'sub-{subject_id}_'+f'T1w_fieldwarp.nii.gz')\
+            for run_id in self.run_list]
 
         templates += [join(
             self.directories.output_dir,

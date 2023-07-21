@@ -12,6 +12,7 @@ Usage:
 """
 
 from statistics import mean
+from os import environ
 
 from pytest import raises, helpers, mark
 from nipype import Workflow
@@ -19,12 +20,14 @@ from nipype import Workflow
 from narps_open.pipelines.team_1KB2 import PipelineTeam1KB2
 
 class TestPipelinesTeam1KB2:
-    """ A class that contains all the unit tests for the PipelineTeam2T6S class."""
+    """ A class that contains all the unit tests for the PipelineTeam1KB2 class."""
 
     @staticmethod
     @mark.unit_test
     def test_create():
         """ Test the creation of a PipelineTeam1KB2 object """
+        # Defines fake environment variable
+        patch.dict(environ, {'FSLDIR': '/fake/path/to/fsl'})
 
         pipeline = PipelineTeam1KB2()
 
@@ -45,7 +48,7 @@ class TestPipelinesTeam1KB2:
     @staticmethod
     @mark.unit_test
     def test_outputs():
-        """ Test the expected outputs of a PipelineTeam2T6S object """
+        """ Test the expected outputs of a PipelineTeam1KB2 object """
         pipeline = PipelineTeam1KB2()
         # 1 - 1 suject outputs, 1 run
         pipeline.subject_list = ['001']
