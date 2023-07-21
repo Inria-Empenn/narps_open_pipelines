@@ -3,7 +3,7 @@ The *status* column tells whether the work on the pipeline is :
 <br>:red_circle: not started yet
 <br>:orange_circle: in progress
 <br>:green_circle: completed
-<br>The *softwares* column gives a simplified version of what can be found in the [team descriptions](/docs/description.md) under the `general.software` column.
+<br><br>The *softwares used* column gives a simplified version of what can be found in the team descriptions under the `general.software` column.
 | team_id | status | softwares used | fmriprep used ? | related issues | related pull requests |
 | --- |:---:| --- | --- | --- | --- |
 | Q6O0 | :green_circle: | SPM | Yes |  |  |
