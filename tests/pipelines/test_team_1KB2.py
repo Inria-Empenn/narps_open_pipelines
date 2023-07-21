@@ -24,10 +24,10 @@ class TestPipelinesTeam1KB2:
 
     @staticmethod
     @mark.unit_test
-    def test_create():
+    def test_create(mocker): # Add mocker as argument
         """ Test the creation of a PipelineTeam1KB2 object """
         # Defines fake environment variable
-        patch.dict(environ, {'FSLDIR': '/fake/path/to/fsl'})
+        mocker.patch.dict(environ, {'FSLDIR': '/fake/path/to/fsl'})
 
         pipeline = PipelineTeam1KB2()
 
