@@ -37,10 +37,9 @@ class PipelineTeam1KB2(Pipeline):
     """ A class that defines the pipeline of team 1KB2 """
 
     def __init__(self):
-        # [INFO] Remove the init method completely if unused
-        # [TODO] Init the attributes of the pipeline, if any other than the ones defined
-        # in the pipeline class
-        pass
+        super().__init__()
+        self.team_id = '1KB2'
+        self.contrast_list = ['0001', '0002', '0003', '0004']
 
     def get_preprocessing(self):
         """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
