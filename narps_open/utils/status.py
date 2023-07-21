@@ -106,8 +106,8 @@ class PipelineStatusReport():
         output_markdown += '<br>:red_circle: not started yet\n'
         output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br>The *softwares* column gives a simplified version of what can be '
-        output_markdown += 'found in the [team descriptions](/docs/description.md) under the '
+        output_markdown += '<br><br>The *softwares used* column gives a simplified version of '
+        output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
 
         # Start table
