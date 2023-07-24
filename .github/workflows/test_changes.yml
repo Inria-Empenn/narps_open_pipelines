@@ -13,10 +13,12 @@ on:
 jobs:
 
   # A job to list the tests to be run
-  pytest:
-    runs-on: self-hosted
+  identify-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.identify.outputs.tests }}
     steps:
-    - name: Checkout PR branch
+    - name: Checkout main branch for comparison
       uses: actions/checkout@v3
 
     - name: Create a list of tests for changed tests
@@ -38,6 +40,14 @@ jobs:
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
 
+  # A job to list the tests to be run
+  pytest:
+    needs: identify-tests
+    runs-on: self-hosted
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v3
+
     - name: Load configuration for self-hosted runner
       run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
 
@@ -48,6 +58,6 @@ jobs:
 
     - name: Collect tests with pytest
       run: |
-        if [[ "${{ steps.identify.outputs.tests }}" != "" ]]; then
-          pytest -q ${{ steps.identify.outputs.tests }}
+        if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
+          pytest -q ${{ needs.identify-tests.outputs.tests }}
         fi

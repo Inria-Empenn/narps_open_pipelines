@@ -12,11 +12,15 @@ on:
 # Jobs that define the workflow
 jobs:
 
-  # A job to identify and run the tests
-  pytest:
-    runs-on: self-hosted
+
+  # A job to list the tests to be run
+  identify-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      teams: ${{ steps.identify.outputs.teams }}
+      tests: ${{ steps.identify.outputs.tests }}
     steps:
-    - name: Checkout PR branch
+    - name: Checkout main branch for comparison
       uses: actions/checkout@v3
 
     - name: Create a list of tests for changed pipelines
@@ -46,6 +50,14 @@ jobs:
         echo "tests=$test_files" >> $GITHUB_OUTPUT
         echo "teams=$teams" >> $GITHUB_OUTPUT
 
+  # A job to identify and run the tests
+  pytest:
+    needs: identify-tests
+    runs-on: self-hosted
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v3
+
     - name: Load configuration for self-hosted runner
       run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
 
@@ -59,8 +71,8 @@ jobs:
 
     - name: Execute tests with pytest
       run: |
-        if [[ "${{ steps.identify.outputs.tests }}" != "" ]]; then
-          pytest -q -m "pipeline_test" ${{ steps.identify.outputs.tests }}
+        if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
+          pytest -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
         fi
 
     - name: Report results on GitHub
@@ -75,7 +87,7 @@ jobs:
         echo "| -------- | ------- | ------- | ------- |" >> $GITHUB_STEP_SUMMARY
 
         # Loop through test report files
-        for team in ${{ steps.identify.outputs.teams }}
+        for team in ${{ needs.identify-tests.outputs.teams }}
         do
           cat test_pipeline-$team.txt >> $GITHUB_STEP_SUMMARY
         done
