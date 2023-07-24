@@ -29,7 +29,7 @@ jobs:
       id: identify
       run: |
         # Loop through modified files between PR base and last head
-        for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
+        for file in $(git diff --name-only --diff-filter=d remotes/origin/main...$GITHUB_SHA)
         do
           # echo each file
           echo $file
