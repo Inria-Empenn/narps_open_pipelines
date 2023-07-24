@@ -45,6 +45,9 @@ jobs:
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
 
+    - name: Load configuration for self-hosted runner
+      run: echo "${{ vars.SELF_HOSTED_TEST_CONFIG }}" > narps_open/utils/configuration/testing_config.toml
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
