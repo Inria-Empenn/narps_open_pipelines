@@ -11,7 +11,11 @@ from argparse import ArgumentParser
 from nipype import Workflow
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
-from narps_open.utils import get_all_participants, get_participants
+from narps_open.data.participants import (
+    get_all_participants,
+    get_participants,
+    get_participants_subset
+    )
 from narps_open.utils.configuration import Configuration
 
 class PipelineRunner():
@@ -52,6 +56,12 @@ class PipelineRunner():
         """ Setter for property random_nb_subjects """
         # Generate a random list of subjects
         self._pipeline.subject_list = choices(get_participants(self.team_id), k = value)
+
+    @subjects.setter
+    def nb_subjects(self, value: int) -> None:
+        """ Setter for property nb_subjects """
+        # Get a subset of participants
+        self._pipeline.subject_list = get_participants_subset(value)
 
     @property
     def team_id(self) -> str:
@@ -149,10 +159,12 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID')
     subjects = parser.add_mutually_exclusive_group(required=True)
-    subjects.add_argument('-r', '--random', type=str,
+    subjects.add_argument('-r', '--rsubjects', type=str,
         help='the number of subjects to be randomly selected')
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
         help='a list of subjects')
+    subjects.add_argument('-n', '--nsubjects', type=str,
+        help='the number of subjects to be randomly selected')
     levels = parser.add_mutually_exclusive_group(required=False)
     levels.add_argument('-g', '--group', action='store_true', default=False,
         help='run the group level only')
@@ -172,8 +184,10 @@ if __name__ == '__main__':
     # Handle subject
     if arguments.subjects is not None:
         runner.subjects = arguments.subjects
+    elif arguments.rsubjects is not None:
+        runner.random_nb_subjects = int(arguments.rsubjects)
     else:
-        runner.random_nb_subjects = int(arguments.random)
+        runner.nb_subjects = int(arguments.nsubjects)
 
     # Check data
     if arguments.check:
@@ -184,7 +198,7 @@ if __name__ == '__main__':
             print('First level:', runner.get_missing_first_level_outputs())
         if not arguments.first:
             print('Group level:', runner.get_missing_group_level_outputs())
-        
-    # Start the runner    
+
+    # Start the runner
     else:
         runner.start(arguments.first, arguments.group)

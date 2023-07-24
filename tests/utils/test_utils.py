@@ -13,33 +13,24 @@ Usage:
 
 from pytest import mark
 
-from narps_open.utils import get_all_participants, get_participants
+from narps_open.utils import show_download_progress
 
 class TestUtils:
     """ A class that contains all the unit tests for the utils module."""
 
     @staticmethod
     @mark.unit_test
-    def test_get_all_participants():
-        """ Test the get_all_participants function """
-        participants_list = get_all_participants()
-        assert len(participants_list) == 108
-        assert '001' in participants_list
-        assert '105' in participants_list
-        assert '123' in participants_list
+    def test_show_download_progress(capfd): # using pytest's capfd fixture to get stdout
+        """ Test the show_download_progress function """
 
-    @staticmethod
-    @mark.unit_test
-    def test_get_participants():
-        """ Test the get_participants function """
+        show_download_progress(25,1,100)
+        captured = capfd.readouterr()
+        assert captured.out == 'Downloading 25 %\r'
 
-        # Team 2T6S includes all participants
-        participants_list = get_participants('2T6S')
-        assert len(participants_list) == 108
+        show_download_progress(26,2,200)
+        captured = capfd.readouterr()
+        assert captured.out == 'Downloading 26 %\r'
 
-        # Team C88N excludes some participants
-        participants_list = get_participants('C88N')
-        assert len(participants_list) == 106
-        assert '001' in participants_list
-        assert '076' not in participants_list
-        assert '117' not in participants_list
+        show_download_progress(25,50,-1)
+        captured = capfd.readouterr()
+        assert captured.out == 'Downloading ⣽\r'

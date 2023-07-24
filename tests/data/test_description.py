@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Tests of the 'narps_open.utils.description' module.
+""" Tests of the 'narps_open.data.description' module.
 
 Launch this test with PyTest
 
@@ -13,7 +13,7 @@ Usage:
 
 from pytest import raises, mark
 
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 
 class TestUtilsDescription:
     """ A class that contains all the unit tests for the description module."""

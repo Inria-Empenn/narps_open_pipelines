@@ -41,6 +41,7 @@ class MockupPipeline(Pipeline):
         if isfile(self.test_file):
             remove(self.test_file)
 
+    # @staticmethod
     def write_to_file(_, text_to_write: str, file_path: str):
         """ Method used inside a nipype Node, to write a line in a test file """
         with open(file_path, 'a', encoding = 'utf-8') as file:
@@ -128,6 +129,12 @@ class MockupPipeline(Pipeline):
             ]
         return [t.format(nb_subjects = len(self.subject_list)) for t in  templates]
 
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS.
+        """
+        template = join(Configuration()['directories']['test_runs'], 'hypothesis_{id}.md')
+        return [template.format(id = i) for i in range(1,18)]
+
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
@@ -146,6 +153,9 @@ class MockupWrongPipeline(Pipeline):
     def get_group_level_analysis(self):
         return None
 
+    def get_hypotheses_outputs(self):
+        return None
+
 class MockupWrongPipeline2(Pipeline):
     """ A simple Pipeline class for test purposes """
 
@@ -162,6 +172,9 @@ class MockupWrongPipeline2(Pipeline):
         return None
 
     def get_group_level_analysis(self):
+        return None
+
+    def get_hypotheses_outputs(self):
         return None
 
 class TestPipelineRunner:
@@ -186,7 +199,7 @@ class TestPipelineRunner:
 
         # 4 - Instanciate a runner with an implemented team id
         runner = PipelineRunner('2T6S')
-        assert isinstance(runner._pipeline, PipelineTeam2T6S)
+        assert isinstance(runner.pipeline, PipelineTeam2T6S)
         assert runner.team_id == '2T6S'
 
         # 5 - Modify team id for an existing runner (with a not implemented team id)
