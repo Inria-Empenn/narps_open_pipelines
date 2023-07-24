@@ -20,16 +20,14 @@ jobs:
     steps:
     - name: Checkout main branch for comparison
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Create a list of tests for changed tests
       id: identify
       run: |
-        # Fetch enough history for a common merge-base commit
-        git fetch origin ${{ github.event.pull_request.head.ref }} --depth $(( ${{ github.event.pull_request.commits }} + 1 ))
-        git fetch origin ${{ github.event.pull_request.base.ref }}
-
         # Loop through modified files between PR base and last head
-        for file in $(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+        for file in $(git diff --name-only --diff-filter=d $(git diff --name-only remotes/origin/main...$GITHUB_SHA
         do
           # List files corresponding to tests/**/test_**.py
           if [[ "$file" =~ .*"tests".*"test_".*".py" ]]; then
