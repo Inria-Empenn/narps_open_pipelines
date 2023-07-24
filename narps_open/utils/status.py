@@ -12,7 +12,7 @@ from collections import OrderedDict
 from requests import get
 from importlib_resources import files
 
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 from narps_open.pipelines import implemented_pipelines
 
 def get_opened_issues():
