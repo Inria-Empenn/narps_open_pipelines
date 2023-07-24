@@ -18,8 +18,8 @@ jobs:
     steps:
     - name: Checkout PR branch
       uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
 
     - name: Create a list of tests for changed tests
       id: identify
