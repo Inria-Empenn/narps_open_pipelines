@@ -5,9 +5,6 @@ name: test_changes
 
 # Define when it runs
 on:
-  push:
-    paths:
-      - 'tests/**/test_*.py'
   pull_request:
     paths:
       - 'tests/**/test_*.py'
@@ -19,13 +16,8 @@ jobs:
   pytest:
     runs-on: self-hosted
     steps:
-    - name: Checkout main branch for comparison
-      uses: actions/checkout@v3
-      with:
-        ref: main
-        fetch-depth: 0
 
-    - name: Checkout current branch
+    - name: Checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -34,7 +26,8 @@ jobs:
       id: identify
       run: |
         # Loop through modified files
-        for file in $(git diff --name-only --diff-filter=d remotes/origin/main...$GITHUB_SHA)
+        # Loop through modified files between PR base and last head
+        for file in $(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
         do
           # List files corresponding to tests/**/test_**.py
           if [[ "$file" =~ .*"tests".*"test_".*".py" ]]; then

@@ -5,9 +5,6 @@ name: pipeline_tests
 
 # Define when it runs
 on:
-  push:
-    paths:
-      - 'narps_open/pipelines/team**'
   pull_request:
     paths:
       - 'narps_open/pipelines/team**'
@@ -17,17 +14,10 @@ jobs:
 
   # A job to identify and run the tests
   pytest:
-
     runs-on: self-hosted
     steps:
 
-    - name: Checkout main branch for comparison
-      uses: actions/checkout@v3
-      with:
-        ref: main
-        fetch-depth: 0
-
-    - name: Checkout current branch
+    - name: Checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -35,8 +25,8 @@ jobs:
     - name: Create a list of tests for changed pipelines
       id: identify
       run: |
-        # Loop through modified files
-        for file in $(git diff --name-only --diff-filter=d remotes/origin/main...$GITHUB_SHA)
+        # Loop through modified files between PR base and last head
+        for file in $(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
         do
           # echo each file
           echo $file
