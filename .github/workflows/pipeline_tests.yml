@@ -61,9 +61,9 @@ jobs:
 
     - name: Execute tests with pytest
       run: |
-      if [[ ${{ steps.identify.outputs.tests }} != "" ]]
-        pytest -q -m "pipeline_test" ${{ steps.identify.outputs.tests }}
-      fi
+        if [[ ${{ steps.identify.outputs.tests }} != "" ]]; then
+          pytest -q -m "pipeline_test" ${{ steps.identify.outputs.tests }}
+        fi
 
     - name: Report results on GitHub
       run: |
