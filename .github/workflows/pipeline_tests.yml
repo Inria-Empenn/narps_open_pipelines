@@ -41,7 +41,7 @@ jobs:
           # echo each file
           echo $file
           # List team id corresponding to team_* files
-          if [[ "$file" =~ .*"narps_open/pipelines/team_".* ]]; then
+          if [[ "$file" =~ narps_open/pipelines/team_[A-Z0-9]{4}.py ]]; then
             echo "Modified pipeline = $file"
             tmp=${file#*"team_"} # remove prefix ending in "team_"
             team_id=${tmp%".py"*}   # remove suffix starting with ".py"
@@ -54,6 +54,9 @@ jobs:
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
         echo "teams=$teams" >> $GITHUB_OUTPUT
+
+    - name: Load configuration for self-hosted runner
+      run: echo "${{ vars.SELF_HOSTED_TEST_CONFIG }}" > narps_open/utils/configuration/testing_config.toml
 
     - name: Install dependencies
       run: |
