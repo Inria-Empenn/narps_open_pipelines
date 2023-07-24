@@ -16,6 +16,12 @@ jobs:
   pytest:
     runs-on: self-hosted
     steps:
+    - name: Checkout main branch for diff
+      uses: actions/checkout@v3
+      with:
+        ref: main
+        fetch-depth: 0
+
     - name: Checkout repository
       uses: actions/checkout@v3
 
@@ -23,7 +29,7 @@ jobs:
       id: identify
       run: |
         # Loop through modified files between PR base and last head
-        for file in $(git diff --name-only --diff-filter=d ${{ github.event.before }} ${{ github.sha }})
+        for file in $(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
         do
           # echo each file
           echo $file
@@ -54,7 +60,10 @@ jobs:
       run: rm -f test_pipeline-*.txt
 
     - name: Execute tests with pytest
-      run: pytest -q -m "pipeline_test" ${{ steps.identify.outputs.tests }}
+      run: |
+      if [[ ${{ steps.identify.outputs.tests }} != "" ]]
+        pytest -q -m "pipeline_test" ${{ steps.identify.outputs.tests }}
+      fi
 
     - name: Report results on GitHub
       run: |
