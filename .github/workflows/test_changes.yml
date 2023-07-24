@@ -16,19 +16,18 @@ jobs:
   pytest:
     runs-on: self-hosted
     steps:
-    - name: Checkout main branch for diff
+    - name: Checkout PR branch
       uses: actions/checkout@v3
-      with:
-        ref: main
-        fetch-depth: 0
-
-    - name: Checkout repository
-      uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
 
     - name: Create a list of tests for changed tests
       id: identify
       run: |
-        # Loop through modified files
+        # Fetch enough history for a common merge-base commit
+        git fetch origin ${{ github.event.pull_request.head.ref }} --depth $(( ${{ github.event.pull_request.commits }} + 1 ))
+        git fetch origin ${{ github.event.pull_request.base.ref }}
+
         # Loop through modified files between PR base and last head
         for file in $(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
         do
@@ -51,6 +50,6 @@ jobs:
 
     - name: Collect tests with pytest
       run: |
-        if [[ ${{ steps.identify.outputs.tests }} != "" ]]; then
+        if [[ "${{ steps.identify.outputs.tests }}" != "" ]]; then
           pytest -q ${{ steps.identify.outputs.tests }}
         fi
