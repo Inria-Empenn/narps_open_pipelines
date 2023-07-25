@@ -8,9 +8,11 @@ on:
   push:
     paths:
       - '**.py'
+      - '.github/workflows/code_quality.yml'
   pull_request:
     paths:
       - '**.py'
+      - '.github/workflows/code_quality.yml'
 
 # Jobs that define the workflow
 jobs:
