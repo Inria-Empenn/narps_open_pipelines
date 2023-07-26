@@ -51,6 +51,7 @@ jobs:
 
     - name: Archive pylint results
       uses: actions/upload-artifact@v3
+      if: failure() # Only if previous step failed
       with:
         name: pylint-reports-python
         path: |
