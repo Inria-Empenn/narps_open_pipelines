@@ -17,6 +17,7 @@ requires = [
     'importlib_resources>=5.10.2,<5.11',
     'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
+    'nilearn>=0.10.0,<0.11',
     'nipype',
     'pandas'
 ]
