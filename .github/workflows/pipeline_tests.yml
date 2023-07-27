@@ -12,7 +12,6 @@ on:
 # Jobs that define the workflow
 jobs:
 
-
   # A job to list the tests to be run
   identify-tests:
     runs-on: ubuntu-latest
@@ -48,10 +47,11 @@ jobs:
         echo "tests=$test_files" >> $GITHUB_OUTPUT
         echo "teams=$teams" >> $GITHUB_OUTPUT
 
-  # A job to identify and run the tests
+  # A job to run the tests
   pytest:
     needs: identify-tests
     runs-on: self-hosted
+    timeout-minutes: 1440 #24h
     steps:
     - name: Checkout PR branch
       uses: actions/checkout@v3
