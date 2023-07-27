@@ -12,13 +12,26 @@ Usage:
 """
 
 from os.path import isdir, join
-from shutil import rmtree
+from shutil import rmtree, move
 
 from checksumdir import dirhash
 from pytest import mark
 
-from narps_open.data.results import ResultsCollection
+from narps_open.data.results import ResultsCollection, ResultsCollectionFactory
+from narps_open.data.results.team_2T6S import ResultsCollection2T6S
 from narps_open.utils.configuration import Configuration
+
+class TestResultsCollection:
+    """ A class that contains all the unit tests for the ResultsCollectionFactory class."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_get_collection():
+        """ Test the get_collection of a ResultsCollectionFactory object """
+
+        factory = ResultsCollectionFactory()
+        assert isinstance(factory.get_collection('2T6S'), ResultsCollection2T6S)
+        assert isinstance(factory.get_collection('Q6O0'), ResultsCollection)
 
 class TestResultsCollection:
     """ A class that contains all the unit tests for the ResultsCollection class."""
@@ -71,3 +84,32 @@ class TestResultsCollection:
 
         # Remove folder
         rmtree(expected_dir)
+
+class TestResultsCollection2T6S:
+    """ A class that contains all the unit tests for the ResultsCollection2T6S class."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_rectify():
+        """ Test the rectify method """
+        collection = ResultsCollection2T6S()
+        test_directory = join(Configuration()['directories']['test_data'], 'results', 'team_2T6S')
+        collection.directory = test_directory
+
+        assert dirhash(test_directory) == 'fa9fedc73f575d322e15d8516eee9da9'
+
+        collection.rectify()
+
+        assert dirhash(test_directory) == '6f598c1162ef0ecb4f8399b0cff65b20'
+
+        # Return the directory back as normal
+        move(
+            join(test_directory, 'hypo5_unthresh_original.nii.gz'),
+            join(test_directory, 'hypo5_unthresh.nii.gz')
+            )
+        move(
+            join(test_directory, 'hypo6_unthresh_original.nii.gz'),
+            join(test_directory, 'hypo6_unthresh.nii.gz')
+            )
+
+        assert dirhash(test_directory) == 'fa9fedc73f575d322e15d8516eee9da9'

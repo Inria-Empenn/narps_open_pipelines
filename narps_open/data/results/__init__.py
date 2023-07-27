@@ -7,12 +7,32 @@
 
 from os import makedirs
 from os.path import join
+from importlib import import_module
 from json import loads
 from urllib.request import urlretrieve, urlopen
 
 from narps_open.utils.configuration import Configuration
 from narps_open.data.description import TeamDescription
 from narps_open.utils import show_download_progress
+
+class ResultsCollectionFactory():
+    """ A factory class to instantiate ResultsCollection objects """
+    collections = {
+        '2T6S': 'ResultsCollection2T6S'
+    }
+
+    def get_collection(self, team_id):
+        """ Return a ResultsCollection object or specialized child class if available """
+        # Send the default ResultsCollection class
+        if team_id not in ResultsCollectionFactory.collections:
+            return ResultsCollection(team_id)
+
+        # There is a specialized class for this team id
+        collection_class = getattr(
+            import_module(f'narps_open.data.results.team_{team_id}'),
+            ResultsCollectionFactory.collections[team_id]
+            )
+        return collection_class()
 
 class ResultsCollection():
     """ Represents a Neurovault collections corresponding
@@ -67,3 +87,9 @@ class ResultsCollection():
                 join(self.directory, file_name+'.nii.gz'),
                 show_download_progress
                 )
+
+    def rectify(self):
+        """ Rectify files in the collection, if needed.
+        This method can be overwritten by child classes.
+        """
+        # Nothing to rectify by default
