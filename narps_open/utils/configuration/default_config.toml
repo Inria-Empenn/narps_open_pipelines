@@ -5,7 +5,7 @@ config_type = "default"
 [directories]
 dataset = "/home/bclenet/data/ds001734/"
 reproduced_results = "/home/bclenet/output/"
-narps_results = "data/results/"
+narps_results = "/home/bclenet/data/narps_nv_collections/"
 
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
