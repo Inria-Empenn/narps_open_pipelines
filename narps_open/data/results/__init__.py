@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """ This module allows to get Neurovault collections corresponding
-    to results from teams involed in NARPS
+    to results from teams involved in NARPS
 """
 
 from os import remove, makedirs
@@ -20,7 +20,7 @@ from narps_open.utils import show_download_progress
 
 class ResultsCollection():
     """ Represents a Neurovault collections corresponding
-        to results from teams involed in NARPS.
+        to results from teams involved in NARPS.
     """
 
     def __init__(self, team_id: str):
