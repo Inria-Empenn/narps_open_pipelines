@@ -1,12 +1,17 @@
 # Access the work progress status pipelines
 
-The class `PipelineStatusReport` of module `narps_open.utils.status` allows to create a report containing the following information for each pipeline:
+The class `PipelineStatusReport` of module `narps_open.utils.status` allows to create a report containing the following informations for each pipeline:
 * the software it uses (collected from the `categorized_for_analysis.analysis_SW` of the [team description](/docs/description.md)) ;
 * whether it uses data from fMRIprep or not ;
 * a list of issues related to it (the opened issues of the project that have the team ID inside their title or description) ;
 * a work progress status : `idle`, `progress`, or `done`.
 
 This allows contributors to best select the pipeline they want/need to contribute to. For this purpose, the GitHub Actions workflow [`.github/workflows/pipeline_status.yml`](/.github/workflows/pipeline_status.yml) allows to dynamically generate the report and to store it in the [project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki).
+
+Pipelines are sorted by the following columns :
+1. status
+2. software used
+3. fmriprep used?
 
 The class allows to output the report in a JSON format or in a Markdown format.
 
