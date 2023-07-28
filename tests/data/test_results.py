@@ -70,6 +70,10 @@ class TestResultsCollection:
             return '15001'
         mocker.patch.object(ResultsCollection, 'get_uid', fake_get_uid)
 
+        # Mock the results path
+        results_directory = Configuration()['directories']['narps_results']
+        Configuration()['directories']['narps_results'] = Configuration()['directories']['test_runs']
+
         # Init & download the collection
         collection = ResultsCollection('2T6S')
         assert collection.uid == '15001'
@@ -81,6 +85,9 @@ class TestResultsCollection:
         # Test presence of the download
         assert isdir(expected_dir)
         assert dirhash(expected_dir) == '4c6a53c163e033d62e9728acd62b12ee'
+
+        # Write back the results path in configuration
+        Configuration()['directories']['narps_results'] = results_directory
 
         # Remove folder
         rmtree(expected_dir)
