@@ -151,7 +151,7 @@ def get_preprocessing(exp_dir, result_dir, working_dir, output_dir, subject_list
     coreg = Node(Coregister(jobtype = 'estimate', write_mask = False), name = 'coreg')
 
     ## Segmentation 
-    # We perfromed segmentation on the structural image for each subject by using the "Segment" 
+    # We performed segmentation on the structural image for each subject by using the "Segment" 
     # routine in SPM12, with default values for each parameter and using the template tissue 
     # probability maps (grey matter, white matter, CSF, bone, soft tissue, and air/background) 
     # in the tpm folder of SPM12. 
@@ -504,7 +504,7 @@ def get_subset_contrasts(file_list, method, subject_list, participants_file):
     Parameters :
     - file_list : original file list selected by selectfiles node 
     - subject_list : list of subject IDs that are in the wanted group for the analysis
-    - participants_file: str, file containing participants caracteristics
+    - participants_file: str, file containing participants characteristics
     - method: str, one of "equalRange", "equalIndifference" or "groupComp"
     
     This function return the file list containing only the files belonging to subject in the wanted group.

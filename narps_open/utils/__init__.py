@@ -28,7 +28,7 @@ def show_download_progress(count, block_size, total_size):
 def get_subject_id(file_name: str) -> str:
     """ Return the id of the subject corresponding to the passed file name.
         Return None if the file name is not associated with any subject.
-        TODO : a feature to be handled globaly to parse data in a file name.
+        TODO : a feature to be handled globally to parse data in a file name.
     """
     key = 'subject_id'
     if key not in file_name:

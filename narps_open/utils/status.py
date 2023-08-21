@@ -56,7 +56,7 @@ class PipelineStatusReport():
 
             self.contents[team_id] = {}
 
-            # Get softwares used in the pipeline, from the team description
+            # Get software used in the pipeline, from the team description
             description = TeamDescription(team_id)
             self.contents[team_id]['softwares'] = \
                 description.categorized_for_analysis['analysis_SW']
@@ -82,7 +82,7 @@ class PipelineStatusReport():
             has_file = team_id in teams_having_pipeline
 
             if is_implemeted and not has_file:
-                raise AttributeError(f'Pipeline {team_id} refered as implemented with no file')
+                raise AttributeError(f'Pipeline {team_id} referred as implemented with no file')
 
             if not is_implemeted and not has_issues and not has_file:
                 self.contents[team_id]['status'] = '2-idle'
