@@ -12,7 +12,8 @@ Usage:
 """
 
 from os.path import isdir, join
-from shutil import rmtree, move
+from shutil import rmtree, move, copytree
+from time import sleep
 
 from checksumdir import dirhash
 from pytest import mark
@@ -99,24 +100,28 @@ class TestResultsCollection2T6S:
     @mark.unit_test
     def test_rectify():
         """ Test the rectify method """
-        collection = ResultsCollection2T6S()
-        test_directory = join(Configuration()['directories']['test_data'], 'results', 'team_2T6S')
-        collection.directory = test_directory
 
+        # Get raw data
+        orig_directory = join(Configuration()['directories']['test_data'], 'results', 'team_2T6S')
+
+        # Create test data
+        test_directory = join(Configuration()['directories']['test_runs'], 'results_team_2T6S')
+        if isdir(test_directory):
+            rmtree(test_directory)
+
+        # Init ResultsCollection
+        collection = ResultsCollection2T6S()
+        collection.directory = test_directory
+        copytree(orig_directory, test_directory)
+
+        # Test copy
         assert dirhash(test_directory) == 'fa9fedc73f575d322e15d8516eee9da9'
 
+        # Rectify data
         collection.rectify()
 
+        # Check rectification
         assert dirhash(test_directory) == '6f598c1162ef0ecb4f8399b0cff65b20'
 
-        # Return the directory back as normal
-        move(
-            join(test_directory, 'hypo5_unthresh_original.nii.gz'),
-            join(test_directory, 'hypo5_unthresh.nii.gz')
-            )
-        move(
-            join(test_directory, 'hypo6_unthresh_original.nii.gz'),
-            join(test_directory, 'hypo6_unthresh.nii.gz')
-            )
-
-        assert dirhash(test_directory) == 'fa9fedc73f575d322e15d8516eee9da9'
+        # Delete data
+        rmtree(test_directory)
