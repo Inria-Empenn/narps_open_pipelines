@@ -31,7 +31,7 @@ class TestUtilsDescription:
         with raises(AttributeError):
             TeamDescription('wrong_id')
 
-        # Instatiation is ok
+        # Instantiation is ok
         assert TeamDescription('2T6S') is not None
 
     @staticmethod
