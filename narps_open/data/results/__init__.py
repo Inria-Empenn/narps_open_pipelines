@@ -51,7 +51,7 @@ class ResultsCollection():
         self.files = self.get_file_urls()
 
     def get_uid(self):
-        """ Return the uid of the collection by browsing the team desription """
+        """ Return the uid of the collection by browsing the team description """
         return TeamDescription(team_id = self.team_id).general['NV_collection_link'].split('/')[-2]
 
     def get_file_urls(self):
