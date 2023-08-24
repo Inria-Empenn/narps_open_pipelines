@@ -48,31 +48,49 @@ aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734/
 
 Stat maps from teams can be downloaded from [NeuroVault](https://www.neurovault.org) [(Gorgolewski & al, 2015)](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full).
 
-The `narps_open.utils.results` module will help you download these collections. Here is how to use it:
+The `narps_open.data.results` module will help you download these collections. Note that it is also possible to rectify the collection, i.e: to pre-process the images as done by the NARPS analysis team during the NARPS study.
+
+Here is how to use the module, both using python code or with the command line:
 
 ```python
 # In a python script
-from narps_open.utils.results import download_all_result_collections, download_result_collection
+from narps_open.data.results import ResultsCollectionFactory
 
-# Either download all collections
-download_all_result_collections()
+# Create a collection factory
+factory = ResultsCollectionFactory()
 
-# Or select the ones you need
-teams = ['2T6S', 'C88N', 'L1A8']
+# Select the collections you need
+teams = ['2T6S', 'C88N', 'L1A8'] # Alternatively use the keys from narps_open.pipelines.implemented_pipelines to get all the team ids
 for team in teams:
-    download_result_collection(team)
+    collection = factory.get_collection(team)
+    collection.download() # Collections are downloaded
+    collection.rectify() # Rectified versions are created
 ```
 
 ```bash
 # From the command line
+$ python narps_open/data/results -h
+usage: results [-h] (-t TEAMS [TEAMS ...] | -a) [-r]
+
+Get Neurovault collection of results from NARPS teams.
+
+options:
+  -h, --help            show this help message and exit
+  -t TEAMS [TEAMS ...], --teams TEAMS [TEAMS ...]
+                        a list of team IDs
+  -a, --all             download results from all teams
+  -r, --rectify         rectify the results
 
 # Either download all collections
 python narps_open/utils/results -a
 
 # Or select the ones you need
 python narps_open/utils/results -t 2T6S C88N L1A8
+
+# Download and rectify the collections
+python narps_open/utils/results -r -t 2T6S C88N L1A8
 ```
 
 The collections are also available [here](https://zenodo.org/record/3528329/) as one release on Zenodo that you can download.
 
-Each team results collection is kept in the `orig` in folder organized using the pattern `<neurovault_collection_id>_<team_id>` (e.g.: `4881_2T6S` for the 2T6S team).
+Each team results collection is kept in the `data/results/orig` directory, in a folder using the pattern `<neurovault_collection_id>_<team_id>` (e.g.: `4881_2T6S` for the 2T6S team).

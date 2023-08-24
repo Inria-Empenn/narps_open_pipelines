@@ -27,7 +27,7 @@ from narps_open.utils.status import (
 
 @fixture
 def mock_api_issue(mocker):
-    """ Create a mock GitHub API response for successful querry on open issues
+    """ Create a mock GitHub API response for successful query on open issues
         (Querying the actual project would lead to non reporducible results)
 
         This method uses the mocker from pytest-mock to replace `requests.get`,

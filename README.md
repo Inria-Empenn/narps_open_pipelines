@@ -53,7 +53,7 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 
 ### Contributing 
 
-:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involed !
+:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
 ## References
 

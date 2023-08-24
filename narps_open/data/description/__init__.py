@@ -82,7 +82,7 @@ class TeamDescription(dict):
                 ...
             Furthermore, we parse the csv derived_description_file.
             The first line of this file being already a second level identifier,
-            the firest level identifier will always be 'derived'.
+            the first level identifier will always be 'derived'.
             This gives -for example- the following key for the dictionary:
                 'derived.n_participants'
         """
