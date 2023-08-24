@@ -20,9 +20,10 @@ from pytest import mark
 
 from narps_open.data.results import ResultsCollection, ResultsCollectionFactory
 from narps_open.data.results.team_2T6S import ResultsCollection2T6S
+from narps_open.utils import hash_dir_images
 from narps_open.utils.configuration import Configuration
 
-class TestResultsCollection:
+class TestResultsCollectionFactory:
     """ A class that contains all the unit tests for the ResultsCollectionFactory class."""
 
     @staticmethod
@@ -121,7 +122,8 @@ class TestResultsCollection2T6S:
         collection.rectify()
 
         # Check rectification
-        assert dirhash(test_directory) == '6f598c1162ef0ecb4f8399b0cff65b20'
+        value = '4b83f985657f4fe4bb06cf42b5214b597dd8b99f1b753ac3183b54583bb3be16'
+        assert hash_dir_images(test_directory) == value
 
         # Delete data
         rmtree(test_directory)
