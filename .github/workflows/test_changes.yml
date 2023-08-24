@@ -57,5 +57,5 @@ jobs:
     - name: Collect tests with pytest
       run: |
         if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
-          pytest -q ${{ needs.identify-tests.outputs.tests }}
+          pytest -s -q ${{ needs.identify-tests.outputs.tests }}
         fi
