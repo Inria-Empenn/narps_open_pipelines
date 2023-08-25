@@ -46,7 +46,7 @@ class PipelineTeamQ6O0(Pipeline):
         Gain and loss amounts were used as parametric regressors.
 
         Parameters :
-        - event_files : list of files containing events informations for each run
+        - event_files : list of files containing events information for each run
         - runs: list of str, list of runs to use
         - model: str, either 'gain' or 'loss'.
 
@@ -310,17 +310,19 @@ class PipelineTeamQ6O0(Pipeline):
         # Function node get_subject_infos - get subject specific condition information
         subject_infos_gain = Node(Function(
             function = self.get_subject_infos,
-            input_names = ['event_files', 'model'],
+            input_names = ['event_files', 'runs', 'model'],
             output_names=['subject_info']),
             name='subject_infos_gain')
-        subject_infos_gain.inputs.modulation = 'gain'
+        subject_infos_gain.inputs.runs = self.run_list
+        subject_infos_gain.inputs.model = 'gain'
 
         subject_infos_loss = Node(Function(
             function = self.get_subject_infos,
-            input_names = ['event_files', 'model'],
+            input_names = ['event_files', 'runs', 'model'],
             output_names = ['subject_info']),
             name='subject_infos_loss')
-        subject_infos_loss.inputs.modulation = 'loss'
+        subject_infos_loss.inputs.runs = self.run_list
+        subject_infos_loss.inputs.model = 'loss'
 
         # Function node get_parameters_file - get parameters files
         parameters = Node(Function(
@@ -492,7 +494,7 @@ class PipelineTeamQ6O0(Pipeline):
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
+        - participants_file: str, file containing participants characteristics
 
         Returns:
         - The file list containing only the files belonging to subject in the wanted group.
