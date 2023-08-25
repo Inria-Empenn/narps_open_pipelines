@@ -97,7 +97,7 @@ class PipelineTeamQ6O0(Pipeline):
             conditions = [c + '_run' + str(run_id + 1) for c in condition_names]
             gain = 'gain_run' + str(run_id + 1)
             loss = 'loss_run' + str(run_id + 1)
-            # distance = 'distance_run' + str(run_id + 1)
+            distance = 'distance_run' + str(run_id + 1)
 
             if model == 'gain':
                 parametric_modulation_bunch = Bunch(
