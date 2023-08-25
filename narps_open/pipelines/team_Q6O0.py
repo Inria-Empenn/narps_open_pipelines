@@ -60,7 +60,6 @@ class PipelineTeamQ6O0(Pipeline):
         duration = {}
         weights_gain = {}
         weights_loss = {}
-        weights_distance = {}
 
         for run_id in range(len(runs)):  # Loop over number of runs.
             # creates dictionary items with empty lists
@@ -68,7 +67,6 @@ class PipelineTeamQ6O0(Pipeline):
             duration.update({s + '_run' + str(run_id + 1) : [] for s in condition_names})
             weights_gain.update({'gain_run' + str(run_id + 1) : []})
             weights_loss.update({'loss_run' + str(run_id + 1) : []})
-            weights_distance.update({'distance_run' + str(run_id + 1) : []})
 
         for run_id, event_file in enumerate(event_files):
             with open(event_file, 'rt') as file:
@@ -81,13 +79,10 @@ class PipelineTeamQ6O0(Pipeline):
                         val = condition + '_run' + str(run_id + 1) # trial_run1
                         val_gain = 'gain_run' + str(run_id + 1) # gain_run1
                         val_loss = 'loss_run' + str(run_id + 1) # loss_run1
-                        val_distance = 'distance_run' + str(run_id + 1)
                         onset[val].append(float(info[0])) # onsets for trial_run1
                         duration[val].append(float(4)) # durations for trial : 4
                         weights_gain[val_gain].append(float(info[2])) # weights gain for trial_run1
                         weights_loss[val_loss].append(float(info[3])) # weights loss for trial_run1
-                        weights_distance[val_distance].append(
-                            abs(0.5*(float(info[2])) - float(info[3])))
 
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
@@ -97,7 +92,6 @@ class PipelineTeamQ6O0(Pipeline):
             conditions = [c + '_run' + str(run_id + 1) for c in condition_names]
             gain = 'gain_run' + str(run_id + 1)
             loss = 'loss_run' + str(run_id + 1)
-            distance = 'distance_run' + str(run_id + 1)
 
             if model == 'gain':
                 parametric_modulation_bunch = Bunch(
