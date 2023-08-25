@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Write the work of NARPS' team 2T6S using Nipype """
+""" Write the work of NARPS team 2T6S using Nipype """
 
 from os.path import join
 from itertools import product
