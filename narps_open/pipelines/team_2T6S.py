@@ -78,8 +78,10 @@ class PipelineTeam2T6S(Pipeline):
                             duration[val].append(float(info[4])) # durations for trial (rpz by RT)
                         else: # trial with no response : duration of 4 s
                             duration[val].append(float(4))
-                        weights_gain[val_gain].append(float(info[2])) # weights gain for trial_run1
-                        weights_loss[val_loss].append(-1.0 * float(info[3])) # weights loss for trial_run1
+                        # weights gain for trial_run1
+                        weights_gain[val_gain].append(float(info[2]))
+                        # weights loss for trial_run1
+                        weights_loss[val_loss].append(-1.0 * float(info[3]))
 
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
@@ -144,8 +146,8 @@ class PipelineTeam2T6S(Pipeline):
         from os import mkdir
         from os.path import join, isdir
 
-        import pandas as pd
-        import numpy as np
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
 
         # Handle the case where filepaths is a single path (str)
         if not isinstance(filepaths, list):
@@ -154,17 +156,17 @@ class PipelineTeam2T6S(Pipeline):
         # Create the parameters files
         parameters_file = []
         for file_id, file in enumerate(filepaths):
-            data_frame = pd.read_csv(file, sep = '\t', header=0)
+            data_frame = read_csv(file, sep = '\t', header=0)
 
             # Extract parameters we want to use for the model
-            temp_list = np.array([
+            temp_list = array([
                 data_frame['X'], data_frame['Y'], data_frame['Z'],
                 data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
-            retained_parameters = pd.DataFrame(np.transpose(temp_list))
+            retained_parameters = DataFrame(transpose(temp_list))
 
             # Write parameters to a parameters file
             # TODO : warning !!! filepaths must be ordered (1,2,3,4) for the following code to work
-            new_path =join(working_dir, 'parameters_file',
+            new_path = join(working_dir, 'parameters_file',
                 f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
             if not isdir(join(working_dir, 'parameters_file')):
@@ -187,11 +189,11 @@ class PipelineTeam2T6S(Pipeline):
 
         Parameters:
         - _: Node input only used for triggering the Node
-        - subject_id: str, TODO
-        - working_id: str, TODO
+        - subject_id: str, subject id from which to remove the unzipped file
+        - working_dir: str, path to the working directory
         """
-        from shutil import rmtree
         from os.path import join
+        from shutil import rmtree
 
         try:
             rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'gunzip_func'))
@@ -209,11 +211,11 @@ class PipelineTeam2T6S(Pipeline):
 
         Parameters:
         - _: Node input only used for triggering the Node
-        - subject_id: str, TODO
-        - working_id: str, TODO
+        - subject_id: str, subject id from which to remove the smoothed file
+        - working_dir: str, path to the working directory
         """
-        from shutil import rmtree
         from os.path import join
+        from shutil import rmtree
 
         try:
             rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'smooth'))
@@ -231,11 +233,7 @@ class PipelineTeam2T6S(Pipeline):
         """
         # Infosource Node - To iterate on subjects
         infosource = Node(IdentityInterface(
-            fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-            dataset_dir = self.directories.dataset_dir,
-            results_dir = self.directories.results_dir,
-            working_dir = self.directories.working_dir,
-            run_list = self.run_list),
+            fields = ['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
 
@@ -401,8 +399,10 @@ class PipelineTeam2T6S(Pipeline):
         Returns :
         - equal_indifference_id : a list of subject ids in the equalIndifference group
         - equal_range_id : a list of subject ids in the equalRange group
-        - equal_indifference_files : a subset of file_list corresponding to subjects in the equalIndifference group
-        - equal_range_files : a subset of file_list corresponding to subjects in the equalRange group
+        - equal_indifference_files : a subset of file_list corresponding to
+            subjects in the equalIndifference group
+        - equal_range_files : a subset of file_list corresponding to
+            subjects in the equalRange group
         """
         equal_indifference_id = []
         equal_range_id = []
@@ -454,8 +454,7 @@ class PipelineTeam2T6S(Pipeline):
         # Infosource - iterate over the list of contrasts
         infosource_groupanalysis = Node(
             IdentityInterface(
-                fields = ['contrast_id', 'subjects'],
-                subjects = self.subject_list),
+                fields = ['contrast_id', 'subjects']),
                 name = 'infosource_groupanalysis')
         infosource_groupanalysis.iterables = [('contrast_id', self.contrast_list)]
 
@@ -469,7 +468,7 @@ class PipelineTeam2T6S(Pipeline):
             }
 
         selectfiles_groupanalysis = Node(SelectFiles(
-            templates, base_directory=self.directories.results_dir, force_list= True),
+            templates, base_directory = self.directories.results_dir, force_list = True),
             name = 'selectfiles_groupanalysis')
 
         # Datasink - save important files
@@ -481,14 +480,14 @@ class PipelineTeam2T6S(Pipeline):
         # Function node get_subset_contrasts - select subset of contrasts
         sub_contrasts = Node(Function(
             function = self.get_subset_contrasts,
-            input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
+            input_names = ['file_list', 'subject_list', 'participants_file'],
             output_names = [
                 'equalIndifference_id',
                 'equalRange_id',
                 'equalIndifference_files',
                 'equalRange_files']),
             name = 'sub_contrasts')
-        sub_contrasts.inputs.method = method
+        sub_contrasts.inputs.subject_list = self.subject_list
 
         # Estimate model
         estimate_model = Node(EstimateModel(
@@ -513,8 +512,6 @@ class PipelineTeam2T6S(Pipeline):
         l2_analysis.connect([
             (infosource_groupanalysis, selectfiles_groupanalysis, [
                 ('contrast_id', 'contrast_id')]),
-            (infosource_groupanalysis, sub_contrasts, [
-                ('subjects', 'subject_list')]),
             (selectfiles_groupanalysis, sub_contrasts, [
                 ('contrast', 'file_list'),
                 ('participants', 'participants_file')]),
@@ -618,29 +615,44 @@ class PipelineTeam2T6S(Pipeline):
         return return_list
 
     def get_hypotheses_outputs(self):
-        """ Return all hypotheses output file names.
-            Note that hypotheses 5 to 8 correspond to the maps given by the team in their results ;
-            but they are not fully consistent with the hypotheses definitions as expected by NARPS.
-        """
+        """ Return all hypotheses output file names. """
         nb_sub = len(self.subject_list)
         files = [
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii')
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]
