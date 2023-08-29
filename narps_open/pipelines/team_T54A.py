@@ -246,7 +246,7 @@ class PipelineTeamT54A(Pipeline):
         # Node contrasts to get contrasts
         contrasts = Node(Function(
             function = self.get_contrasts,
-            input_names = ['subject_id'],
+            input_names = [],
             output_names = ['contrasts']),
             name = 'contrasts')
 
@@ -289,7 +289,6 @@ class PipelineTeamT54A(Pipeline):
                 ('run_id', 'run_id')]),
             (selectfiles, subject_infos, [('event', 'event_file')]),
             (selectfiles, parameters, [('param', 'filepath')]),
-            (infosource, contrasts, [('subject_id', 'subject_id')]),
             (infosource, parameters, [
                 ('subject_id', 'subject_id'),
                 ('run_id', 'run_id')]),
@@ -592,11 +591,10 @@ class PipelineTeamT54A(Pipeline):
 
         # Templates to select files node
         templates = {
-            ##### TODO not dataset here
             'cope' : join(self.directories.output_dir,
-                'l2_analysis', '_contrast-{contrast_id}_subject_id_cope.nii.gz'),
-            ##### TODO not dataset here
-            'varcope' : join(data_dir, 'NARPS-T54A', 'sub-*_contrast-{contrast_id}_varcope.nii.gz'),
+                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}', 'cope1.nii.gz'),
+            'varcope' : join(self.directories.output_dir,
+                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}', 'varcope1.nii.gz'),
             'participants' : join(self.directories.dataset_dir, 'participants.tsv'),
             ##### TODO not dataset here
             'mask' : join(data_dir, 'NARPS-T54A', 'hypo2_unthresh_Z.nii.gz')
