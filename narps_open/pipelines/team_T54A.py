@@ -228,7 +228,7 @@ class PipelineTeamT54A(Pipeline):
             name = 'skullstrip')
 
         # Smoothing
-        smooth = Node(IsotropicSmooth(fwhm = self.fwhm),
+        smooth = Node(IsotropicSmooth(fwhm = self.fwhm), # TODO : Previously set to 6 mm ?
             name = 'smooth')
 
         # Function node get_subject_infos - get subject specific condition information
@@ -254,8 +254,8 @@ class PipelineTeamT54A(Pipeline):
         parameters = Node(Function(
             function = self.get_parameters_file,
             input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
-            output_names=['parameters_file']),
-            name='parameters')
+            output_names = ['parameters_file']),
+            name = 'parameters')
         parameters.inputs.working_dir = self.directories.working_dir
 
         # First temporal derivatives of the two regressors were also used,
@@ -753,7 +753,7 @@ class PipelineTeamT54A(Pipeline):
             for parameter_values in parameter_sets]
 
         # Handle groupComp
-        files : [
+        files = [
             'randomise_tfce_corrp_tstat1.nii.gz',
             'randomise_tstat1.nii.gz',
             'zstat1.nii.gz',
