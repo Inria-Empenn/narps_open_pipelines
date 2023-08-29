@@ -1,630 +1,797 @@
-from nipype.interfaces.fsl import (BET, ICA_AROMA, FAST, MCFLIRT, FLIRT, FNIRT, ApplyWarp, SUSAN, 
-                                   Info, ImageMaths, IsotropicSmooth, Threshold, Level1Design, FEATModel, 
-                                   L2Model, Merge, FLAMEO, ContrastMgr,Cluster,  FILMGLS, Randomise, MultipleRegressDesign)
-from nipype.algorithms.modelgen import SpecifyModel
+#!/usr/bin/python
+# coding: utf-8
 
-from niflow.nipype1.workflows.fmri.fsl import create_susan_smooth
+""" Write the work of NARPS team T54A using Nipype """
+
+from os import system
+from os.path import join
+from itertools import product
+
+from nipype import Workflow, Node
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-from nipype.algorithms.misc import Gunzip
-from nipype import Workflow, Node, MapNode
-from nipype.interfaces.base import Bunch
+from nipype.interfaces.fsl import (
+    BET, IsotropicSmooth, Level1Design, FEATModel, L2Model, Merge, FLAMEO,
+    FILMGLS, Randomise, MultipleRegressDesign
+    )
+from nipype.algorithms.modelgen import SpecifyModel
 
-from os.path import join as opj
-import os
+from narps_open.pipelines import Pipeline
 
-def get_session_infos(event_file):
-    '''
-    Create Bunchs for specifyModel.
-    
-    Parameters :
-    - event_file : str, file corresponding to the run and the subject to analyze
-    
-    Returns :
-    - subject_info : list of Bunch for 1st level analysis.
-    '''
-    from os.path import join as opj
-    from nipype.interfaces.base import Bunch
-    import numpy as np
-    
-    cond_names = ['trial', 'gain', 'loss', 'difficulty','response']
-    
-    onset = {}
-    duration = {}
-    amplitude = {}
-    
-    for c in cond_names:  # For each condition.
-        onset.update({c : []}) # creates dictionary items with empty lists
-        duration.update({c : []}) 
-        amplitude.update({c : []})
+class PipelineTeamT54A(Pipeline):
+    """ A class that defines the pipeline of team T54A. """
 
-    with open(event_file, 'rt') as f:
-        next(f)  # skip the header
+    def __init__(self):
+        super().__init__()
+        self.fwhm = 4.0
+        self.team_id = 'T54A'
+        self.contrast_list = ['01', '02']
 
-        for line in f:
-            info = line.strip().split()
-            # Creates list with onsets, duration and loss/gain for amplitude (FSL)
-            for c in cond_names:
-                if info[5] != 'NoResp':
-                    if c == 'gain':
-                        onset[c].append(float(info[0]))
-                        duration[c].append(float(info[4]))
-                        amplitude[c].append(float(info[2]))
-                    elif c == 'loss':
-                        onset[c].append(float(info[0]))
-                        duration[c].append(float(info[4]))
-                        amplitude[c].append(float(info[3]))
-                    elif c == 'trial':
-                        onset[c].append(float(info[0]))
-                        duration[c].append(float(info[4]))
-                        amplitude[c].append(float(1))
-                    elif c == 'difficulty':
-                        onset[c].append(float(info[0]))
-                        duration[c].append(float(info[4]))
-                        amplitude[c].append(abs(0.5 * float(info[2]) - float(info[3])))
-                    elif c == 'response':
-                        onset[c].append(float(info[0]) + float(info[4]))
-                        duration[c].append(float(0))
-                        amplitude[c].append(float(1))   
-                else:
-                    if c=='missed':
-                        onset[c].append(float(info[0]))
-                        duration[c].append(float(0))
-                        
-    #for c in ['gain', 'loss']:
-    #    amplitude[c] = amplitude[c] - np.mean(amplitude[c])
+    def get_preprocessing(self):
+        """ No preprocessing has been done by team T54A """
+        return None
 
-    
-    subject_info = []
+    def get_session_infos(event_file):
+        """
+        Create Bunchs for specifyModel.
 
-    subject_info.append(Bunch(conditions=cond_names,
-                             onsets=[onset[k] for k in cond_names],
-                             durations=[duration[k] for k in cond_names],
-                             amplitudes=[amplitude[k] for k in cond_names],
-                             regressor_names=None,
-                             regressors=None))
+        Parameters :
+        - event_file : str, file corresponding to the run and the subject to analyze
 
-    return subject_info
+        Returns :
+        - subject_info : list of Bunch for 1st level analysis.
+        """
+        from nipype.interfaces.base import Bunch
 
-def get_parameters_file(file, subject_id, run_id, result_dir, working_dir):
-    '''
-    Create new tsv files with only desired parameters per subject per run. 
-    
-    Parameters :
-    - filepaths : paths to subject parameters file (i.e. one per run)
-    - subject_id : subject for whom the 1st level analysis is made
-    - run_id: run for which the 1st level analysis is made
-	- result_dir: str, directory where results will be stored
-	- working_dir: str, name of the sub-directory for intermediate results
-    
-    Return :
-    - parameters_file : paths to new files containing only desired parameters.
-    '''
-    import pandas as pd
-    import numpy as np 
-    from os.path import join as opj
-    import os
-    
-    parameters_file = []
-    
-    df = pd.read_csv(file, sep = '\t', header=0)
-    if 'NonSteadyStateOutlier00' in df.columns:
-        temp_list = np.array([df['X'], df['Y'], df['Z'],
-                              df['RotX'], df['RotY'], df['RotZ'], 
-                             df['NonSteadyStateOutlier00']])
-    else:
-        temp_list = np.array([df['X'], df['Y'], df['Z'],
-                              df['RotX'], df['RotY'], df['RotZ']])# Parameters we want to use for the model
-    retained_parameters = pd.DataFrame(np.transpose(temp_list))
-    new_path =opj(result_dir, working_dir, 'parameters_file', f"parameters_file_sub-{subject_id}_run{run_id}.tsv")
-    if not os.path.isdir(opj(result_dir, working_dir, 'parameters_file')):
-        os.mkdir(opj(result_dir, working_dir, 'parameters_file'))
-    writer = open(new_path, "w")
-    writer.write(retained_parameters.to_csv(sep = '\t', index = False, header = False, na_rep = '0.0'))
-    writer.close()
-        
-    parameters_file = new_path
-    os.system('export PATH=$PATH:/local/egermani/ICA-AROMA')
-    
-    return parameters_file
+        condition_names = ['trial', 'gain', 'loss', 'difficulty', 'response']
+        onset = {}
+        duration = {}
+        amplitude = {}
 
-# Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
-def get_contrasts(subject_id):
-    '''
-    Create the list of tuples that represents contrasts. 
-    Each contrast is in the form : 
-    (Name,Stat,[list of condition names],[weights on those conditions])
+        for condition in condition_names:
+            # Create dictionary items with empty lists
+            onset.update({condition : []})
+            duration.update({condition : []})
+            amplitude.update({condition : []})
 
-    Parameters:
-    	- subject_id: str, ID of the subject 
+        with open(event_file, 'rt') as file:
+            next(file)  # skip the header
 
-    Returns:
-    	- contrasts: list of tuples, list of contrasts to analyze
-    '''
-    # list of condition names     
-    conditions = ['trial', 'gain', 'loss']
-    
-    # create contrasts
-    gain = ('gain', 'T', conditions, [0, 1, 0])
-    
-    loss = ('loss', 'T', conditions, [0, 0, 1])
-    
-    # contrast list
-    contrasts = [gain, loss]
-
-    return contrasts
-
-
-def rm_smoothed_files(files, subject_id, run_id, result_dir, working_dir):
-    import shutil
-    from os.path import join as opj
-
-    smooth_dir = opj(result_dir, working_dir, 'l1_analysis', f"_run_id_{run_id}_subject_id_{subject_id}", 'smooth')
-    
-    try:
-        shutil.rmtree(smooth_dir)
-    except OSError as e:
-        print(e)
-    else:
-        print("The directory is deleted successfully")
-
-
-def get_l1_analysis(subject_list, run_list, TR, fwhm, exp_dir, output_dir, working_dir, result_dir):
-	"""
-	Returns the first level analysis workflow.
-
-	Parameters: 
-		- exp_dir: str, directory where raw data are stored
-		- result_dir: str, directory where results will be stored
-		- working_dir: str, name of the sub-directory for intermediate results
-		- output_dir: str, name of the sub-directory for final results
-		- subject_list: list of str, list of subject for which you want to do the analysis
-		- run_list: list of str, list of runs for which you want to do the analysis 
-		- fwhm: float, fwhm for smoothing step
-		- TR: float, time repetition used during acquisition
-
-	Returns: 
-		- l1_analysis : Nipype WorkFlow 
-	"""
-	# Infosource Node - To iterate on subject and runs 
-	infosource = Node(IdentityInterface(fields = ['subject_id', 'run_id']), name = 'infosource')
-	infosource.iterables = [('subject_id', subject_list),
-	                       ('run_id', run_list)]
-
-	# Templates to select files node
-	func_file = opj('derivatives', 'fmriprep', 'sub-{subject_id}', 'func', 
-	                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz')
-
-	event_file = opj('sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv')
-    
-	param_file = opj('derivatives', 'fmriprep', 'sub-{subject_id}', 'func', 
-                    'sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv')
-
-	template = {'func' : func_file, 'event' : event_file, 'param' : param_file}
-
-	# SelectFiles node - to select necessary files
-	selectfiles = Node(SelectFiles(template, base_directory=exp_dir), name = 'selectfiles')
-
-	# DataSink Node - store the wanted results in the wanted repository
-	datasink = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink')
-    
-	## Skullstripping
-	skullstrip = Node(BET(frac = 0.1, functional = True, mask = True), name = 'skullstrip')
-    
-	## Smoothing
-	smooth = Node(IsotropicSmooth(fwhm = 6), name = 'smooth')
-    
-	# Node contrasts to get contrasts 
-	contrasts = Node(Function(function=get_contrasts,
-	                          input_names=['subject_id'],
-	                          output_names=['contrasts']),
-	                 name='contrasts')
-
-	# Get Subject Info - get subject specific condition information
-	get_subject_infos = Node(Function(input_names=['event_file'],
-	                               output_names=['subject_info'],
-	                               function=get_session_infos),
-	                      name='get_subject_infos')
-
-	specify_model = Node(SpecifyModel(high_pass_filter_cutoff = 100,
-	                                 input_units = 'secs',
-	                                 time_repetition = TR), name = 'specify_model')
-    
-	parameters = Node(Function(function=get_parameters_file,
-                              input_names=['file', 'subject_id', 'run_id', 'result_dir', 'working_dir'],
-                              output_names=['parameters_file']), 
-                     name='parameters')
-    
-	parameters.inputs.result_dir = result_dir
-	parameters.inputs.working_dir = working_dir
-
-	# First temporal derivatives of the two regressors were also used, 
-	# along with temporal filtering (60 s) of all the independent variable time-series. 
-	# No motion parameter regressors used. 
-
-	l1_design = Node(Level1Design(bases = {'dgamma':{'derivs' : True}},
-	                             interscan_interval = TR, 
-	                             model_serial_correlations = True), name = 'l1_design')
-
-	model_generation = Node(FEATModel(), name = 'model_generation')
-
-	model_estimate = Node(FILMGLS(), name='model_estimate')
-
-	remove_smooth = Node(Function(input_names = ['subject_id', 'run_id', 'files', 'result_dir', 'working_dir'],
-		function = rm_smoothed_files), name = 'remove_smooth')
-
-	remove_smooth.inputs.result_dir = result_dir
-	remove_smooth.inputs.working_dir = working_dir
-
-	# Create l1 analysis workflow and connect its nodes
-	l1_analysis = Workflow(base_dir = opj(result_dir, working_dir), name = "l1_analysis")
-
-	l1_analysis.connect([(infosource, selectfiles, [('subject_id', 'subject_id'),
-	                                               ('run_id', 'run_id')]),
-	                    (selectfiles, get_subject_infos, [('event', 'event_file')]),
-                        (selectfiles, parameters, [('param', 'file')]),
-	                    (infosource, contrasts, [('subject_id', 'subject_id')]),
-                        (infosource, parameters, [('subject_id', 'subject_id'), 
-                                                  ('run_id', 'run_id')]),
-                        (selectfiles, skullstrip, [('func', 'in_file')]),
-	                    (skullstrip, smooth, [('out_file', 'in_file')]),
-                        (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
-	                    (smooth, specify_model, [('out_file', 'functional_runs')]),
-	                    (get_subject_infos, specify_model, [('subject_info', 'subject_info')]),
-	                    (contrasts, l1_design, [('contrasts', 'contrasts')]),
-	                    (specify_model, l1_design, [('session_info', 'session_info')]),
-	                    (l1_design, model_generation, [('ev_files', 'ev_files'), ('fsf_files', 'fsf_file')]),
-	                    (smooth, model_estimate, [('out_file', 'in_file')]),
-	                    (model_generation, model_estimate, [('con_file', 'tcon_file'), 
-	                                                        ('design_file', 'design_file')]),
-	                    (infosource, remove_smooth, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-	                    (model_estimate, remove_smooth, [('results_dir', 'files')]),
-	                    (model_estimate, datasink, [('results_dir', 'l1_analysis.@results')]),
-	                    (model_generation, datasink, [('design_file', 'l1_analysis.@design_file'),
-	                                                 ('design_image', 'l1_analysis.@design_img')]),
-                        (skullstrip, datasink, [('mask_file', 'l1_analysis.@skullstriped')])
-	                    ])
-
-	return l1_analysis
-
-def get_l2_analysis(subject_list, contrast_list, run_list, exp_dir, output_dir, working_dir, result_dir, data_dir):
-	"""
-	Returns the 2nd level of analysis workflow.
-
-	Parameters: 
-		- exp_dir: str, directory where raw data are stored
-		- result_dir: str, directory where results will be stored
-		- working_dir: str, name of the sub-directory for intermediate results
-		- output_dir: str, name of the sub-directory for final results
-		- subject_list: list of str, list of subject for which you want to do the preprocessing
-		- contrast_list: list of str, list of contrasts to analyze
-		- run_list: list of str, list of runs for which you want to do the analysis 
-
-
-	Returns: 
-	- l2_analysis: Nipype WorkFlow 
-	"""      
-	# Infosource Node - To iterate on subject and runs
-	infosource_2ndlevel = Node(IdentityInterface(fields=['subject_id', 'contrast_id']), name='infosource_2ndlevel')
-	infosource_2ndlevel.iterables = [('subject_id', subject_list), ('contrast_id', contrast_list)]
-
-	# Templates to select files node
-	copes_file = opj(output_dir, 'l1_analysis', '_run_id_*_subject_id_{subject_id}', 'results', 
-	                 'cope{contrast_id}.nii.gz')
-
-	varcopes_file = opj(output_dir, 'l1_analysis', '_run_id_*_subject_id_{subject_id}', 'results', 
-	                    'varcope{contrast_id}.nii.gz')
-    
-	mask_file = opj(data_dir, 'NARPS-T54A', 'hypo1_cope.nii.gz')
-
-	template = {'cope' : copes_file, 'varcope' : varcopes_file, 'mask':mask_file}
-
-	# SelectFiles node - to select necessary files
-	selectfiles_2ndlevel = Node(SelectFiles(template, base_directory=result_dir), name = 'selectfiles_2ndlevel')
-
-	datasink_2ndlevel = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink_2ndlevel')
-
-	# Generate design matrix
-	specify_model_2ndlevel = Node(L2Model(num_copes = len(run_list)), name='l2model_2ndlevel')
-
-	# Merge copes and varcopes files for each subject
-	merge_copes_2ndlevel = Node(Merge(dimension='t'), name='merge_copes_2ndlevel')
-
-	merge_varcopes_2ndlevel = Node(Merge(dimension='t'), name='merge_varcopes_2ndlevel')
-
-	# Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
-	flame = Node(FLAMEO(run_mode = 'flame1'), 
-	             name='flameo')
-
-	l2_analysis = Workflow(base_dir = opj(result_dir, working_dir), name = "l2_analysis")
-
-	l2_analysis.connect([(infosource_2ndlevel, selectfiles_2ndlevel, [('subject_id', 'subject_id'), 
-	                                                                  ('contrast_id', 'contrast_id')]),
-	                    (selectfiles_2ndlevel, merge_copes_2ndlevel, [('cope', 'in_files')]),
-	                    (selectfiles_2ndlevel, merge_varcopes_2ndlevel, [('varcope', 'in_files')]),
-                        (selectfiles_2ndlevel, flame, [('mask', 'mask_file')]),
-	                    (merge_copes_2ndlevel, flame, [('merged_file', 'cope_file')]),
-	                    (merge_varcopes_2ndlevel, flame, [('merged_file', 'var_cope_file')]),
-	                    (specify_model_2ndlevel, flame, [('design_mat', 'design_file'), 
-	                                                     ('design_con', 't_con_file'),
-	                                                     ('design_grp', 'cov_split_file')]),
-	                    (flame, datasink_2ndlevel, [('zstats', 'l2_analysis.@stats'),
-	                                               ('tstats', 'l2_analysis.@tstats'),
-	                                               ('copes', 'l2_analysis.@copes'),
-	                                               ('var_copes', 'l2_analysis.@varcopes')])])
-
-	return l2_analysis
-
-def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
-    ''' 
-    Parameters :
-    - copes: original file list selected by selectfiles node 
-    - varcopes: original file list selected by selectfiles node
-    - subject_ids: list of subject IDs that are analyzed
-    - participants_file: str, file containing participants characteristics
-    
-    This function return the file list containing only the files belonging to subject in the wanted group.
-    '''
-    
-    from os.path import join as opj
-    
-    equalRange_id = []
-    equalIndifference_id = []
-    
-    subject_list = ['sub-' + str(i) for i in subject_ids]
-    
-    with open(participants_file, 'rt') as f:
-            next(f)  # skip the header
-            
-            for line in f:
+            for line in file:
                 info = line.strip().split()
-                
-                if info[0] in subject_list and info[1] == "equalIndifference":
-                    equalIndifference_id.append(info[0][-3:])
-                elif info[0] in subject_list and info[1] == "equalRange":
-                    equalRange_id.append(info[0][-3:])
-                    
-    copes_equalIndifference = []
-    copes_equalRange = []
-    copes_global = []
-    varcopes_equalIndifference = []
-    varcopes_equalRange = []
-    varcopes_global = []
-    
-    for file in copes:
-        sub_id = file.split('/')
-        if sub_id[-1][4:7] in equalIndifference_id:
-            copes_equalIndifference.append(file)
-        elif sub_id[-1][4:7] in equalRange_id:
-            copes_equalRange.append(file) 
-        if sub_id[-1][4:7] in subject_ids:
-            copes_global.append(file)
-            
-    for file in varcopes:
-        sub_id = file.split('/')
-        if sub_id[-1][4:7] in equalIndifference_id:
-            varcopes_equalIndifference.append(file)
-        elif sub_id[-1][4:7] in equalRange_id:
-            varcopes_equalRange.append(file) 
-        if sub_id[-1][4:7] in subject_ids:
-            varcopes_global.append(file)
-            
-    return copes_equalIndifference, copes_equalRange, varcopes_equalIndifference, varcopes_equalRange, equalIndifference_id, equalRange_id, copes_global, varcopes_global
+                # Creates list with onsets, duration and loss/gain
+                # for amplitude (FSL)
+                for condition in condition_names:
+                    if info[5] != 'NoResp':
+                        if condition == 'gain':
+                            onset[condition].append(float(info[0]))
+                            duration[condition].append(float(info[4]))
+                            amplitude[condition].append(float(info[2]))
+                        elif condition == 'loss':
+                            onset[condition].append(float(info[0]))
+                            duration[condition].append(float(info[4]))
+                            amplitude[condition].append(float(info[3]))
+                        elif condition == 'trial':
+                            onset[condition].append(float(info[0]))
+                            duration[condition].append(float(info[4]))
+                            amplitude[condition].append(float(1))
+                        elif condition == 'difficonditionulty':
+                            onset[condition].append(float(info[0]))
+                            duration[condition].append(float(info[4]))
+                            amplitude[condition].append(
+                                abs(0.5 * float(info[2]) - float(info[3]))
+                                )
+                        elif condition == 'response':
+                            onset[condition].append(float(info[0]) + float(info[4]))
+                            duration[condition].append(float(0))
+                            amplitude[condition].append(float(1))
+                    else:
+                        if condition=='missed':
+                            onset[condition].append(float(info[0]))
+                            duration[condition].append(float(0))
 
-def get_regs(equalRange_id, equalIndifference_id, method, subject_list):
-	"""
-	Create dictionary of regressors for group analysis. 
+        return [
+            Bunch(
+                conditions = condition_names,
+                onsets = [onset[k] for k in condition_names],
+                durations = [duration[k] for k in condition_names],
+                amplitudes = [amplitude[k] for k in condition_names],
+                regressor_names = None,
+                regressors = None)
+            ]
 
-	Parameters: 
-		- equalRange_id: list of str, ids of subjects in equal range group
-		- equalIndifference_id: list of str, ids of subjects in equal indifference group
-		- method: one of "equalRange", "equalIndifference" or "groupComp"
-		- subject_list: list of str, ids of subject for which to do the analysis
+    def get_parameters_file(filepath, subject_id, run_id, working_dir):
+        """
+        Create a tsv file with only desired parameters per subject per run.
 
-	Returns:
-		- regressors: dict, dictionary of regressors used to distinguish groups in FSL group analysis
-	"""
-	if method == "equalRange":
-		regressors = dict(group_mean = [1 for i in range(len(equalRange_id))])
-        
-	elif method == "equalIndifference":
-		regressors = dict(group_mean = [1 for i in range(len(equalIndifference_id))])
-        
-	elif method == "groupComp":   
-		equalRange_reg = [1 for i in range(len(equalRange_id) + len(equalIndifference_id))]
-		equalIndifference_reg = [0 for i in range(len(equalRange_id) + len(equalIndifference_id))]
-        
-		for i, sub_id in enumerate(subject_list): 
-			if sub_id in equalIndifference_id:
-				index = i
-				equalIndifference_reg[index] = 1
-				equalRange_reg[index] = 0
-            
-		regressors = dict(equalRange = equalRange_reg, 
-                      equalIndifference = equalIndifference_reg)
-    
-	return regressors
+        Parameters :
+        - filepath : path to subject parameters file (i.e. one per run)
+        - subject_id : subject for whom the 1st level analysis is made
+        - run_id: run for which the 1st level analysis is made
+        - working_dir: str, name of the directory for intermediate results
 
-def get_group_workflow(subject_list, n_sub, contrast_list, method, exp_dir, output_dir, 
-                       working_dir, result_dir, data_dir):
-	"""
-	Returns the group level of analysis workflow.
+        Return :
+        - parameters_file : paths to new files containing only desired parameters.
+        """
+        from os import mkdir
+        from os.path import join, isdir
 
-	Parameters: 
-		- exp_dir: str, directory where raw data are stored
-		- result_dir: str, directory where results will be stored
-		- working_dir: str, name of the sub-directory for intermediate results
-		- output_dir: str, name of the sub-directory for final results
-		- subject_list: list of str, list of subject for which you want to do the preprocessing
-		- contrast_list: list of str, list of contrasts to analyze
-		- method: one of "equalRange", "equalIndifference" or "groupComp"
-		- n_sub: int, number of subjects
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
 
-	Returns: 
-		- l2_analysis: Nipype WorkFlow 
-	"""     
-	# Infosource Node - To iterate on subject and runs 
-	infosource_3rdlevel = Node(IdentityInterface(fields = ['contrast_id', 'exp_dir', 'result_dir', 
-                                                          'output_dir', 'working_dir', 'subject_list', 'method'],
-                                                exp_dir = exp_dir, result_dir = result_dir, 
-                                                 output_dir = output_dir, working_dir = working_dir, 
-                                                 subject_list = subject_list, method = method), 
-                               name = 'infosource_3rdlevel')
-	infosource_3rdlevel.iterables = [('contrast_id', contrast_list)]
+        data_frame = read_csv(filepath, sep = '\t', header=0)
+        if 'NonSteadyStateOutlier00' in data_frame.columns:
+            temp_list = array([
+                data_frame['X'], data_frame['Y'], data_frame['Z'],
+                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
+                data_frame['NonSteadyStateOutlier00']])
+        else:
+            temp_list = array([
+                data_frame['X'], data_frame['Y'], data_frame['Z'],
+                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
+        retained_parameters = DataFrame(transpose(temp_list))
 
-	# Templates to select files node
-	copes_file = opj(data_dir, 'NARPS-T54A', 'sub-*_contrast-{contrast_id}_cope.nii.gz') # contrast_id = ploss ou pgain 
-    
-	varcopes_file = opj(data_dir, 'NARPS-T54A', 'sub-*_contrast-{contrast_id}_varcope.nii.gz')
-    
-	participants_file = opj(exp_dir, 'participants.tsv')
-    
-	mask_file = opj(data_dir, 'NARPS-T54A', 'hypo2_unthresh_Z.nii.gz')
+        parameters_file = join(working_dir, 'parameters_file',
+            f'parameters_file_sub-{subject_id}_run{run_id}.tsv')
 
-	template = {'cope' : copes_file, 'varcope' : varcopes_file, 'participants' : participants_file,
-               'mask' : mask_file}
+        if not isdir(join(working_dir, 'parameters_file')):
+            mkdir(join(working_dir, 'parameters_file'))
 
-    # SelectFiles node - to select necessary files
-	selectfiles_3rdlevel = Node(SelectFiles(template, base_directory=result_dir), name = 'selectfiles_3rdlevel')
-    
-	datasink_3rdlevel = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink_3rdlevel')
-    
-	merge_copes_3rdlevel = Node(Merge(dimension = 't'), name = 'merge_copes_3rdlevel')
-	merge_varcopes_3rdlevel = Node(Merge(dimension = 't'), name = 'merge_varcopes_3rdlevel')
-    
-	subgroups_contrasts = Node(Function(input_names = ['copes', 'varcopes', 'subject_ids', 'participants_file'], 
-                                  output_names = ['copes_equalIndifference', 'copes_equalRange',
-                                                  'varcopes_equalIndifference', 'varcopes_equalRange', 
-                                                 'equalIndifference_id', 'equalRange_id', 'copes_global', 
-                                                 'varcopes_global'],
-                                  function = get_subgroups_contrasts), 
-                         name = 'subgroups_contrasts')
-    
-	specifymodel_3rdlevel = Node(MultipleRegressDesign(), name = 'specifymodel_3rdlevel')
+        with open(parameters_file, 'w') as writer:
+            writer.write(retained_parameters.to_csv(
+                sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-	flame_3rdlevel = Node(FLAMEO(run_mode = 'flame1'), 
-	             name='flame_3rdlevel')
-    
-	regs = Node(Function(input_names = ['equalRange_id', 'equalIndifference_id', 'method', 'subject_list'],
-                                        output_names = ['regressors'],
-                                        function = get_regs), name = 'regs')
-	regs.inputs.method = method
-	regs.inputs.subject_list = subject_list
-    
-	randomise = Node(Randomise(num_perm = 10000, tfce=True, vox_p_values=True, c_thresh=0.05, tfce_E=0.01),
-                     name = "randomise")
-    
-	l3_analysis = Workflow(base_dir = opj(result_dir, working_dir), name = f"l3_analysis_{method}_nsub_{n_sub}")
-    
-	l3_analysis.connect([(infosource_3rdlevel, selectfiles_3rdlevel, [('contrast_id', 'contrast_id')]),
-                        (infosource_3rdlevel, subgroups_contrasts, [('subject_list', 'subject_ids')]),
-                        (selectfiles_3rdlevel, subgroups_contrasts, [('cope', 'copes'), ('varcope', 'varcopes'),
-                                                                    ('participants', 'participants_file')]),
-                        (selectfiles_3rdlevel, flame_3rdlevel, [('mask', 'mask_file')]),
-                        (selectfiles_3rdlevel, randomise, [('mask', 'mask')]),
-                        (subgroups_contrasts, regs, [('equalRange_id', 'equalRange_id'),
-                                                    ('equalIndifference_id', 'equalIndifference_id')]),
-                        (regs, specifymodel_3rdlevel, [('regressors', 'regressors')])])
+        return parameters_file
 
+    def get_contrasts():
+        """
+        Create a list of tuples that represent contrasts.
+        Each contrast is in the form :
+        (Name,Stat,[list of condition names],[weights on those conditions])
 
-	if method == 'equalIndifference' or method == 'equalRange':
-		specifymodel_3rdlevel.inputs.contrasts = [["group_mean", "T", ["group_mean"], [1]], ["group_mean_neg", "T", ["group_mean"], [-1]]]
-        
-		if method == 'equalIndifference':
-			l3_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, 
-                                 [('copes_equalIndifference', 'in_files')]), 
-                                (subgroups_contrasts, merge_varcopes_3rdlevel, 
-                                 [('varcopes_equalIndifference', 'in_files')])])
-		elif method == 'equalRange':
-			l3_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, [('copes_equalRange', 'in_files')]),
-                                (subgroups_contrasts, merge_varcopes_3rdlevel, [('varcopes_equalRange', 'in_files')])])
-            
-	elif method == "groupComp":
-		specifymodel_3rdlevel.inputs.contrasts = [["equalRange_sup", "T", ["equalRange", "equalIndifference"],
-                                                   [1, -1]]]
-        
-		l3_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, [('copes_global', 'in_files')]),
-                            (subgroups_contrasts, merge_varcopes_3rdlevel, [('varcopes_global', 'in_files')])])
-    
-	l3_analysis.connect([(merge_copes_3rdlevel, flame_3rdlevel, [('merged_file', 'cope_file')]),
-                         (merge_varcopes_3rdlevel, flame_3rdlevel, [('merged_file', 'var_cope_file')]),
-                        (specifymodel_3rdlevel, flame_3rdlevel, [('design_mat', 'design_file'),
-                                                           ('design_con', 't_con_file'), 
-                                                           ('design_grp', 'cov_split_file')]),
-                        (merge_copes_3rdlevel, randomise, [('merged_file', 'in_file')]),
-                        (specifymodel_3rdlevel, randomise, [('design_mat', 'design_mat'),
-                                                           ('design_con', 'tcon')]),
-                        (randomise, datasink_3rdlevel, [('t_corrected_p_files', 
-                                                         f"l3_analysis_{method}_nsub_{n_sub}.@tcorpfile"),
-                                                       ('tstat_files', f"l3_analysis_{method}_nsub_{n_sub}.@tstat")]),
-                        (flame_3rdlevel, datasink_3rdlevel, [('zstats', 
-                                                         f"l3_analysis_{method}_nsub_{n_sub}.@zstats"), 
-                                                            ('tstats', 
-                                                         f"l3_analysis_{method}_nsub_{n_sub}.@tstats")]), 
+        Returns:
+            - contrasts: list of tuples, list of contrasts to analyze
+        """
+        # List of condition names
+        conditions = ['trial', 'gain', 'loss']
+
+        # Create contrasts
+        gain = ('gain', 'T', conditions, [0, 1, 0])
+        loss = ('loss', 'T', conditions, [0, 0, 1])
+
+        # Contrast list
+        return [gain, loss]
+
+    def remove_smoothed_files(_, subject_id, run_id, working_dir):
+        """
+        This method is used in a Function node to fully remove
+        the files generated by the smoothing node, once they aren't needed anymore.
+
+        Parameters:
+        - _: Node input only used for triggering the Node
+        - subject_id: str, id of the subject from which to remove the file
+        - run_id: str, id of the run from which to remove the file
+        - working_dir: str, path to the working dir
+        """
+        from shutil import rmtree
+        from os.path import join
+
+        try:
+            rmtree(join(
+                working_dir, 'l1_analysis',
+                f'_run_id_{run_id}_subject_id_{subject_id}', 'smooth')
+            )
+        except OSError as error:
+            print(error)
+        else:
+            print('The directory is deleted successfully')
+
+    def get_run_level_analysis(self):
+        """
+        Create the run level analysis workflow.
+
+        Returns:
+            - l1_analysis : nipype.WorkFlow
+        """
+        # Infosource Node - To iterate on subject and runs
+        infosource = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'infosource')
+        infosource.iterables = [
+            ('subject_id', self.subject_list),
+            ('run_id', self.run_list)]
+
+        # Templates to select files node
+        template = {
+            # Parameter file
+            'param' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv'),
+            # Functional MRI
+            'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+            'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'
+            ),
+            # Event file
+            'event' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv')
+        }
+
+        # SelectFiles - to select necessary files
+        selectfiles = Node(SelectFiles(template, base_directory = self.directories.dataset_dir),
+            name = 'selectfiles')
+
+        # DataSink - store the wanted results in the wanted repository
+        datasink = Node(DataSink(base_directory = self.directories.output_dir),
+            name='datasink')
+
+        # Skullstripping
+        skullstrip = Node(BET(frac = 0.1, functional = True, mask = True),
+            name = 'skullstrip')
+
+        # Smoothing
+        smooth = Node(IsotropicSmooth(fwhm = self.fwhm),
+            name = 'smooth')
+
+        # Function node get_subject_infos - get subject specific condition information
+        subject_infos = Node(Function(
+            function = self.get_session_infos,
+            input_names = ['event_file'],
+            output_names = ['subject_info']),
+            name = 'subject_infos')
+
+        # SpecifyModel - generates Model
+        specify_model = Node(SpecifyModel(
+            high_pass_filter_cutoff = 100, input_units = 'secs', time_repetition = self.tr),
+            name = 'specify_model')
+
+        # Node contrasts to get contrasts
+        contrasts = Node(Function(
+            function = self.get_contrasts,
+            input_names = ['subject_id'],
+            output_names = ['contrasts']),
+            name = 'contrasts')
+
+        # Function node get_parameters_file - get parameters files
+        parameters = Node(Function(
+            function = self.get_parameters_file,
+            input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
+            output_names=['parameters_file']),
+            name='parameters')
+        parameters.inputs.working_dir = self.directories.working_dir
+
+        # First temporal derivatives of the two regressors were also used,
+        # along with temporal filtering (60 s) of all the independent variable time-series.
+        # No motion parameter regressors used.
+        # Level1Design - generates a design matrix
+        l1_design = Node(Level1Design(
+            bases = {'dgamma':{'derivs' : True}},
+            interscan_interval = self.tr,
+            model_serial_correlations = True),
+            name = 'l1_design')
+
+        model_generation = Node(FEATModel(),
+            name = 'model_generation')
+
+        model_estimate = Node(FILMGLS(),
+            name='model_estimate')
+
+        # Function node remove_smoothed_files - remove output of the smooth node
+        remove_smoothed_files = Node(Function(
+            function = self.remove_smoothed_files,
+            input_names = ['_', 'subject_id', 'run_id', 'working_dir']),
+            name = 'remove_smoothed_files')
+        remove_smoothed_files.inputs.working_dir = self.directories.working_dir
+
+        # Create l1 analysis workflow and connect its nodes
+        l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
+        l1_analysis.connect([
+            (infosource, selectfiles, [
+                ('subject_id', 'subject_id'),
+                ('run_id', 'run_id')]),
+            (selectfiles, subject_infos, [('event', 'event_file')]),
+            (selectfiles, parameters, [('param', 'filepath')]),
+            (infosource, contrasts, [('subject_id', 'subject_id')]),
+            (infosource, parameters, [
+                ('subject_id', 'subject_id'),
+                ('run_id', 'run_id')]),
+            (selectfiles, skullstrip, [('func', 'in_file')]),
+            (skullstrip, smooth, [('out_file', 'in_file')]),
+            (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
+            (smooth, specify_model, [('out_file', 'functional_runs')]),
+            (subject_infos, specify_model, [('subject_info', 'subject_info')]),
+            (contrasts, l1_design, [('contrasts', 'contrasts')]),
+            (specify_model, l1_design, [('session_info', 'session_info')]),
+            (l1_design, model_generation, [
+                ('ev_files', 'ev_files'),
+                ('fsf_files', 'fsf_file')]),
+            (smooth, model_estimate, [('out_file', 'in_file')]),
+            (model_generation, model_estimate, [
+                ('con_file', 'tcon_file'),
+                ('design_file', 'design_file')]),
+            (infosource, remove_smoothed_files, [
+                ('subject_id', 'subject_id'),
+                ('run_id', 'run_id')]),
+            (model_estimate, remove_smoothed_files, [('results_dir', '_')]),
+            (model_estimate, datasink, [('results_dir', 'l1_analysis.@results')]),
+            (model_generation, datasink, [
+                ('design_file', 'l1_analysis.@design_file'),
+                ('design_image', 'l1_analysis.@design_img')]),
+            (skullstrip, datasink, [('mask_file', 'l1_analysis.@skullstriped')])
             ])
-    
-	return l3_analysis
 
-def reorganize_results(result_dir, output_dir, n_sub, team_ID):
-    """
-    Reorganize the results to analyze them. 
+        return l1_analysis
 
-    Parameters: 
-        - result_dir: str, directory where results will be stored
-        - output_dir: str, name of the sub-directory for final results
-        - n_sub: float, number of subject used for the analysis
-        - team_ID: str, ID of the team to reorganize results
+    def get_run_level_outputs(self):
+        """ Return the names of the files the run level analysis is supposed to generate. """
 
-    """
-    from os.path import join as opj
-    import os
-    import shutil
-    import gzip
-    import nibabel as nib
-    import numpy as np
+        parameters = {
+            'run_id' : self.run_list,
+            'subject_id' : self.subject_list,
+            'file' : [
+                join('results', 'cope1.nii.gz'),
+                join('results', 'cope2.nii.gz'),
+                join('results', 'dof'),
+                join('results', 'logfile'),
+                join('results', 'pe10.nii.gz'),
+                join('results', 'pe11.nii.gz'),
+                join('results', 'pe12.nii.gz'),
+                join('results', 'pe13.nii.gz'),
+                join('results', 'pe14.nii.gz'),
+                join('results', 'pe15.nii.gz'),
+                join('results', 'pe16.nii.gz'),
+                join('results', 'pe17.nii.gz'),
+                join('results', 'pe1.nii.gz'),
+                join('results', 'pe2.nii.gz'),
+                join('results', 'pe3.nii.gz'),
+                join('results', 'pe4.nii.gz'),
+                join('results', 'pe5.nii.gz'),
+                join('results', 'pe6.nii.gz'),
+                join('results', 'pe7.nii.gz'),
+                join('results', 'pe8.nii.gz'),
+                join('results', 'pe9.nii.gz'),
+                join('results', 'res4d.nii.gz'),
+                join('results', 'sigmasquareds.nii.gz'),
+                join('results', 'threshac1.nii.gz'),
+                join('results', 'tstat1.nii.gz'),
+                join('results', 'tstat2.nii.gz'),
+                join('results', 'varcope1.nii.gz'),
+                join('results', 'varcope2.nii.gz'),
+                join('results', 'zstat1.nii.gz'),
+                join('results', 'zstat2.nii.gz'),
+                'run0.mat',
+                'run0.png',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
+            ]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l1_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
+            )
 
-    h1 = opj(result_dir, output_dir, f"l3_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_pgain')
-    h2 = opj(result_dir, output_dir, f"l3_analysis_equalRange_nsub_{n_sub}", '_contrast_id_pgain')
-    h3 = opj(result_dir, output_dir, f"l3_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_pgain')
-    h4 = opj(result_dir, output_dir, f"l3_analysis_equalRange_nsub_{n_sub}", '_contrast_id_pgain')
-    h5 = opj(result_dir, output_dir, f"l3_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_ploss')
-    h6 = opj(result_dir, output_dir, f"l3_analysis_equalRange_nsub_{n_sub}", '_contrast_id_ploss')
-    h7 = opj(result_dir, output_dir, f"l3_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_ploss')
-    h8 = opj(result_dir, output_dir, f"l3_analysis_equalRange_nsub_{n_sub}", '_contrast_id_ploss')
-    h9 = opj(result_dir, output_dir, f"l3_analysis_groupComp_nsub_{n_sub}", '_contrast_id_ploss')
+        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
-    h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+    def get_subject_level_analysis(self):
+        """
+        Create the subject level analysis workflow.
 
-    repro_unthresh = [opj(filename, "zstat2.nii.gz") if i in [4, 5] else opj(filename, "zstat1.nii.gz") for i, filename in enumerate(h)]
+        Returns:
+        - l2_analysis: nipype.WorkFlow
+        """
+        # Infosource Node - To iterate on subject and runs
+        infosource_sub_level = Node(IdentityInterface(
+            fields = ['subject_id', 'contrast_id']),
+            name = 'infosource_sub_level')
+        infosource_sub_level.iterables = [
+            ('subject_id', self.subject_list),
+            ('contrast_id', self.contrast_list)
+            ]
 
-    repro_thresh = [opj(filename, "randomise_tfce_corrp_tstat2.nii.gz") if i in [4, 5] else opj(filename, 'randomise_tfce_corrp_tstat1.nii.gz')  for i, filename in enumerate(h)]
-    
-    if not os.path.isdir(opj(result_dir, "NARPS-reproduction")):
-        os.mkdir(opj(result_dir, "NARPS-reproduction"))
-    
-    for i, filename in enumerate(repro_unthresh):
-        f_in = filename
-        f_out = opj(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_unthresholded.nii.gz")
-        shutil.copyfile(f_in, f_out)
+        # Templates to select files node
+        templates = {
+            'cope' : join(self.directories.output_dir,
+                'l1_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
+                'cope{contrast_id}.nii.gz'),
+            'varcope' : join(self.directories.output_dir,
+                'l1_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
+                'varcope{contrast_id}.nii.gz'),
 
-    for i, filename in enumerate(repro_thresh):
-        f_in = filename 
-        f_out = opj(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii.gz")
-        shutil.copyfile(f_in, f_out)
-        
-    for i, filename in enumerate(repro_thresh):
-        f_in = filename
-        img = nib.load(filename)
-        original_affine = img.affine.copy()
-        spm = nib.load(repro_unthresh[i])
-        new_img = img.get_fdata().astype(float) > 0
-        new_img = new_img.astype(float)
-        print(np.unique(new_img))
-        print(np.unique(spm.get_fdata()))
-        new_img = new_img * spm.get_fdata()
-        print(np.unique(new_img))
-        new_spm = nib.Nifti1Image(new_img, original_affine)
-        nib.save(new_spm, opj(result_dir, "NARPS-reproduction",
-                          f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii.gz")) 
+            ##### TODO not dataset here
+            'mask': join(self.directories.dataset_dir, 'NARPS-T54A', 'hypo1_cope.nii.gz')
+        }
 
-    print(f"Results files of team {team_ID} reorganized.")
+        # SelectFiles node - to select necessary files
+        selectfiles_sub_level = Node(SelectFiles(
+            templates, base_directory = self.directories.results_dir),
+            name = 'selectfiles_sub_level')
+
+        # Datasink - save important files
+        datasink_sub_level = Node(DataSink(
+            base_directory = str(self.directories.output_dir)
+            ),
+            name = 'datasink_sub_level')
+
+        # Generate design matrix
+        specify_model_sub_level = Node(L2Model(
+            num_copes = len(self.run_list)),
+            name = 'specify_model_sub_level')
+
+        # Merge copes and varcopes files for each subject
+        merge_copes = Node(Merge(dimension = 't'),
+            name='merge_copes')
+        merge_varcopes = Node(Merge(dimension='t'),
+            name='merge_varcopes')
+
+        flame = Node(FLAMEO(run_mode = 'flame1'),
+            name='flameo')
+
+        # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
+        l2_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'l2_analysis')
+        l2_analysis.connect([
+            (infosource_sub_level, selectfiles_sub_level, [
+                ('subject_id', 'subject_id'),
+                ('contrast_id', 'contrast_id')]),
+            (selectfiles_sub_level, merge_copes, [('cope', 'in_files')]),
+            (selectfiles_sub_level, merge_varcopes, [('varcope', 'in_files')]),
+            (selectfiles_sub_level, flame, [('mask', 'mask_file')]),
+            (merge_copes, flame, [('merged_file', 'cope_file')]),
+            (merge_varcopes, flame, [('merged_file', 'var_cope_file')]),
+            (specify_model_sub_level, flame, [
+                ('design_mat', 'design_file'),
+                ('design_con', 't_con_file'),
+                ('design_grp', 'cov_split_file')]),
+            (flame, datasink_sub_level, [
+                ('zstats', 'l2_analysis.@stats'),
+                ('tstats', 'l2_analysis.@tstats'),
+                ('copes', 'l2_analysis.@copes'),
+                ('var_copes', 'l2_analysis.@varcopes')])])
+
+        return l2_analysis
+
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
+        parameters = {
+            'contrast_id' : self.contrast_list,
+            'subject_id' : self.subject_list,
+            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz']
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
+            )
+
+        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+    def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
+        """
+        Parameters :
+        - copes: original file list selected by selectfiles node
+        - varcopes: original file list selected by selectfiles node
+        - subject_ids: list of subject IDs that are analyzed
+        - participants_file: str, file containing participants characteristics
+
+        Returns : the file list containing only the files belonging to subject in the wanted group.
+        """
+        equal_range_id = []
+        equal_indifference_id = []
+        subject_list = [f'sub-{str(s).zfill(3)}' for s in subject_ids]
+
+        with open(participants_file, 'rt') as file:
+            next(file)  # skip the header
+
+            for line in file:
+                info = line.strip().split()
+                if info[0] in subject_list and info[1] == 'equalIndifference':
+                    equal_indifference_id.append(info[0][-3:])
+                elif info[0] in subject_list and info[1] == 'equalRange':
+                    equal_range_id.append(info[0][-3:])
+
+        copes_equal_indifference = []
+        copes_equal_range = []
+        copes_global = []
+        varcopes_equal_indifference = []
+        varcopes_equal_range = []
+        varcopes_global = []
+
+        for file in copes:
+            sub_id = file.split('/')
+            if sub_id[-1][4:7] in equal_indifference_id:
+                copes_equal_indifference.append(file)
+            elif sub_id[-1][4:7] in equal_range_id:
+                copes_equal_range.append(file)
+            if sub_id[-1][4:7] in subject_ids:
+                copes_global.append(file)
+
+        for file in varcopes:
+            sub_id = file.split('/')
+            if sub_id[-1][4:7] in equal_indifference_id:
+                varcopes_equal_indifference.append(file)
+            elif sub_id[-1][4:7] in equal_range_id:
+                varcopes_equal_range.append(file)
+            if sub_id[-1][4:7] in subject_ids:
+                varcopes_global.append(file)
+
+        return copes_equal_indifference, copes_equal_range,\
+            varcopes_equal_indifference, varcopes_equal_range,\
+            equal_indifference_id, equal_range_id,\
+            copes_global, varcopes_global
+
+    def get_regressors(equal_range_ids, equal_indifference_ids, method, subject_list):
+        """
+        Create dictionary of regressors for group analysis.
+
+        Parameters:
+            - equal_range_ids: list of str, ids of subjects in equal range group
+            - equal_indifference_ids: list of str, ids of subjects in equal indifference group
+            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
+            - subject_list: list of str, ids of subject for which to do the analysis
+
+        Returns:
+            - regressors: dict, dictionary of regressors used to
+                distinguish groups in FSL group analysis
+        """
+        if method == 'equalRange':
+            regressors = dict(group_mean = [1 for i in range(len(equal_range_ids))])
+        elif method == 'equalIndifference':
+            regressors = dict(group_mean = [1 for i in range(len(equal_indifference_ids))])
+        elif method == 'groupComp':
+            equal_range_reg = [
+                1 for i in range(len(equal_range_ids) + len(equal_indifference_ids))
+                ]
+            equal_indifference_reg = [
+                0 for i in range(len(equal_range_ids) + len(equal_indifference_ids))
+                ]
+
+            for index, sub_id in enumerate(subject_list):
+                if sub_id in equal_indifference_ids:
+                    equal_indifference_reg[index] = 1
+                    equal_range_reg[index] = 0
+
+            regressors = dict(
+                equalRange = equal_range_reg,
+                equalIndifference = equal_indifference_reg
+                )
+
+        return regressors
+
+    def get_group_level_analysis(self):
+        """
+        Return all workflows for the group level analysis.
+
+        Returns;
+            - a list of nipype.WorkFlow
+        """
+
+        methods = ['equalRange', 'equalIndifference', 'groupComp']
+        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
+
+    def get_group_level_analysis_sub_workflow(self, method):
+        """
+        Return a workflow for the group level analysis.
+
+        Parameters:
+            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
+
+        Returns:
+            - l3_analysis: nipype.WorkFlow
+        """
+        # Compute the number of participants used to do the analysis
+        nb_subjects = len(self.subject_list)
+
+        # Infosource Node - To iterate on subject and runs
+        infosource_group_level = Node(IdentityInterface(
+            fields = ['contrast_ids', 'subject_list'],
+            subject_list = self.subject_list),
+            name = 'infosource_group_level')
+        infosource_group_level.iterables = [('contrast_id', self.contrast_list)]
+
+        # Templates to select files node
+        templates = {
+            ##### TODO not dataset here
+            'cope' : join(self.directories.output_dir,
+                'l2_analysis', '_contrast-{contrast_id}_subject_id_cope.nii.gz'),
+            ##### TODO not dataset here
+            'varcope' : join(data_dir, 'NARPS-T54A', 'sub-*_contrast-{contrast_id}_varcope.nii.gz'),
+            'participants' : join(self.directories.dataset_dir, 'participants.tsv'),
+            ##### TODO not dataset here
+            'mask' : join(data_dir, 'NARPS-T54A', 'hypo2_unthresh_Z.nii.gz')
+            }
+
+        # SelectFiles node - to select necessary files
+        selectfiles_group_level = Node(SelectFiles(
+            templates, base_directory = self.directories.result_dir),
+            name = 'selectfiles_group_level')
+
+        datasink_group_level = Node(DataSink(
+            base_directory = self.directories.result_dir
+            ),
+            name='datasink_group_level')
+
+        merge_copes_group_level = Node(Merge(dimension = 't'),
+            name = 'merge_copes_group_level')
+        merge_varcopes_group_level = Node(Merge(dimension = 't'),
+            name = 'merge_varcopes_group_level')
+
+        subgroups_contrasts = Node(Function(
+            function = self.get_subgroups_contrasts,
+            input_names = ['copes', 'varcopes', 'subject_list', 'participants_file'],
+            output_names = [
+                'copes_equalIndifference', 'copes_equalRange',
+                'varcopes_equalIndifference', 'varcopes_equalRange',
+                'equalIndifference_id', 'equalRange_id',
+                'copes_global', 'varcopes_global']
+            ),
+            name = 'subgroups_contrasts')
+
+        specifymodel_group_level = Node(MultipleRegressDesign(),
+            name = 'specifymodel_group_level')
+
+        flame_group_level = Node(FLAMEO(run_mode = 'flame1'),
+            name='flame_group_level')
+
+        regressors = Node(Function(
+            function = self.get_regressors,
+            input_names = ['equalRange_id', 'equalIndifference_id', 'method', 'subject_list'],
+            output_names = ['regressors']),
+            name = 'regressors')
+        regressors.inputs.method = method
+        regressors.inputs.subject_list = self.subject_list
+
+        randomise = Node(Randomise(
+            num_perm = 10000, tfce = True, vox_p_values = True, c_thresh = 0.05, tfce_E = 0.01),
+            name = "randomise")
+
+        l3_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'l3_analysis_{method}_nsub_{nb_subjects}')
+        l3_analysis.connect([
+            (infosource_group_level, selectfiles_group_level, [('contrast_id', 'contrast_id')]),
+            (infosource_group_level, subgroups_contrasts, [('subject_list', 'subject_ids')]),
+            (selectfiles_group_level, subgroups_contrasts, [
+                ('cope', 'copes'),
+                ('varcope', 'varcopes'),
+                ('participants', 'participants_file')]),
+            (selectfiles_group_level, flame_group_level, [('mask', 'mask_file')]),
+            (selectfiles_group_level, randomise, [('mask', 'mask')]),
+            (subgroups_contrasts, regressors, [
+                ('equalRange_id', 'equalRange_id'),
+                ('equalIndifference_id', 'equalIndifference_id')]),
+            (regressors, specifymodel_group_level, [('regressors', 'regressors')])])
+
+        if method in ('equalIndifference', 'equalRange'):
+            specifymodel_group_level.inputs.contrasts = [
+                ['group_mean', 'T', ['group_mean'], [1]],
+                ['group_mean_neg', 'T', ['group_mean'], [-1]]
+                ]
+
+            if method == 'equalIndifference':
+                l3_analysis.connect([
+                    (subgroups_contrasts, merge_copes_group_level,
+                        [('copes_equalIndifference', 'in_files')]
+                    ),
+                    (subgroups_contrasts, merge_varcopes_group_level,
+                        [('varcopes_equalIndifference', 'in_files')]
+                    )
+                ])
+            elif method == 'equalRange':
+                l3_analysis.connect([
+                    (subgroups_contrasts, merge_copes_group_level,
+                        [('copes_equalRange', 'in_files')]
+                    ),
+                    (subgroups_contrasts, merge_varcopes_group_level,
+                        [('varcopes_equalRange', 'in_files')]
+                    )
+                ])
+
+        elif method == 'groupComp':
+            specifymodel_group_level.inputs.contrasts = [
+                ['equalRange_sup', 'T', ['equalRange', 'equalIndifference'], [1, -1]]
+            ]
+            l3_analysis.connect([
+                (subgroups_contrasts, merge_copes_group_level,
+                    [('copes_global', 'in_files')]
+                ),
+                (subgroups_contrasts, merge_varcopes_group_level,
+                    [('varcopes_global', 'in_files')]
+                )
+            ])
+
+        l3_analysis.connect([
+            (merge_copes_group_level, flame_group_level, [('merged_file', 'cope_file')]),
+            (merge_varcopes_group_level, flame_group_level, [('merged_file', 'var_cope_file')]),
+            (specifymodel_group_level, flame_group_level, [
+                ('design_mat', 'design_file'),
+                ('design_con', 't_con_file'),
+                ('design_grp', 'cov_split_file')]),
+            (merge_copes_group_level, randomise, [('merged_file', 'in_file')]),
+            (specifymodel_group_level, randomise, [
+                ('design_mat', 'design_mat'),
+                ('design_con', 'tcon')]),
+            (randomise, datasink_group_level, [
+                ('t_corrected_p_files', f'l3_analysis_{method}_nsub_{nb_subjects}.@tcorpfile'),
+                ('tstat_files', f'l3_analysis_{method}_nsub_{nb_subjects}.@tstat')]),
+            (flame_group_level, datasink_group_level, [
+                ('zstats', f'l3_analysis_{method}_nsub_{nb_subjects}.@zstats'),
+                ('tstats', f'l3_analysis_{method}_nsub_{nb_subjects}.@tstats')]),
+        ])
+
+        return l3_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': ['ploss', 'pgain'],
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tfce_corrp_tstat2.nii.gz',
+                'randomise_tstat1.nii.gz',
+                'randomise_tstat2.nii.gz',
+                'tstat1.nii.gz',
+                'tstat2.nii.gz',
+                'zstat1.nii.gz',
+                'zstat2.nii.gz'
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l3_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        files : [
+            'randomise_tfce_corrp_tstat1.nii.gz',
+            'randomise_tstat1.nii.gz',
+            'zstat1.nii.gz',
+            'tstat1.nii.gz'
+            ]
+
+        return_list += [join(
+            self.directories.output_dir,
+            f'l3_analysis_groupComp_nsub_{len(self.subject_list)}',
+            '_contrast_id_ploss', f'{file}') for file in files]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+
+        nb_sub = len(self.subject_list)
+        files = [
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_pgain', 'zstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_pgain', 'zstat1.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_pgain', 'zstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_pgain', 'zstat1.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_ploss', 'zstat2.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_ploss', 'zstat2.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_ploss', 'zstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_ploss', 'zstat1.nii.gz'),
+            join(f'l3_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'l3_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_ploss', 'zstat1.nii.gz')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
+
+##### TODO : what is this ?
+system('export PATH=$PATH:/local/egermani/ICA-AROMA')
