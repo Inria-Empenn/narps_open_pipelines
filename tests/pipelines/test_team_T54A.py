@@ -27,12 +27,12 @@ class TestPipelinesTeamT54A:
         pipeline = PipelineTeamT54A()
 
         # 1 - check the parameters
-        assert pipeline.fwhm == 8.0
+        assert pipeline.fwhm == 4.0
         assert pipeline.team_id == 'T54A'
 
         # 2 - check workflows
         assert pipeline.get_preprocessing() is None
-        assert pipeline.get_run_level_analysis() is None
+        assert isinstance(pipeline.get_run_level_analysis(), Workflow)
         assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
         group_level = pipeline.get_group_level_analysis()
 
@@ -48,17 +48,17 @@ class TestPipelinesTeamT54A:
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
         assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 7
-        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_run_level_outputs()) == 33*4*1
+        assert len(pipeline.get_subject_level_outputs()) == 4*2*1
+        assert len(pipeline.get_group_level_outputs()) == 8*2*2 + 4
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
         assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 28
-        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_run_level_outputs()) == 33*4*4
+        assert len(pipeline.get_subject_level_outputs()) == 4*2*4
+        assert len(pipeline.get_group_level_outputs()) == 8*2*2 + 4
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
     @staticmethod
