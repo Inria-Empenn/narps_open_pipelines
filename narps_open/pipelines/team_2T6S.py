@@ -273,6 +273,7 @@ class PipelineTeam2T6S(Pipeline):
             input_names = ['event_files', 'runs'],
             output_names = ['subject_info']),
             name = 'subject_infos')
+        subject_infos.inputs.runs = self.run_list
 
         # SpecifyModel - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(
@@ -330,7 +331,6 @@ class PipelineTeam2T6S(Pipeline):
         l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
         l1_analysis.connect([
             (infosource, selectfiles, [('subject_id', 'subject_id')]),
-            (infosource, subject_infos, [('run_list', 'runs')]),
             (infosource, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (infosource, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_infos, specify_model, [('subject_info', 'subject_info')]),
