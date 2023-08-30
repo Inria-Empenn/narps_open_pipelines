@@ -4,6 +4,7 @@
 """ Write the work of NARPS' team J7F9 using Nipype """
 
 from os.path import join
+from itertools import product
 
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
@@ -128,7 +129,7 @@ class PipelineTeamJ7F9(Pipeline):
 
         return subject_info
 
-    def get_contrasts(subject_id):
+    def get_contrasts():
         """
         Create the list of tuples that represents contrasts.
         Each contrast is in the form :
@@ -144,7 +145,6 @@ class PipelineTeamJ7F9(Pipeline):
 
         # Return contrast list
         return [trial, effect_gain, effect_loss]
-
 
     def get_parameters_file(filepaths, subject_id, working_dir):
         """
@@ -242,11 +242,7 @@ class PipelineTeamJ7F9(Pipeline):
         """
         # Infosource Node - To iterate on subjects
         infosource = Node(IdentityInterface(
-            fields = ['subject_id', 'exp_dir', 'result_dir', 'working_dir', 'run_list'],
-            dataset_dir = self.directories.dataset_dir,
-            results_dir = self.directories.results_dir,
-            working_dir = self.directories.working_dir,
-            run_list = self.run_list),
+            fields = ['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
 
@@ -278,12 +274,13 @@ class PipelineTeamJ7F9(Pipeline):
         smooth = Node(Smooth(fwhm = self.fwhm),
             name = 'smooth')
 
-        # Funcion node get_subject_infos - get subject specific condition information
+        # Function node get_subject_infos - get subject specific condition information
         subject_infos = Node(Function(
             function = self.get_subject_infos,
             input_names = ['event_files', 'runs'],
             output_names = ['subject_info']),
             name = 'subject_infos')
+        subject_infos.inputs.runs = self.run_list
 
         # SpecifyModel - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(
@@ -340,8 +337,6 @@ class PipelineTeamJ7F9(Pipeline):
         l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
         l1_analysis.connect([
             (infosource, selectfiles, [('subject_id', 'subject_id')]),
-            (infosource, subject_infos, [('exp_dir', 'exp_dir'), ('run_list', 'runs')]),
-            (infosource, contrasts, [('subject_id', 'subject_id')]),
             (infosource, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (infosource, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_infos, specify_model, [('subject_info', 'subject_info')]),
@@ -401,7 +396,7 @@ class PipelineTeamJ7F9(Pipeline):
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
+        - participants_file: str, file containing participants characteristics
         - method: str, one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         This function return the file list containing only the files belonging
