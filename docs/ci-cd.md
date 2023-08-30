@@ -1,14 +1,14 @@
 # :package: Continuous Integration (CI) and Continuous Deployment (CD) for the NARPS open pipelines project
 
-:mega: This file descripes how CI/CD works for the project.
+:mega: This file describes how CI/CD works for the project.
 
 ## :octopus: CI on GitHub
 
 GitHub allows to launch CI workflows using [Actions](https://docs.github.com/en/actions).
 
-See GitHub's documentation on [worflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions) to write your own workflows.
+See GitHub's documentation on [workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions) to write your own workflows.
 
-These worflows are YAML files, located in the `.github/workflows/` directory.
+These workflows are YAML files, located in the `.github/workflows/` directory.
 
 ### CI scheme
 
@@ -35,6 +35,7 @@ For now, the following workflows are set up:
 | Name / File | What does it do ? | When is it launched ? | Where does it run ? | How can I see the results ? |
 | ----------- | ----------- | ----------- | ----------- | ----------- |
 | [code_quality](/.github/workflows/code_quality.yml) | A static analysis of the python code (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every push or pull_request if there are changes on `.py` files. | On GitHub servers. | Outputs (logs of pylint) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push. |
+| [codespell](/.github/workflows/codespell.yml) | A static analysis of the text files for commonly made typos using [codespell](codespell-project/codespell: check code for common misspellings). | For every push or pull_request to the `maint` branch. | On GitHub servers. | Outputs (logs of codespell) are stored as [downloadable artifacts](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) during 15 days after the push. |
 | [pipeline_tests](/.github/workflows/pipelines.yml) | Runs all the tests for changed pipelines. | For every push or pull_request, if a pipeline file changed. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
 | [test_changes](/.github/workflows/test_changes.yml) | It runs all the changed tests for the project. | For every push or pull_request, if a test file changed. | On Empenn runners. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |
 | [unit_testing](/.github/workflows/unit_testing.yml) | It runs all the unit tests for the project (see the [testing](/docs/testing.md) topic of the documentation for more information). | For every push or pull_request, if a file changed inside `narps_open/`, or a file related to test execution. | On GitHub servers. | Outputs (logs of pytest) are stored as downloadable artifacts during 15 days after the push. |

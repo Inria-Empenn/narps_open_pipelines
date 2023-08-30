@@ -20,7 +20,7 @@ def get_subject_infos_gain(event_files):
     Gain and loss amounts were used as parametric regressors. 
     
     Parameters :
-    - event_files : list of files containing events informations for each run 
+    - event_files : list of files containing events information for each run 
     
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
@@ -91,7 +91,7 @@ def get_subject_infos_loss(event_files):
     Gain and loss amounts were used as parametric regressors. 
     
     Parameters :
-    - event_files : list of files containing events informations for each run 
+    - event_files : list of files containing events information for each run 
     
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
@@ -384,7 +384,7 @@ def get_subset_contrasts(file_list, method, subject_list, participants_file):
     Parameters :
     - file_list : original file list selected by selectfiles node 
     - subject_list : list of subject IDs that are in the wanted group for the analysis
-    - participants_file: str, file containing participants caracteristics
+    - participants_file: str, file containing participants characteristics
     - method: str, one of "equalRange", "equalIndifference" or "groupComp"
     
     This function return the file list containing only the files belonging to subject in the wanted group.

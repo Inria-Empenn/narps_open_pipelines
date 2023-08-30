@@ -289,7 +289,7 @@ def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
     - copes: original file list selected by selectfiles node 
     - varcopes: original file list selected by selectfiles node
     - subject_ids: list of subject IDs that are analyzed
-    - participants_file: str, file containing participants caracteristics
+    - participants_file: str, file containing participants characteristics
     
     This function return the file list containing only the files belonging to subject in the wanted group.
     '''
@@ -343,7 +343,7 @@ def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
 
 def get_regs(equalRange_id, equalIndifference_id, method, subject_list):
 	"""
-	Create dictionnary of regressors for group analysis. 
+	Create dictionary of regressors for group analysis. 
 
 	Parameters: 
 		- equalRange_id: list of str, ids of subjects in equal range group
@@ -352,7 +352,7 @@ def get_regs(equalRange_id, equalIndifference_id, method, subject_list):
 		- subject_list: list of str, ids of subject for which to do the analysis
 
 	Returns:
-		- regressors: dict, dictionnary of regressors used to distinguish groups in FSL group analysis
+		- regressors: dict, dictionary of regressors used to distinguish groups in FSL group analysis
 	"""
 	if method == "equalRange":
 		regressors = dict(group_mean = [1 for i in range(len(equalRange_id))])

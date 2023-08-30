@@ -14,10 +14,10 @@ class TeamDescription(dict):
     """
 
     description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_full_descriptions.tsv')
     derived_description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_derived_descriptions.tsv')
 
     def __init__(self, team_id):
@@ -82,7 +82,7 @@ class TeamDescription(dict):
                 ...
             Furthermore, we parse the csv derived_description_file.
             The first line of this file being already a second level identifier,
-            the firest level identifier will always be 'derived'.
+            the first level identifier will always be 'derived'.
             This gives -for example- the following key for the dictionary:
                 'derived.n_participants'
         """

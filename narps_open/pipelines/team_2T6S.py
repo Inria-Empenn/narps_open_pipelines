@@ -4,6 +4,7 @@
 """ Write the work of NARPS' team 2T6S using Nipype """
 
 from os.path import join
+from itertools import product
 
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
@@ -25,7 +26,7 @@ class PipelineTeam2T6S(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = '2T6S'
-        self.contrast_list = ['0001', '0002', '0003', '0004']
+        self.contrast_list = ['0001', '0002', '0003']
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team 2T6S """
@@ -38,7 +39,7 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_subject_infos(event_files, runs):
-        ''' Create Bunchs for specifySPMModel.
+        """ Create Bunchs for specifySPMModel.
 
         Parameters :
         - event_files: list of str, list of events files (one per run) for the subject
@@ -46,7 +47,7 @@ class PipelineTeam2T6S(Pipeline):
 
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
-        '''
+        """
         from nipype.interfaces.base import Bunch
 
         condition_names = ['trial']
@@ -111,27 +112,26 @@ class PipelineTeam2T6S(Pipeline):
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_contrasts():
-        '''
+        """
         Create a list of tuples that represent contrasts.
         Each contrast is in the form :
         (Name, Stat, [list of condition names],[weights on those conditions])
-        '''
+        """
         # List of condition names
         conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
 
         # Create contrasts
         trial = ('trial', 'T', conditions, [1, 0, 0])
         effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        positive_effect_loss = ('positive_effect_of_loss', 'T', conditions, [0, 0, 1])
-        negative_effect_loss = ('negative_effect_of_loss', 'T', conditions, [0, 0, -1])
+        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
 
         # Return contrast list
-        return [trial, effect_gain, positive_effect_loss, negative_effect_loss]
+        return [trial, effect_gain, effect_loss]
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_parameters_file(filepaths, subject_id, working_dir):
-        '''
+        """
         Create new tsv files with only desired parameters per subject per run.
 
         Parameters :
@@ -140,7 +140,7 @@ class PipelineTeam2T6S(Pipeline):
 
         Return :
         - parameters_file : paths to new files containing only desired parameters.
-        '''
+        """
         from os import mkdir
         from os.path import join, isdir
 
@@ -269,7 +269,7 @@ class PipelineTeam2T6S(Pipeline):
         smooth = Node(Smooth(fwhm = self.fwhm),
             name = 'smooth')
 
-        # Funcion node get_subject_infos - get subject specific condition information
+        # Function node get_subject_infos - get subject specific condition information
         subject_infos = Node(Function(
             function = self.get_subject_infos,
             input_names = ['event_files', 'runs'],
@@ -362,19 +362,48 @@ class PipelineTeam2T6S(Pipeline):
 
         return l1_analysis
 
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
+        # Contrat maps
+        templates = [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # SPM.mat file
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+
+        # spmT maps
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
+
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subset_contrasts(file_list, method, subject_list, participants_file):
-        '''
+    def get_subset_contrasts(file_list, subject_list, participants_file):
+        """
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
-        - method: str, one of 'equalRange', 'equalIndifference' or 'groupComp'
+        - participants_file: str, file containing participants characteristics
 
         Returns :
-        - TODO
-        '''
+        - equal_indifference_id : a list of subject ids in the equalIndifference group
+        - equal_range_id : a list of subject ids in the equalRange group
+        - equal_indifference_files : a subset of file_list corresponding to subjects in the equalIndifference group
+        - equal_range_files : a subset of file_list corresponding to subjects in the equalRange group
+        """
         equal_indifference_id = []
         equal_range_id = []
         equal_indifference_files = []
@@ -397,56 +426,6 @@ class PipelineTeam2T6S(Pipeline):
                 equal_range_files.append(file)
 
         return equal_indifference_id, equal_range_id, equal_indifference_files, equal_range_files
-
-    # @staticmethod # Starting python 3.10, staticmethod should be used here
-    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def reorganize_results(team_id, nb_sub, output_dir, results_dir):
-        """ Reorganize the results to analyze them. """
-        from os import mkdir
-        from os.path import join, isdir
-        from shutil import copyfile
-
-        hypotheses = [
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_03')
-        ]
-
-        # Build lists of files for unthresholded and thresholded maps
-        repro_unthresh = []
-        repro_thresh = []
-        for file_id, filename in enumerate(hypotheses):
-            if file_id in [4,5]:
-                repro_unthresh.append(join(filename, 'spmT_0002.nii'))
-                repro_thresh.append(join(filename, '_threshold1', 'spmT_0002_thr.nii'))
-            else:
-                repro_unthresh.append(join(filename, 'spmT_0001.nii'))
-                repro_thresh.append(join(filename, '_threshold0', 'spmT_0001_thr.nii'))
-
-        if not isdir(join(results_dir, 'NARPS-reproduction')):
-            mkdir(join(results_dir, 'NARPS-reproduction'))
-
-        for file_id, filename in enumerate(repro_unthresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_unthresholded.nii')
-            copyfile(f_in, f_out)
-
-        for file_id, filename in enumerate(repro_thresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_thresholded.nii')
-            copyfile(f_in, f_out)
-
-        print(f'Results files of team {team_id} reorganized.')
 
     def get_group_level_analysis(self):
         """
@@ -498,16 +477,6 @@ class PipelineTeam2T6S(Pipeline):
             base_directory = str(self.directories.output_dir)
             ),
             name = 'datasink_groupanalysis')
-
-        # Function node reorganize_results - organize results once computed
-        reorganize_res = Node(Function(
-            function = self.reorganize_results,
-            input_names = ['team_id', 'nb_subjects', 'results_dir', 'output_dir']),
-            name = 'reorganize_res')
-        reorganize_res.inputs.team_id = self.team_id
-        reorganize_res.inputs.nb_subjects = nb_subjects
-        reorganize_res.inputs.results_dir = self.directories.results_dir
-        reorganize_res.inputs.output_dir = self.directories.output_dir
 
         # Function node get_subset_contrasts - select subset of contrasts
         sub_contrasts = Node(Function(
@@ -599,3 +568,79 @@ class PipelineTeam2T6S(Pipeline):
         estimate_contrast.inputs.contrasts = contrasts
 
         return l2_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names.
+            Note that hypotheses 5 to 8 correspond to the maps given by the team in their results ;
+            but they are not fully consistent with the hypotheses definitions as expected by NARPS.
+        """
+        nb_sub = len(self.subject_list)
+        files = [
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0002', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold1', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0002.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_0003', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
