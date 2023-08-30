@@ -131,6 +131,7 @@ class TestPipelines:
 class TestUtils:
     """ A class that contains all the unit tests for the utils in module pipelines."""
 
+    @staticmethod
     @mark.unit_test
     def test_utils():
         """ Test the utils methods of PipelineRunner """
