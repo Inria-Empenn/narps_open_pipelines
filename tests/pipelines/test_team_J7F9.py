@@ -11,9 +11,7 @@ Usage:
     pytest -q test_team_J7F9.py -k <selected_test>
 """
 
-from statistics import mean
-
-from pytest import raises, helpers, mark
+from pytest import helpers, mark
 from nipype import Workflow
 
 from narps_open.pipelines.team_J7F9 import PipelineTeamJ7F9
@@ -43,13 +41,28 @@ class TestPipelinesTeamJ7F9:
             assert isinstance(sub_workflow, Workflow)
 
     @staticmethod
+    @mark.unit_test
+    def test_outputs():
+        """ Test the expected outputs of a PipelineTeamJ7F9 object """
+        pipeline = PipelineTeamJ7F9()
+        # 1 - 1 subject outputs
+        pipeline.subject_list = ['001']
+        assert len(pipeline.get_preprocessing_outputs()) == 0
+        assert len(pipeline.get_run_level_outputs()) == 0
+        assert len(pipeline.get_subject_level_outputs()) == 7
+        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_hypotheses_outputs()) == 18
+
+        # 2 - 4 subjects outputs
+        pipeline.subject_list = ['001', '002', '003', '004']
+        assert len(pipeline.get_preprocessing_outputs()) == 0
+        assert len(pipeline.get_run_level_outputs()) == 0
+        assert len(pipeline.get_subject_level_outputs()) == 28
+        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_hypotheses_outputs()) == 18
+
+    @staticmethod
     @mark.pipeline_test
     def test_execution():
         """ Test the execution of a PipelineTeamJ7F9 and compare results """
-        results_4_subjects = helpers.test_pipeline(
-            'J7F9',
-            '/references/',
-            '/data/',
-            '/output/',
-            4)
-        assert mean(results_4_subjects) > .003
+        helpers.test_pipeline_evaluation('J7F9')
