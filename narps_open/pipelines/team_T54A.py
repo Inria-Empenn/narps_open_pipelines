@@ -12,11 +12,14 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     BET, IsotropicSmooth, Level1Design, FEATModel, L2Model, Merge, FLAMEO,
-    FILMGLS, Randomise, MultipleRegressDesign
+    FILMGLS, Randomise, MultipleRegressDesign, FSLCommand
     )
 from nipype.algorithms.modelgen import SpecifyModel
 
 from narps_open.pipelines import Pipeline
+
+# Setup FSL
+FSLCommand.set_default_output_type('NIFTI_GZ')
 
 class PipelineTeamT54A(Pipeline):
     """ A class that defines the pipeline of team T54A. """
