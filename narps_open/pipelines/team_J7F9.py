@@ -87,11 +87,11 @@ class PipelineTeamJ7F9(Pipeline):
                                 onset[val].append(float(info[0]))
                                 duration[val].append(float(0))
 
-        for gain_key, gain_value in weights_gain:
+        for gain_key, gain_value in weights_gain.items():
             gain_value = gain_value - mean(gain_value)
             weights_gain[gain_key] = gain_value.tolist()
 
-        for loss_key, loss_value in weights_loss:
+        for loss_key, loss_value in weights_loss.items():
             loss_value = loss_value - mean(loss_value)
             weights_loss[loss_key] = loss_value.tolist()
 
