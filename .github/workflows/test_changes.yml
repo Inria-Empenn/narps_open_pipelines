@@ -55,7 +55,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[tests]
 
-    - name: Collect tests with pytest
+    - name: Execute tests with pytest
       run: |
         if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
           pytest -s -q ${{ needs.identify-tests.outputs.tests }}
