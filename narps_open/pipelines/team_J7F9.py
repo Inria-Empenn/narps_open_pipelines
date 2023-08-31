@@ -158,7 +158,7 @@ class PipelineTeamJ7F9(Pipeline):
         Return :
         - parameters_file : paths to new files containing only desired parameters.
         """
-        from os import mkdir
+        from os import makedirs
         from os.path import join, isdir
         from pandas import DataFrame, read_csv
         from numpy import array, transpose
@@ -182,8 +182,7 @@ class PipelineTeamJ7F9(Pipeline):
             new_path = join(working_dir, 'parameters_file',
                 f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
-            if not isdir(join(working_dir, 'parameters_file')):
-                mkdir(join(working_dir, 'parameters_file'))
+            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
 
             with open(new_path, 'w') as writer:
                 writer.write(retained_parameters.to_csv(
