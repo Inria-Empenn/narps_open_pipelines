@@ -1,5 +1,5 @@
----
-name: Codespell
+## Disclaimer - This GitHub Actions workflow performs a check for spelling errors inside code comments and documentation
+name: codespell
 
 on:
   push:
