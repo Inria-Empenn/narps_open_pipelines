@@ -147,10 +147,10 @@ def test_pipeline_evaluation(team_id: str):
 
     for subjects in [20, 40, 60, 80, 108]:
         # Execute pipeline
-        results = helpers.test_pipeline_execution(team_id, subjects)
+        results = test_pipeline_execution(team_id, subjects)
 
         # Compute correlation with results
-        passed = helpers.test_correlation_results(results, subjects)
+        passed = test_correlation_results(results, subjects)
 
         # Write values in a file
         with open(file_name, 'a', encoding = 'utf-8') as file:
