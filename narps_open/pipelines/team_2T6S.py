@@ -169,8 +169,7 @@ class PipelineTeam2T6S(Pipeline):
             new_path = join(working_dir, 'parameters_file',
                 f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
-            if not isdir(join(working_dir, 'parameters_file')):
-                mkdir(join(working_dir, 'parameters_file'))
+            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
 
             with open(new_path, 'w') as writer:
                 writer.write(retained_parameters.to_csv(
@@ -616,38 +615,47 @@ class PipelineTeam2T6S(Pipeline):
         """ Return all hypotheses output file names. """
         nb_sub = len(self.subject_list)
         files = [
+            # Hypothesis 1
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 2
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 3
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 4
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 5
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 6
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 7
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 8
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 9
             join(f'l2_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'l2_analysis_groupComp_nsub_{nb_sub}',
