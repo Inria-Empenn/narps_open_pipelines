@@ -56,7 +56,7 @@ class ResultsCollection():
 
     def get_file_urls(self):
         """ Return a dict containing the download url for each file of the collection.
-        * dict key is the file base name (with no extension)
+        * dict key is the file base name (with extension)
         * dict value is the download url for the file on Neurovault
         """
 
@@ -69,7 +69,7 @@ class ResultsCollection():
             file_urls = {}
             for result in json['results']:
                 # Get data for a file in the collection
-                file_urls[result['name']] = result['file']
+                file_urls[result['name']+'.nii.gz'] = result['file']
 
         return file_urls
 
@@ -84,7 +84,7 @@ class ResultsCollection():
         for file_name, file_url in self.files.items():
             urlretrieve(
                 file_url,
-                join(self.directory, file_name+'.nii.gz'),
+                join(self.directory, file_name),
                 show_download_progress
                 )
 

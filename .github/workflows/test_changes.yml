@@ -42,6 +42,7 @@ jobs:
   pytest:
     needs: identify-tests
     runs-on: self-hosted
+    timeout-minutes: 2880 # 48h
     steps:
     - name: Checkout PR branch
       uses: actions/checkout@v3
