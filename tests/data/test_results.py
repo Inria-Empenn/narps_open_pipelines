@@ -48,7 +48,7 @@ class TestResultsCollection:
         assert collection.uid == '4881'
         assert 'results/orig/4881_2T6S' in collection.directory
         test_str = 'http://neurovault.org/media/images/4881/hypo1_thresholded_revised.nii.gz'
-        assert collection.files['hypo1_thresh'] == test_str
+        assert collection.files['hypo1_thresh.nii.gz'] == test_str
 
         collection = ResultsCollection('43FJ')
         assert collection.team_id == '43FJ'
@@ -56,7 +56,7 @@ class TestResultsCollection:
         assert 'results/orig/4824_43FJ' in collection.directory
         test_str = 'http://neurovault.org/media/images/4824/'
         test_str += 'Zstat_Thresholded_Negative_Effect_of_Loss_Equal_Indifference.nii.gz'
-        assert collection.files['hypo5_thresh'] == test_str
+        assert collection.files['hypo5_thresh.nii.gz'] == test_str
 
     @staticmethod
     @mark.unit_test
