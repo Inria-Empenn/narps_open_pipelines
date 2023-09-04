@@ -11,13 +11,13 @@ Usage:
     pytest -q test_conftest.py -k <selected_test>
 """
 
-from os import makedirs
+from os import makedirs, remove
 from os.path import join, abspath, isdir, isfile
 from shutil import rmtree
 
 from datetime import datetime
 
-from pytest import raises, mark, helpers, fixture
+from pytest import mark, helpers, fixture
 
 from nipype import Node, Workflow
 from nipype.interfaces.utility import Function
@@ -50,10 +50,11 @@ class MockupPipeline(Pipeline):
         with open(self.test_file, 'w', encoding = 'utf-8') as file:
             file.write(str(0))
 
-    def update_execution_count(_, file_path: str):
+    def update_execution_count(_, file_path: str, workflow_name: str):
         """ Method used inside a nipype Node, to update the execution count inside the file.
         Arguments:
         - file_path:str, path to the execution count file
+        - workflow_name:str, name of the workflow
 
         Return: the updated number of executions
         """
@@ -61,13 +62,14 @@ class MockupPipeline(Pipeline):
         # Read file counter
         execution_counter = 0
         with open(file_path, 'r', encoding = 'utf-8') as file:
-            execution_counter = int(file.readline())
+            # Get last char of the file
+            execution_counter = int(file.read()[-1])
 
         execution_counter += 1
 
         # Write execution count back
-        with open(file_path, 'w', encoding = 'utf-8') as file:
-            file.write(str(execution_counter))
+        with open(file_path, 'a', encoding = 'utf-8') as file:
+            file.write(f'\n{workflow_name} {execution_counter}')
 
         return execution_counter
 
@@ -80,7 +82,7 @@ class MockupPipeline(Pipeline):
         """ Method used inside a nipype Node, to create a set of files """
         from pathlib import Path
 
-        if execution_counter != 0:
+        if execution_counter != 2:
             for file_path in file_list:
                 Path(file_path).touch()
 
@@ -96,7 +98,7 @@ class MockupPipeline(Pipeline):
             - file_list: list, list of the files that the workflow is supposed to generate
         """
         node_count = Node(Function(
-            input_names = ['_', 'file_path'],
+            input_names = ['_', 'file_path', 'workflow_name'],
             output_names = ['execution_counter'],
             function = self.update_execution_count),
             name = 'node_count'
@@ -105,6 +107,7 @@ class MockupPipeline(Pipeline):
         # nipype's cache to work
         node_count.inputs._ = datetime.now()
         node_count.inputs.file_path = self.test_file
+        node_count.inputs.workflow_name = workflow_name
 
         node_decide = Node(Function(
             input_names = ['execution_counter'],
@@ -261,7 +264,53 @@ class TestConftest:
         assert isdir(join(TEST_DIR, 'TestConftest_subject_level_workflow'))
         assert isdir(join(TEST_DIR, 'TestConftest_group_level_workflow'))
 
+        # Check executions
+        with open(join(TEST_DIR, 'test_conftest.txt'), 'r', encoding = 'utf-8') as file:
+            assert file.readline() == '0\n'
+            # First exec of preprocessing creates an exception (execution counter == 1)
+            assert file.readline() == 'TestConftest_preprocessing_workflow 1\n'
+            # Relaunching the workflow
+            # Preprocessing files won't be created(execution counter == 2)
+            assert file.readline() == 'TestConftest_preprocessing_workflow 2\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 3\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 4\n'
+            # Relaunching the workflow
+            # Everything's fine
+            assert file.readline() == 'TestConftest_preprocessing_workflow 5\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 6\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 7\n'
+            assert file.readline() == 'TestConftest_group_level_workflow 8'
+
     @staticmethod
     @mark.unit_test
-    def test_test_pipeline_evaluation():
+    def test_test_pipeline_evaluation(mocker):
         """ Test the test_pipeline_evaluation helper """
+
+        # Create mocks
+        mocker.patch('conftest.test_pipeline_execution',
+            return_value = [0.1, 0.2, 0.3, 0.4, 0.55555, 0.6, 0.7, 0.8, 0.999999]
+            )
+        mocker.patch('conftest.test_correlation_results', return_value = True)
+
+        # Run helper
+        helpers.test_pipeline_evaluation('fake_team_id')
+
+        assert isfile('test_pipeline-fake_team_id.txt')
+
+        with open('test_pipeline-fake_team_id.txt', 'r', encoding = 'utf-8') as file:
+            file_contents = file.read()
+
+        remove('test_pipeline-fake_team_id.txt')
+
+        check_file_contents = '| fake_team_id | 20 subjects | success '
+        check_file_contents += '| [0.1, 0.2, 0.3, 0.4, 0.56, 0.6, 0.7, 0.8, 1.0] |\n'
+        check_file_contents += '| fake_team_id | 40 subjects | success '
+        check_file_contents += '| [0.1, 0.2, 0.3, 0.4, 0.56, 0.6, 0.7, 0.8, 1.0] |\n'
+        check_file_contents += '| fake_team_id | 60 subjects | success '
+        check_file_contents += '| [0.1, 0.2, 0.3, 0.4, 0.56, 0.6, 0.7, 0.8, 1.0] |\n'
+        check_file_contents += '| fake_team_id | 80 subjects | success '
+        check_file_contents += '| [0.1, 0.2, 0.3, 0.4, 0.56, 0.6, 0.7, 0.8, 1.0] |\n'
+        check_file_contents += '| fake_team_id | 108 subjects | success '
+        check_file_contents += '| [0.1, 0.2, 0.3, 0.4, 0.56, 0.6, 0.7, 0.8, 1.0] |\n'
+
+        assert check_file_contents == file_contents
