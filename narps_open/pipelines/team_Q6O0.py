@@ -208,8 +208,7 @@ class PipelineTeamQ6O0(Pipeline):
             new_path =join(working_dir, 'parameters_file',
                 f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
-            if not isdir(join(working_dir, 'parameters_file')):
-                mkdir(join(working_dir, 'parameters_file'))
+            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
 
             with open(new_path, 'w') as writer:
                 writer.write(retained_parameters.to_csv(
