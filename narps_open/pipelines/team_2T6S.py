@@ -143,7 +143,7 @@ class PipelineTeam2T6S(Pipeline):
         Return :
         - parameters_file : paths to new files containing only desired parameters.
         """
-        from os import mkdir
+        from os import makedirs
         from os.path import join, isdir
 
         from pandas import read_csv, DataFrame
