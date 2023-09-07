@@ -113,12 +113,13 @@ jobs:
         # Loop through test report files & write them to the corresponding wiki page
         for team in ${{ needs.identify-tests.outputs.teams }}
         do
-          echo "# Correlation values" > wiki/pipeline_$team.md
+          echo "# Correlation values for pipeline $team" > wiki/pipeline_$team.md
           echo "Unthresholded maps, reproduced vs. results" >> wiki/pipeline_$team.md
           echo "Correlation values are sorted from hypotheses 1 to 9" >> wiki/pipeline_$team.md
           echo "These values were calculated by GitHub Actions run [# $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" >> wiki/pipeline_$team.md
           echo "| Team    | Number of subjects | Test status | Correlation values |" >> wiki/pipeline_$team.md
           echo "| -------- | ------- | ------- | ------- |" >> wiki/pipeline_$team.md
+          cat test_pipeline-$team.txt >> wiki/pipeline_$team.md
         done
 
         # Push changes
