@@ -82,7 +82,8 @@ jobs:
           crash-*.pklz
         retention-days: 15
 
-    - name: Report results on GitHub
+    - name: Report results on step summary
+      id: summary
       if: ${{ always() }}
       run: |
         # Start report
@@ -102,13 +103,13 @@ jobs:
 
     - name: Checkout wiki
       uses: actions/checkout@v3
-      if: ${{ github.ref }} == 'refs/heads/master'
+      if: ${{ steps.summary.conclusion == 'success' }} # Run only if previous job succeed
       with:
         repository: ${{github.repository}}.wiki
         path: wiki
 
     - name: Report results on the project's wiki
-      if: ${{ github.ref }} == 'refs/heads/master'
+      if: ${{ steps.summary.conclusion == 'success' }}
       run: |
         # Loop through test report files & write them to the corresponding wiki page
         for team in ${{ needs.identify-tests.outputs.teams }}
