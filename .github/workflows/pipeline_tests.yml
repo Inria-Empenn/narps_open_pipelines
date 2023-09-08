@@ -83,7 +83,6 @@ jobs:
         retention-days: 15
 
     - name: Report results on step summary
-      id: summary
       if: ${{ always() }}
       run: |
         # Start report
@@ -102,14 +101,14 @@ jobs:
         done
 
     - name: Checkout wiki
+      if: ${{ always() }}
       uses: actions/checkout@v3
-      needs: summary
       with:
         repository: ${{github.repository}}.wiki
         path: wiki
 
     - name: Report results on the project's wiki
-      needs: summary
+      if: ${{ always() }}
       run: |
         # Loop through test report files & write them to the corresponding wiki page
         for team in ${{ needs.identify-tests.outputs.teams }}
