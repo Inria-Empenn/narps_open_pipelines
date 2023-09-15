@@ -10,7 +10,7 @@ jobs:
     - run:
         name: build docker image
         command: |
-          cp ./circleci/build_docker.sh 
+          cp ./circleci/build_docker.sh build_docker.sh 
           bash build_docker.sh
     - persist_to_workspace:
         root: /home/circleci
@@ -27,7 +27,7 @@ jobs:
     - run:
         name: push to dockerhub
         command: |
-          cp ./circleci/push_docker.sh 
+          cp ./circleci/push_docker.sh push_docker.sh 
           bash push_docker.sh
 
 workflows:
