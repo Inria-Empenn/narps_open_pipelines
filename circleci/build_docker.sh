@@ -14,7 +14,7 @@ set -eux -o pipefail
 #
 
 # make sure we have a lowercase repo
-user_name="Inria-Empenn"
+user_name="remi-gau"
 repo_name=$(echo "${CIRCLE_PROJECT_REPONAME}" | tr '[:upper:]' '[:lower:]')
 
 if [[ -e "${HOME}/docker/image.tar" ]]; then

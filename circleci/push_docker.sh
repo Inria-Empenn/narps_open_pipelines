@@ -7,7 +7,7 @@ set -ex -o pipefail
 if [[ -n "${DOCKER_TOKEN}" ]]; then
 
     # make sure we have a lowercase repo
-    user_name="Inria-Empenn"
+    user_name="remi-gau"
     repo_name=$(echo "${CIRCLE_PROJECT_REPONAME}" | tr '[:upper:]' '[:lower:]')
 
     echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_USER}" --password-stdin
