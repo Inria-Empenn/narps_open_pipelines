@@ -23,6 +23,7 @@ jobs:
     steps:
     - attach_workspace:
         at: /tmp/workspace
+    - checkout
     - run: docker load -i /tmp/workspace/docker/image.tar
     - run:
         name: push to dockerhub
