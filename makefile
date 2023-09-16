@@ -8,7 +8,7 @@ Dockerfile:
 			--ants method=binaries version=2.4.3 \
 			--fsl version=6.0.6.4 \
 			--spm12 version=r7771 method=binaries \
-			--miniconda method=binaries env_name=neuro \
+			--miniconda method=binaries \
 						version=latest \
 						conda_install="python=3.11 traits jupyter nilearn graphviz nipype==1.8.6 scikit-image" \
 						pip_install="matplotlib" \
