@@ -10,6 +10,6 @@ Dockerfile:
 			--spm12 version=r7771 method=binaries \
 			--miniconda method=binaries \
 						version=latest \
-						conda_install="python=3.11 traits jupyter nilearn graphviz nipype==1.8.6 scikit-image" \
-						pip_install="matplotlib" \
+						conda_install="python=3.11" \
+						pip_install="matplotlib traits jupyter nilearn graphviz nipype==1.8.6 scikit-image" \
 			--run 'mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py' > Dockerfile
