@@ -87,10 +87,6 @@ RUN export TMPDIR="$(mktemp -d)" \
     && rm -rf /tmp/spm* \
     # Test
     && /opt/spm12-r7771/run_spm12.sh /opt/matlab-compiler-runtime-2010a/v713 quit
-RUN test "$(getent passwd neuro)" \
-    || useradd --no-user-group --create-home --shell /bin/bash neuro
-USER neuro
-WORKDIR /home
 ENV CONDA_DIR="/opt/miniconda-latest" \
     PATH="/opt/miniconda-latest/bin:$PATH"
 RUN yum install -y -q \
@@ -131,16 +127,9 @@ RUN yum install -y -q \
     # Clean up
     && sync && conda clean --all --yes && sync \
     && rm -rf ~/.cache/pip/*
-ENV LD_LIBRARY_PATH="/opt/miniconda-latest/envs/neuro:D_LIBRARY_PATH"
-RUN bash -c 'source activate neuro'
-USER root
-RUN chmod 777 -Rf /home
-RUN chown -R neuro /home
-USER neuro
 RUN mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py
 
 # Save specification to JSON.
-USER root
 RUN printf '{ \
   "pkg_manager": "yum", \
   "existing_users": [ \
@@ -219,18 +208,6 @@ RUN printf '{ \
       } \
     }, \
     { \
-      "name": "user", \
-      "kwds": { \
-        "user": "neuro" \
-      } \
-    }, \
-    { \
-      "name": "workdir", \
-      "kwds": { \
-        "path": "/home" \
-      } \
-    }, \
-    { \
       "name": "env", \
       "kwds": { \
         "CONDA_DIR": "/opt/miniconda-latest", \
@@ -244,42 +221,6 @@ RUN printf '{ \
       } \
     }, \
     { \
-      "name": "env", \
-      "kwds": { \
-        "LD_LIBRARY_PATH": "/opt/miniconda-latest/envs/neuro:D_LIBRARY_PATH" \
-      } \
-    }, \
-    { \
-      "name": "run", \
-      "kwds": { \
-        "command": "bash -c '"'"'source activate neuro'"'"'" \
-      } \
-    }, \
-    { \
-      "name": "user", \
-      "kwds": { \
-        "user": "root" \
-      } \
-    }, \
-    { \
-      "name": "run", \
-      "kwds": { \
-        "command": "chmod 777 -Rf /home" \
-      } \
-    }, \
-    { \
-      "name": "run", \
-      "kwds": { \
-        "command": "chown -R neuro /home" \
-      } \
-    }, \
-    { \
-      "name": "user", \
-      "kwds": { \
-        "user": "neuro" \
-      } \
-    }, \
-    { \
       "name": "run", \
       "kwds": { \
         "command": "mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \\\\\\"0.0.0.0\\\\\\" > ~/.jupyter/jupyter_notebook_config.py" \
@@ -287,5 +228,4 @@ RUN printf '{ \
     } \
   ] \
 }' > /.reproenv.json
-USER neuro
 # End saving to specification to JSON.
