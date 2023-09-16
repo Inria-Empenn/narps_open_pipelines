@@ -61,8 +61,8 @@ The Dockerfile used to create the image stored on DockerHub is available at the 
 			--spm12 version=r7771 method=binaries \
 			--miniconda method=binaries \
 						version=latest \
-						conda_install="python=3.11" \
-						pip_install="matplotlib traits jupyter nilearn graphviz nipype==1.8.6 scikit-image" \
+						conda_install="python=3.11 pip=23.2.1" \
+						pip_install="traits==6.3.0 jupyterlab-4.0.6 graphviz-0.20.1 nipype==1.8.6 scikit-image==0.21.0 matplotlib==3.8.0 nilearn==0.10.1" \
 			--run 'mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py' > Dockerfile
 ```
 

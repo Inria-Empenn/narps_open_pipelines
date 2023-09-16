@@ -115,15 +115,16 @@ RUN yum install -y -q \
     && conda init bash \
     && conda install -y  --name base \
            "python=3.11" \
+           "pip=23.2.1" \
     && bash -c "source activate base \
     &&   python -m pip install --no-cache-dir  \
-             "matplotlib" \
-             "traits" \
-             "jupyter" \
-             "nilearn" \
-             "graphviz" \
+             "traits==6.3.0" \
+             "jupyterlab-4.0.6" \
+             "graphviz-0.20.1" \
              "nipype==1.8.6" \
-             "scikit-image"" \
+             "scikit-image==0.21.0" \
+             "matplotlib==3.8.0" \
+             "nilearn==0.10.1"" \
     # Clean up
     && sync && conda clean --all --yes && sync \
     && rm -rf ~/.cache/pip/*
@@ -217,7 +218,7 @@ RUN printf '{ \
     { \
       "name": "run", \
       "kwds": { \
-        "command": "yum install -y -q \\\\\\n    bzip2 \\\\\\n    curl\\nyum clean all\\nrm -rf /var/cache/yum/*\\n# Install dependencies.\\nexport PATH=\\"/opt/miniconda-latest/bin:$PATH\\"\\necho \\"Downloading Miniconda installer ...\\"\\nconda_installer=\\"/tmp/miniconda.sh\\"\\ncurl -fsSL -o \\"$conda_installer\\" https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh\\nbash \\"$conda_installer\\" -b -p /opt/miniconda-latest\\nrm -f \\"$conda_installer\\"\\nconda update -yq -nbase conda\\n# Prefer packages in conda-forge\\nconda config --system --prepend channels conda-forge\\n# Packages in lower-priority channels not considered if a package with the same\\n# name exists in a higher priority channel. Can dramatically speed up installations.\\n# Conda recommends this as a default\\n# https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-channels.html\\nconda config --set channel_priority strict\\nconda config --system --set auto_update_conda false\\nconda config --system --set show_channel_urls true\\n# Enable `conda activate`\\nconda init bash\\nconda install -y  --name base \\\\\\n    \\"python=3.11\\"\\nbash -c \\"source activate base\\n  python -m pip install --no-cache-dir  \\\\\\n      \\"matplotlib\\" \\\\\\n      \\"traits\\" \\\\\\n      \\"jupyter\\" \\\\\\n      \\"nilearn\\" \\\\\\n      \\"graphviz\\" \\\\\\n      \\"nipype==1.8.6\\" \\\\\\n      \\"scikit-image\\"\\"\\n# Clean up\\nsync && conda clean --all --yes && sync\\nrm -rf ~/.cache/pip/*" \
+        "command": "yum install -y -q \\\\\\n    bzip2 \\\\\\n    curl\\nyum clean all\\nrm -rf /var/cache/yum/*\\n# Install dependencies.\\nexport PATH=\\"/opt/miniconda-latest/bin:$PATH\\"\\necho \\"Downloading Miniconda installer ...\\"\\nconda_installer=\\"/tmp/miniconda.sh\\"\\ncurl -fsSL -o \\"$conda_installer\\" https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh\\nbash \\"$conda_installer\\" -b -p /opt/miniconda-latest\\nrm -f \\"$conda_installer\\"\\nconda update -yq -nbase conda\\n# Prefer packages in conda-forge\\nconda config --system --prepend channels conda-forge\\n# Packages in lower-priority channels not considered if a package with the same\\n# name exists in a higher priority channel. Can dramatically speed up installations.\\n# Conda recommends this as a default\\n# https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-channels.html\\nconda config --set channel_priority strict\\nconda config --system --set auto_update_conda false\\nconda config --system --set show_channel_urls true\\n# Enable `conda activate`\\nconda init bash\\nconda install -y  --name base \\\\\\n    \\"python=3.11\\" \\\\\\n    \\"pip=23.2.1\\"\\nbash -c \\"source activate base\\n  python -m pip install --no-cache-dir  \\\\\\n      \\"traits==6.3.0\\" \\\\\\n      \\"jupyterlab-4.0.6\\" \\\\\\n      \\"graphviz-0.20.1\\" \\\\\\n      \\"nipype==1.8.6\\" \\\\\\n      \\"scikit-image==0.21.0\\" \\\\\\n      \\"matplotlib==3.8.0\\" \\\\\\n      \\"nilearn==0.10.1\\"\\"\\n# Clean up\\nsync && conda clean --all --yes && sync\\nrm -rf ~/.cache/pip/*" \
       } \
     }, \
     { \
