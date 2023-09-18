@@ -51,3 +51,9 @@ markers = [
     "pipeline_test: marks tests that execute complete pipelines",
     "unit_test: marks unit tests"
 ]
+
+
+[tool.codespell]
+skip = ".git,*.pdf,*.svg,analysis_pipelines_full_descriptions.tsv,data,env,run"
+# softwares - key in data structures etc
+ignore-words-list = "te,fpr,fwe,softwares"
