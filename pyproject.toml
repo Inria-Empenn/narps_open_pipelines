@@ -8,7 +8,6 @@ name = 'narps_open'
 version = '0.1.0'
 description = 'The NARPS open pipelines project: a codebase reproducing the 70 pipelines of the NARPS study (Botvinik-Nezer et al., 2020).'
 readme = "README.md"
-maintainers = [{name = ""}]
 classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
@@ -18,12 +17,13 @@ requires-python = '>=3.8,<3.12'
 dependencies = [
     'importlib_resources>=5.10.2,<5.11',
     'tomli>=2.0.1,<2.1',
-    'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
-    'nilearn>=0.10.0,<0.11',
-    'nipype',
-    'jupyter',
+    'nilearn==0.10.1',
+    'jupyterlab',
     'graphviz',
-    'scikit-image',
+    'traits==6.3.0',
+    'nipype==1.8.6',
+    'scikit-image==0.21.0',
+    'matplotlib==3.8.0',
 ]
 
 
