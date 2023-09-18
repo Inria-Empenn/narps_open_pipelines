@@ -413,10 +413,10 @@ class PipelineTeam48CD(Pipeline):
             if sub_id[-2][-3:] in subject_list:
                 varcopes_global.append(varcope)
 
-        return copes_equal_indifference, copes_equal_range,
+        return (copes_equal_indifference, copes_equal_range,
             varcopes_equal_indifference, varcopes_equal_range,
             equal_indifference_id, equal_range_id,
-            copes_global, varcopes_global
+            copes_global, varcopes_global)
 
 
     # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
