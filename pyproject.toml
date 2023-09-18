@@ -1,0 +1,53 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+
+[project]
+name = 'narps_open'
+version = '0.1.0'
+description = 'The NARPS open pipelines project: a codebase reproducing the 70 pipelines of the NARPS study (Botvinik-Nezer et al., 2020).'
+readme = "README.md"
+maintainers = [{name = ""}]
+classifiers = [
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.8'
+]
+requires-python = '>=3.8,<3.12'
+dependencies = [
+    'importlib_resources>=5.10.2,<5.11',
+    'tomli>=2.0.1,<2.1',
+    'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
+    'nilearn>=0.10.0,<0.11',
+    'nipype',
+    'jupyter',
+    'graphviz',
+    'scikit-image',
+]
+
+
+[project.urls]
+Homepage = 'https://github.com/Inria-Empenn/narps_open_pipelines'
+"Bug trakcer" = 'https://github.com/Inria-Empenn/narps_open_pipelines/issues'
+Source = 'https://github.com/Inria-Empenn/narps_open_pipelines'
+
+
+[project.optional-dependencies]
+tests= [
+        'pylint',
+        'pytest',
+        'pytest-cov',
+        'pytest-helpers-namespace',
+        'pytest-mock',
+        'checksumdir'
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths =["tests"]
+markers = [
+    "pipeline_test: marks tests that execute complete pipelines",
+    "unit_test: marks unit tests"
+]
