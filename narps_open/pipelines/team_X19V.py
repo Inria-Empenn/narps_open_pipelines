@@ -346,7 +346,7 @@ def get_l1_analysis(
             (
                 model_generation,
                 model_estimate,
-                [("con_file", "tcon_file"), ("design_file", "design_file")],
+                [("design_file", "design_file")],
             ),
             (
                 infosource,

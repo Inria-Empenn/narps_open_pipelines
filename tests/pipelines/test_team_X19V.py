@@ -1,4 +1,6 @@
 """Tests for team X19V."""
+from pathlib import Path
+
 import pandas as pd
 
 from narps_open.pipelines.team_X19V_new import PipelineTeamX19V, rm_smoothed_files
@@ -46,6 +48,27 @@ def test_get_contrasts():
     contrasts = pipeline.get_contrasts()
 
     assert contrasts[0] == ("gain", "T", ["trial", "gain", "loss"], [0, 1, 0])
+
+
+def test_get_subject_level_analysis(bids_dir, subject_id, run_list, result_dir):
+    """Test the get_subject_level_analysis method of a PipelineTeamX19V object.
+
+    Only a smoke test for now.
+    """
+    pipeline = PipelineTeamX19V()
+
+    output_dir = f"NARPS-{pipeline.team_id}-reproduced"
+    working_dir = Path(f"NARPS-{pipeline.team_id}-reproduced") / "intermediate_results"
+
+    pipeline.get_subject_level_analysis(
+        exp_dir=bids_dir,
+        result_dir=result_dir,
+        output_dir=output_dir,
+        working_dir=working_dir,
+        subject_list=[subject_id],
+        run_list=run_list,
+        TR=1,
+    )
 
 
 def test_rm_smoothed_files(smooth_dir, subject_id, run_id, tmp_path):

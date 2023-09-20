@@ -5,33 +5,19 @@
 
 import os
 import shutil
-from os.path import join, join as opj
+from os.path import join as opj
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-# [INFO] The import of base objects from Nipype, to create Workflows
-from nipype import Node, Workflow  # , JoinNode, MapNode
+from nipype import Node, Workflow
+from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.base import Bunch
+from nipype.interfaces.fsl import BET, FILMGLS, FEATModel, IsotropicSmooth, Level1Design
 from nipype.interfaces.io import DataSink, SelectFiles
-
-# [INFO] a list of interfaces used to manpulate data
 from nipype.interfaces.utility import Function, IdentityInterface
 
-# [INFO] In order to inherit from Pipeline
 from narps_open.pipelines import Pipeline
-
-# from nipype.algorithms.misc import Gunzip
-
-# [INFO] a list of FSL-specific interfaces
-# from nipype.algorithms.modelgen import SpecifyModel
-# from nipype.interfaces.fsl import (
-#     Info, ImageMaths, IsotropicSmooth, Threshold,
-#     Level1Design, FEATModel, L2Model, Merge,
-#     FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign,
-#     Cluster, BET, SmoothEstimate
-#     )
 
 
 class PipelineTeamX19V(Pipeline):
@@ -62,6 +48,224 @@ class PipelineTeamX19V(Pipeline):
     def get_run_level_analysis(self):
         """Return a Nipype workflow describing the run level analysis part of the pipeline."""
         return None
+
+    def get_subject_level_analysis(
+        self,
+        exp_dir: str | Path,
+        result_dir: str | Path,
+        working_dir: str | Path,
+        output_dir: str,
+        subject_list: list[str],
+        run_list: list[str],
+        TR: float,
+    ):
+        """
+        Returns the first level analysis workflow.
+
+        Parameters:
+                - exp_dir: str, directory where raw data are stored
+                - result_dir: str, directory where results will be stored
+                - working_dir: str, name of the sub-directory for intermediate results
+                - output_dir: str, name of the sub-directory for final results
+                - subject_list: list of str, list of subject for which you want to do the analysis
+                - run_list: list of str, list of runs for which you want to do the analysis
+                - TR: float, time repetition used during acquisition
+
+        Returns:
+                - l1_analysis : Nipype WorkFlow
+        """
+        exp_dir = str(exp_dir)
+        result_dir = str(result_dir)
+        working_dir = str(working_dir)
+
+        # Infosource Node - To iterate on subject and runs
+        infosource = Node(
+            IdentityInterface(fields=["subject_id", "run_id"]), name="infosource"
+        )
+        infosource.iterables = [("subject_id", subject_list), ("run_id", run_list)]
+
+        # Templates to select files node
+        func_file = opj(
+            "derivatives",
+            "fmriprep",
+            "sub-{subject_id}",
+            "func",
+            "sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz",
+        )
+
+        event_file = opj(
+            "sub-{subject_id}",
+            "func",
+            "sub-{subject_id}_task-MGT_run-{run_id}_events.tsv",
+        )
+
+        param_file = opj(
+            "derivatives",
+            "fmriprep",
+            "sub-{subject_id}",
+            "func",
+            "sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv",
+        )
+
+        template = {"func": func_file, "event": event_file, "param": param_file}
+
+        # SelectFiles node - to select necessary files
+        selectfiles = Node(
+            SelectFiles(template, base_directory=exp_dir), name="selectfiles"
+        )
+
+        # DataSink Node - store the wanted results in the wanted repository
+        datasink = Node(
+            DataSink(base_directory=result_dir, container=output_dir), name="datasink"
+        )
+
+        ## Skullstripping
+        skullstrip = Node(BET(frac=0.1, functional=True, mask=True), name="skullstrip")
+
+        ## Smoothing
+        smooth = Node(IsotropicSmooth(fwhm=self.fwhm), name="smooth")
+
+        # Node contrasts to get contrasts
+        contrasts = Node(
+            Function(
+                function=self.get_contrasts,
+                input_names=["subject_id"],
+                output_names=["contrasts"],
+            ),
+            name="contrasts",
+        )
+
+        # Get Subject Info - get subject specific condition information
+        get_subject_infos = Node(
+            Function(
+                input_names=["event_file"],
+                output_names=["subject_info"],
+                function=self.get_session_infos,
+            ),
+            name="get_subject_infos",
+        )
+
+        specify_model = Node(
+            SpecifyModel(
+                high_pass_filter_cutoff=60, input_units="secs", time_repetition=TR
+            ),
+            name="specify_model",
+        )
+
+        parameters = Node(
+            Function(
+                function=self.get_parameters_file,
+                input_names=[
+                    "file",
+                    "subject_id",
+                    "run_id",
+                    "result_dir",
+                    "working_dir",
+                ],
+                output_names=["parameters_file"],
+            ),
+            name="parameters",
+        )
+
+        parameters.inputs.result_dir = result_dir
+        parameters.inputs.working_dir = working_dir
+
+        # First temporal derivatives of the two regressors were also used,
+        # along with temporal filtering (60 s) of all the independent variable time-series.
+        # No motion parameter regressors used.
+
+        l1_design = Node(
+            Level1Design(
+                bases={"dgamma": {"derivs": False}},
+                interscan_interval=TR,
+                model_serial_correlations=True,
+            ),
+            name="l1_design",
+        )
+
+        model_generation = Node(FEATModel(), name="model_generation")
+
+        model_estimate = Node(FILMGLS(), name="model_estimate")
+
+        remove_smooth = Node(
+            Function(
+                input_names=[
+                    "subject_id",
+                    "run_id",
+                    "files",
+                    "result_dir",
+                    "working_dir",
+                ],
+                function=rm_smoothed_files,
+            ),
+            name="remove_smooth",
+        )
+
+        remove_smooth.inputs.result_dir = result_dir
+        remove_smooth.inputs.working_dir = working_dir
+
+        # Create l1 analysis workflow and connect its nodes
+        l1_analysis = Workflow(
+            base_dir=opj(result_dir, working_dir), name="l1_analysis"
+        )
+
+        l1_analysis.connect(
+            [
+                (
+                    infosource,
+                    selectfiles,
+                    [("subject_id", "subject_id"), ("run_id", "run_id")],
+                ),
+                (selectfiles, get_subject_infos, [("event", "event_file")]),
+                (selectfiles, parameters, [("param", "file")]),
+                (infosource, contrasts, [("subject_id", "subject_id")]),
+                (
+                    infosource,
+                    parameters,
+                    [("subject_id", "subject_id"), ("run_id", "run_id")],
+                ),
+                (selectfiles, skullstrip, [("func", "in_file")]),
+                (skullstrip, smooth, [("out_file", "in_file")]),
+                (
+                    parameters,
+                    specify_model,
+                    [("parameters_file", "realignment_parameters")],
+                ),
+                (smooth, specify_model, [("out_file", "functional_runs")]),
+                (get_subject_infos, specify_model, [("subject_info", "subject_info")]),
+                (contrasts, l1_design, [("contrasts", "contrasts")]),
+                (specify_model, l1_design, [("session_info", "session_info")]),
+                (
+                    l1_design,
+                    model_generation,
+                    [("ev_files", "ev_files"), ("fsf_files", "fsf_file")],
+                ),
+                (smooth, model_estimate, [("out_file", "in_file")]),
+                (
+                    model_generation,
+                    model_estimate,
+                    [("design_file", "design_file")],
+                ),
+                (
+                    infosource,
+                    remove_smooth,
+                    [("subject_id", "subject_id"), ("run_id", "run_id")],
+                ),
+                (model_estimate, remove_smooth, [("results_dir", "files")]),
+                (model_estimate, datasink, [("results_dir", "l1_analysis.@results")]),
+                (
+                    model_generation,
+                    datasink,
+                    [
+                        ("design_file", "l1_analysis.@design_file"),
+                        ("design_image", "l1_analysis.@design_img"),
+                    ],
+                ),
+                (skullstrip, datasink, [("mask_file", "l1_analysis.@skullstriped")]),
+            ]
+        )
+
+        return l1_analysis
 
     # [INFO] This function is used in the subject level analysis pipelines using FSL
     def get_session_infos(self, event_file: str) -> list[type[Bunch]]:
@@ -195,111 +399,6 @@ class PipelineTeamX19V(Pipeline):
         contrasts = [gain, loss, gain_sup, loss_sup]
 
         return contrasts
-
-    def get_subject_level_analysis(self):
-        """Return a Nipype workflow describing the subject level analysis part of the pipeline."""
-        # [INFO] The following part stays the same for all pipelines
-
-        # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields=[
-                    "subject_id",
-                    "dataset_dir",
-                    "results_dir",
-                    "working_dir",
-                    "run_list",
-                ],
-                dataset_dir=self.directories.dataset_dir,
-                results_dir=self.directories.results_dir,
-                working_dir=self.directories.working_dir,
-                run_list=self.run_list,
-            ),
-            name="info_source",
-        )
-        info_source.iterables = [("subject_id", self.subject_list)]
-
-        # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
-        templates = {
-            "func": join(
-                self.directories.results_dir,
-                "preprocess",
-                "_run_id_*_subject_id_{subject_id}",
-                "complete_filename_{subject_id}_complete_filename.nii",
-            ),
-            "event": join(
-                self.directories.dataset_dir,
-                "sub-{subject_id}",
-                "func",
-                "sub-{subject_id}_task-MGT_run-*_events.tsv",
-            ),
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(templates, base_directory=self.directories.dataset_dir),
-            name="select_files",
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory=self.directories.output_dir), name="data_sink"
-        )
-
-        # [INFO] This is the node executing the get_subject_infos_spm function
-        # Subject Infos node - get subject specific condition information
-        subject_infos = Node(
-            Function(
-                input_names=["event_files", "runs"],
-                output_names=["subject_info"],
-                function=self.get_subject_infos,
-            ),
-            name="subject_infos",
-        )
-        subject_infos.inputs.runs = self.run_list
-
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
-        contrasts = Node(
-            Function(
-                input_names=["subject_id"],
-                output_names=["contrasts"],
-                function=self.get_contrasts,
-            ),
-            name="contrasts",
-        )
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(node_function, name="node_name")
-
-        # [TODO] Add other nodes with the different steps of the pipeline
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
-        subject_level_analysis = Workflow(
-            base_dir=self.directories.working_dir, name="subject_level_analysis"
-        )
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        subject_level_analysis.connect(
-            [
-                (info_source, select_files, [("subject_id", "subject_id")]),
-                (info_source, contrasts, [("subject_id", "subject_id")]),
-                (select_files, subject_infos, [("event", "event_files")]),
-                (select_files, node_name, [("func", "node_input_name")]),
-                (node_name, data_sink, [("node_output_name", "preprocess.@sym_link")]),
-            ]
-        )
-
-        # [INFO] Here we simply return the created workflow
-        return subject_level_analysis
 
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
@@ -467,23 +566,25 @@ class PipelineTeamX19V(Pipeline):
         # [TODO] Change the name of the files depending on the filenames
         # of results of first level analysis
         template = {
-            "cope": join(
+            "cope": opj(
                 self.directories.results_dir,
                 "subject_level_analysis",
                 "_contrast_id_{contrast_id}_subject_id_*",
                 "cope1.nii.gz",
             ),
-            "varcope": join(
+            "varcope": opj(
                 self.directories.results_dir,
                 "subject_level_analysis",
                 "_contrast_id_{contrast_id}_subject_id_*",
                 "varcope1.nii.gz",
             ),
-            "participants": join(self.directories.dataset_dir, "participants.tsv"),
+            "participants": opj(self.directories.dataset_dir, "participants.tsv"),
         }
         select_files = Node(
             SelectFiles(
-                templates, base_directory=self.directories.results_dir, force_list=True
+                templates,
+                base_directory=self.directories.results_dir,
+                force_list=True,
             ),
             name="select_files",
         )
@@ -496,7 +597,12 @@ class PipelineTeamX19V(Pipeline):
 
         contrasts = Node(
             Function(
-                input_names=["copes", "varcopes", "subject_ids", "participants_file"],
+                input_names=[
+                    "copes",
+                    "varcopes",
+                    "subject_ids",
+                    "participants_file",
+                ],
                 output_names=[
                     "copes_equalIndifference",
                     "copes_equalRange",
@@ -583,7 +689,10 @@ class PipelineTeamX19V(Pipeline):
         # [INFO] Here we define the contrasts used for the group level analysis, depending on the
         # method used.
         if method in ("equalRange", "equalIndifference"):
-            contrasts = [("Group", "T", ["mean"], [1]), ("Group", "T", ["mean"], [-1])]
+            contrasts = [
+                ("Group", "T", ["mean"], [1]),
+                ("Group", "T", ["mean"], [-1]),
+            ]
 
         elif method == "groupComp":
             contrasts = [
@@ -599,7 +708,11 @@ class PipelineTeamX19V(Pipeline):
         return group_level_analysis
 
 
-def rm_smoothed_files(subject_id: str, run_id: str, result_dir: Path, working_dir: str):
+def rm_smoothed_files(
+    subject_id: str, run_id: str, result_dir: str | Path, working_dir: str
+):
+    if isinstance(result_dir, str):
+        result_dir = Path(result_dir)
     smooth_dir = (
         result_dir
         / working_dir

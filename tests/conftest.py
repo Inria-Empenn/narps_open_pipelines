@@ -7,27 +7,25 @@ pytest on (a) test file(s) in the same directory.
 """
 
 from os import remove
-from os.path import join, isfile
-from shutil import rmtree
+from os.path import isfile, join
 from pathlib import Path
+from shutil import rmtree
 
-from pytest import helpers, fixture
+from pytest import fixture, helpers
 
+from narps_open.data.results import ResultsCollection
 from narps_open.runner import PipelineRunner
 from narps_open.utils import get_subject_id
-from narps_open.utils.correlation import get_correlation_coefficient
 from narps_open.utils.configuration import Configuration
-from narps_open.data.results import ResultsCollection
+from narps_open.utils.correlation import get_correlation_coefficient
 
 # Init configuration, to ensure it is in testing mode
-Configuration(config_type='testing')
+Configuration(config_type="testing")
+
 
 @helpers.register
-def test_pipeline_execution(
-    team_id: str,
-    nb_subjects: int = 4
-    ):
-    """ This pytest helper allows to launch a pipeline over a given number of subjects
+def test_pipeline_execution(team_id: str, nb_subjects: int = 4):
+    """This pytest helper allows to launch a pipeline over a given number of subjects.
 
     Arguments:
         - team_id: str, the ID of the team (allows to identify which pipeline to run)
@@ -47,15 +45,16 @@ def test_pipeline_execution(
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
     runner.nb_subjects = nb_subjects
-    runner.pipeline.directories.dataset_dir = Configuration()['directories']['dataset']
-    runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
+    runner.pipeline.directories.dataset_dir = Configuration()["directories"]["dataset"]
+    runner.pipeline.directories.results_dir = Configuration()["directories"][
+        "reproduced_results"
+    ]
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
 
     # Run as long as there are missing files after first level (with a max number of trials)
     # TODO : this is a workaround
-    for _ in range(Configuration()['runner']['nb_trials']):
-
+    for _ in range(Configuration()["runner"]["nb_trials"]):
         # Get missing subjects
         missing_subjects = set()
         for file in runner.get_missing_first_level_outputs():
@@ -69,16 +68,16 @@ def test_pipeline_execution(
 
         # Start pipeline
         runner.subjects = missing_subjects
-        try: # This avoids errors in the workflow to make the test fail
+        try:  # This avoids errors in the workflow to make the test fail
             runner.start(True, False)
-        except(RuntimeError) as err:
-            print('RuntimeError: ', err)
+        except RuntimeError as err:
+            print("RuntimeError: ", err)
 
     # Check missing files for the last time
     missing_files = runner.get_missing_first_level_outputs()
     if missing_files:
-        print('Missing files:', missing_files)
-        raise Exception('There are missing files for first level analysis.')
+        print("Missing files:", missing_files)
+        raise Exception("There are missing files for first level analysis.")
 
     # Start pipeline for the group level only
     runner.nb_subjects = nb_subjects
@@ -100,18 +99,20 @@ def test_pipeline_execution(
     return [
         get_correlation_coefficient(reproduced_file, results_file)
         for reproduced_file, results_file in zip(reproduced_files, results_files)
-        ]
+    ]
+
 
 @helpers.register
 def test_correlation_results(values: list, nb_subjects: int) -> bool:
-    """ This pytest helper returns True if all values in `values` are greater than
-        expected values. It returns False otherwise.
+    """Return True if all values in `values` are greater than expected values.
 
-        Arguments:
-        - values, list of 9 floats: a list of correlation values for the 9 hypotheses of NARPS
-        - nb_subjects, int: the number of subject used to compute the correlation values
+    It returns False otherwise.
+
+    Arguments:
+    - values, list of 9 floats: a list of correlation values for the 9 hypotheses of NARPS
+    - nb_subjects, int: the number of subject used to compute the correlation values
     """
-    scores = Configuration()['testing']['pipelines']['correlation_thresholds']
+    scores = Configuration()["testing"]["pipelines"]["correlation_thresholds"]
     if nb_subjects < 21:
         expected = [scores[0] for _ in range(9)]
     elif nb_subjects < 41:
@@ -125,24 +126,25 @@ def test_correlation_results(values: list, nb_subjects: int) -> bool:
 
     return False not in [v > e for v, e in zip(values, expected)]
 
+
 @helpers.register
 def test_pipeline_evaluation(team_id: str):
-    """ Test the execution of a Pipeline and compare with results.
-        Arguments:
-        - team_id, str: the id of the team for which to test the pipeline
+    """Test the execution of a Pipeline and compare with results.
 
-        Return: True if the correlation coefficients between reproduced data and results
-            meet the expectations, False otherwise.
+    Arguments:
+    - team_id, str: the id of the team for which to test the pipeline
+
+    Return: True if the correlation coefficients between reproduced data and results
+        meet the expectations, False otherwise.
     """
-
     # Remove previous computations
     reproduced_dir = join(
-        Configuration()['directories']['reproduced_results'],
-        f'NARPS-{team_id}-reproduced'
-        )
+        Configuration()["directories"]["reproduced_results"],
+        f"NARPS-{team_id}-reproduced",
+    )
     rmtree(reproduced_dir, ignore_errors=True)
 
-    file_name = f'test_pipeline-{team_id}.txt'
+    file_name = f"test_pipeline-{team_id}.txt"
     if isfile(file_name):
         remove(file_name)
 
@@ -154,44 +156,58 @@ def test_pipeline_evaluation(team_id: str):
         passed = test_correlation_results(results, subjects)
 
         # Write values in a file
-        with open(file_name, 'a', encoding = 'utf-8') as file:
-            file.write(f'| {team_id} | {subjects} subjects | ')
-            file.write('success' if passed else 'failure')
-            file.write(f' | {[round(i, 2) for i in results]} |\n')
+        with open(file_name, "a", encoding="utf-8") as file:
+            file.write(f"| {team_id} | {subjects} subjects | ")
+            file.write("success" if passed else "failure")
+            file.write(f" | {[round(i, 2) for i in results]} |\n")
 
         assert passed
+
 
 @fixture
 def root_dir() -> Path:
     return Path(__file__).parent.parent
 
+
+@fixture
+def bids_dir(root_dir) -> Path:
+    return root_dir / "data" / "original" / "ds001734"
+
+
+@fixture
+def result_dir(root_dir):
+    return root_dir / "derived" / "reproduced"
+
+
 @fixture
 def subject_id() -> str:
     return "001"
+
 
 @fixture
 def run_id() -> str:
     return "01"
 
+
 @fixture
-def events_file(root_dir, subject_id, run_id):
+def run_list() -> list:
+    return ["01", "02", "03", "04"]
+
+
+@fixture
+def events_file(bids_dir, subject_id, run_id):
     return (
-        root_dir
-        / "data"
-        / "original"
-        / "ds001734"
+        bids_dir
         / f"sub-{subject_id}"
         / "func"
         / f"sub-{subject_id}_task-MGT_run-{run_id}_events.tsv"
     )
 
+
 @fixture
-def confounds_file(root_dir, subject_id, run_id):
+def confounds_file(bids_dir, subject_id, run_id):
     return (
-        root_dir
-        / "data"
-        / "original"
-        / "ds001734"
+        bids_dir
         / "derivatives"
         / "fmriprep"
         / f"sub-{subject_id}"
