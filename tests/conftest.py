@@ -11,6 +11,7 @@ from os.path import isfile, join
 from pathlib import Path
 from shutil import rmtree
 
+import pandas as pd
 from pytest import fixture, helpers
 
 from narps_open.data.results import ResultsCollection
@@ -211,3 +212,9 @@ def confounds_file(bids_dir, subject_id, run_id) -> Path:
         / "func"
         / f"sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv"
     )
+
+
+@fixture
+def participant_tsv(bids_dir) -> pd.DataFrame:
+    """Return the participant tsv file as a DataFrame."""
+    return pd.DataFrame(bids_dir / "participants.tsv", sep="\t")

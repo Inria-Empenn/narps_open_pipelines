@@ -468,10 +468,10 @@ class PipelineTeamX19V(Pipeline):
 
     # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
     def get_regressors(
+        self,
         equal_range_id: list,
         equal_indifference_id: list,
         method: str,
-        subject_list: list,
     ) -> dict:
         """Create dictionary of regressors for group analysis.
 
@@ -479,7 +479,6 @@ class PipelineTeamX19V(Pipeline):
             - equal_range_id: ids of subjects in equal range group
             - equal_indifference_id: ids of subjects in equal indifference group
             - method: one of "equalRange", "equalIndifference" or "groupComp"
-            - subject_list: ids of subject for which to do the analysis
 
         Returns:
             - regressors: regressors used to distinguish groups in FSL group analysis
@@ -487,9 +486,9 @@ class PipelineTeamX19V(Pipeline):
         # For one sample t-test, creates a dictionary
         # with a list of the size of the number of participants
         if method == "equalRange":
-            regressors = dict(group_mean=[1 for i in range(len(equal_range_id))])
+            regressors = dict(group_mean=[1 for _ in range(len(equal_range_id))])
         elif method == "equalIndifference":
-            regressors = dict(group_mean=[1 for i in range(len(equal_indifference_id))])
+            regressors = dict(group_mean=[1 for _ in range(len(equal_indifference_id))])
 
         # For two sample t-test, creates 2 lists:
         #  - one for equal range group,
@@ -498,13 +497,13 @@ class PipelineTeamX19V(Pipeline):
         # For equalRange_reg list --> participants with a 1 are in the equal range group
         elif method == "groupComp":
             equalRange_reg = [
-                1 for i in range(len(equal_range_id) + len(equal_indifference_id))
+                1 for _ in range(len(equal_range_id) + len(equal_indifference_id))
             ]
             equalIndifference_reg = [
-                0 for i in range(len(equal_range_id) + len(equal_indifference_id))
+                0 for _ in range(len(equal_range_id) + len(equal_indifference_id))
             ]
 
-            for index, subject_id in enumerate(subject_list):
+            for index, subject_id in enumerate(self.subject_list):
                 if subject_id in equal_indifference_id:
                     equalIndifference_reg[index] = 1
                     equalRange_reg[index] = 0
@@ -617,7 +616,7 @@ class PipelineTeamX19V(Pipeline):
             name="regs",
         )
         regs.inputs.method = method
-        regs.inputs.subject_list = subject_list
+        regs.inputs.subject_list = self.subject_list
 
         # [INFO] The following part has to be modified with nodes of the pipeline
 
@@ -692,9 +691,7 @@ class PipelineTeamX19V(Pipeline):
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
 
-    def rm_smoothed_files(
-        self, subject_id: str, run_id: str
-    ):
+    def rm_smoothed_files(self, subject_id: str, run_id: str):
         smooth_dir = (
             Path(self.directories.results_dir)
             / self.directories.working_dir

@@ -9,6 +9,7 @@ from narps_open.pipelines.team_X19V_new import PipelineTeamX19V
 
 @pytest.fixture
 def pipeline(bids_dir, tmp_path, subject_id):
+    """Set up the pipeline with one subject and the proper directories."""
     pipeline = PipelineTeamX19V(bids_dir=bids_dir, subject_list=subject_id)
 
     pipeline.directories.results_dir = tmp_path
@@ -70,19 +71,40 @@ def test_get_subject_level_analysis(pipeline):
 @pytest.mark.unit_test
 def test_rm_smoothed_files(pipeline):
     """Test the remove smoothed files function."""
-
     subject_id = pipeline.subject_list[0]
     run_id = pipeline.run_list[0]
 
     smooth_dir = (
-                Path(pipeline.directories.results_dir)
-                / pipeline.directories.working_dir
-                / "l1_analysis"
-                / f"_run_id_{run_id}_subject_id_{subject_id}"
-                / "smooth"
-            )
+        Path(pipeline.directories.results_dir)
+        / pipeline.directories.working_dir
+        / "l1_analysis"
+        / f"_run_id_{run_id}_subject_id_{subject_id}"
+        / "smooth"
+    )
     smooth_dir.mkdir(parents=True, exist_ok=True)
 
     pipeline.rm_smoothed_files(subject_id, run_id)
 
     assert not smooth_dir.exists()
+
+
+@pytest.mark.unit_test
+@pytest.mark.parametrize(
+    "method, expected",
+    [
+        ("equalRange", {"group_mean": [1, 1, 1]}),
+        ("equalIndifference", {"group_mean": [1, 1]}),
+        # TODO the following looks WRONG
+        (
+            "groupComp",
+            {"equalRange": [0, 1, 1, 1, 1], "equalIndifference": [1, 0, 0, 0, 0]},
+        ),
+    ],
+)
+def test_get_rergressors(pipeline, method, expected):
+    regressors = pipeline.get_regressors(
+        equal_range_id=["002", "004", "006"],
+        equal_indifference_id=["001", "003"],
+        method=method,
+    )
+    assert regressors == expected
