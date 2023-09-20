@@ -6,17 +6,19 @@
 
 ## 2 - Clone the code
 
-First, install [Datalad](https://www.datalad.org/). This will allow you to get the code as well as "links" to the data, because the NARPS data is bundled in this repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
+First, install [Datalad](https://www.datalad.org/). This will allow you to access the NARPS data easily, as it is included in the repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
 
 Then, [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) the project :
 
 ```bash
+# Replace YOUR_GITHUB_USERNAME in the following command.
 datalad install --recursive https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
 ```
 
 > [!WARNING]  
-> It is still possible to clone the fork using [git](https://git-scm.com/) ; but doing this, you will only get the code, loosing the links to the data.
+> It is still possible to clone the fork using [git](https://git-scm.com/) ; but by doing this, you will only get the code.
 > ```bash
+> # Replace YOUR_GITHUB_USERNAME in the following command.
 > git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
 > ```
 
@@ -38,9 +40,9 @@ datalad get data/original/ds001734/derivatives/fmriprep/sub-00[1-4] -J 12
 
 ## 4 - Set up the environment
 
-The Narps Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...).
+The Narps Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains software dependencies.
 
-Therefore, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains the necessary Python packages and software. [Install Docker](https://docs.docker.com/engine/install/) then pull the Docker image :
+[Install Docker](https://docs.docker.com/engine/install/) then pull the Docker image :
 
 ```bash
 docker pull elodiegermani/open_pipeline:latest
@@ -50,26 +52,28 @@ Once it's done you can check the image is available on your system :
 
 ```bash
 docker images
+   REPOSITORY                               TAG       IMAGE ID        CREATED         SIZE
    docker.io/elodiegermani/open_pipeline    latest    0f3c74d28406    9 months ago    22.7 GB
 ```
 
 > [!NOTE]  
-> Feel free to read this documentation page [docs/environment.md](docs/environment.md) to start the environment from it.
+> Feel free to read this documentation page [docs/environment.md](docs/environment.md) to get further information about this environment.
 
 ## 5 - Run the project
 
 Start a Docker container from the Docker image :
 
 ```bash
-docker run -it -v <path_to_the_repository>:/home/neuro/code/ elodiegermani/open_pipeline
+# Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
+docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ elodiegermani/open_pipeline
 ```
 
-Install NARPS Open Pipeline inside the container :
+Install NARPS Open Pipelines inside the container :
 
 ```bash
 source activate neuro
 cd /home/neuro/code/
-pip insall .
+pip install .
 ```
 
 Finally, you are able to run pipelines :
@@ -80,4 +84,4 @@ python narps_open/runner.py
 ```
 
 > [!NOTE]  
-> For further information, read [docs/running.md](docs/running.md).
+> For further information, read this documentation page [docs/running.md](docs/running.md).
