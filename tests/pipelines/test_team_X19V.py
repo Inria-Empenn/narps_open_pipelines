@@ -16,5 +16,5 @@ def test_get_session_infos(events_file):
 
     subject_info = pipeline.get_session_infos(str(events_file))
 
-    assert subject_info[0].conditions == ['trial', 'gain', 'loss']
+    assert subject_info[0].conditions == ["trial", "gain", "loss"]
     assert subject_info[0].regressor_names is None

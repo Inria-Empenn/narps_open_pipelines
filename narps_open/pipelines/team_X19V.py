@@ -1,22 +1,22 @@
+from os.path import join as opj
+
+from nipype import MapNode, Node, Workflow
+from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl import (
-    IsotropicSmooth,
-    Level1Design,
-    FEATModel,
-    L2Model,
-    Merge,
-    FLAMEO,
-    FILMGLS,
-    MultipleRegressDesign,
-    Cluster,
     BET,
+    FILMGLS,
+    FLAMEO,
+    Cluster,
+    FEATModel,
+    IsotropicSmooth,
+    L2Model,
+    Level1Design,
+    Merge,
+    MultipleRegressDesign,
     SmoothEstimate,
 )
-from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.io import SelectFiles, DataSink
-from nipype import Workflow, Node, MapNode
-
-from os.path import join as opj
+from nipype.interfaces.io import DataSink, SelectFiles
+from nipype.interfaces.utility import Function, IdentityInterface
 
 # Event-Related design, 4 second events, with parametric modulation based on amount gained or lost on each trial.
 # One 'gain' regressor, and one 'loss' regressor.
@@ -33,9 +33,8 @@ def get_session_infos(event_file):
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
     """
-    from os.path import join as opj
-    from nipype.interfaces.base import Bunch
     import numpy as np
+    from nipype.interfaces.base import Bunch
 
     cond_names = ["trial", "gain", "loss"]
 
@@ -97,10 +96,11 @@ def get_parameters_file(file, subject_id, run_id, result_dir, working_dir):
     Return :
     - parameters_file : paths to new files containing only desired parameters.
     """
-    import pandas as pd
-    import numpy as np
-    from os.path import join as opj
     import os
+    from os.path import join as opj
+
+    import numpy as np
+    import pandas as pd
 
     parameters_file = []
 
@@ -499,9 +499,6 @@ def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
 
     This function return the file list containing only the files belonging to subject in the wanted group.
     """
-
-    from os.path import join as opj
-
     equalRange_id = []
     equalIndifference_id = []
 
@@ -884,10 +881,11 @@ def reorganize_results(result_dir, output_dir, n_sub, team_ID):
         - team_ID: str, ID of the team to reorganize results
 
     """
-    from os.path import join as opj
+    import gzip
     import os
     import shutil
-    import gzip
+    from os.path import join as opj
+
     import nibabel as nib
     import numpy as np
 

@@ -4,15 +4,18 @@
 
 from os.path import join
 
+import numpy as np
+
 # [INFO] The import of base objects from Nipype, to create Workflows
 from nipype import Node, Workflow  # , JoinNode, MapNode
+from nipype.interfaces.base import Bunch
+from nipype.interfaces.io import DataSink, SelectFiles
 
 # [INFO] a list of interfaces used to manpulate data
-from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.io import SelectFiles, DataSink
+from nipype.interfaces.utility import Function, IdentityInterface
 
-from nipype.interfaces.base import Bunch
-import numpy as np
+# [INFO] In order to inherit from Pipeline
+from narps_open.pipelines import Pipeline
 
 # from nipype.algorithms.misc import Gunzip
 
@@ -24,9 +27,6 @@ import numpy as np
 #     FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign,
 #     Cluster, BET, SmoothEstimate
 #     )
-
-# [INFO] In order to inherit from Pipeline
-from narps_open.pipelines import Pipeline
 
 
 class PipelineTeamX19V(Pipeline):
@@ -40,7 +40,7 @@ class PipelineTeamX19V(Pipeline):
 
     def get_hypotheses_outputs():
         ...
-    
+
     def get_preprocessing():
         ...
 
@@ -100,7 +100,7 @@ class PipelineTeamX19V(Pipeline):
                 durations=[duration[k] for k in cond_names],
                 amplitudes=[amplitude[k] for k in cond_names],
                 regressor_names=None,
-                regressors=None,    
+                regressors=None,
             )
         )
 
