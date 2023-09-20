@@ -211,17 +211,3 @@ def confounds_file(bids_dir, subject_id, run_id) -> Path:
         / "func"
         / f"sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv"
     )
-
-
-@fixture
-def smooth_dir(tmp_path, run_id, subject_id) -> Path:
-    """Create a tmp dir that would host smoothed files for testing purposes."""
-    smooth_dir = (
-        tmp_path
-        / "working_dir"
-        / "l1_analysis"
-        / f"_run_id_{run_id}_subject_id_{subject_id}"
-        / "smooth"
-    )
-    smooth_dir.mkdir(parents=True)
-    return smooth_dir

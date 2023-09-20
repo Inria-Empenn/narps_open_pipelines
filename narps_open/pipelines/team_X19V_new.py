@@ -48,12 +48,10 @@ class PipelineTeamX19V(Pipeline):
         """
         ...
 
-    # [INFO] There was no run level analysis for the pipelines using FSL
     def get_run_level_analysis(self):
         """Return a Nipype workflow describing the run level analysis part of the pipeline."""
         return None
 
-    # [INFO] This function is used in the subject level analysis pipelines using FSL
     def get_subject_infos(self, event_file: str) -> list[type[Bunch]]:
         """Create Bunchs for specifyModel.
 
@@ -315,7 +313,7 @@ class PipelineTeamX19V(Pipeline):
                     "result_dir",
                     "working_dir",
                 ],
-                function=rm_smoothed_files,
+                function=self.rm_smoothed_files,
             ),
             name="remove_smooth",
         )
@@ -694,23 +692,20 @@ class PipelineTeamX19V(Pipeline):
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
 
+    def rm_smoothed_files(
+        self, subject_id: str, run_id: str
+    ):
+        smooth_dir = (
+            Path(self.directories.results_dir)
+            / self.directories.working_dir
+            / "l1_analysis"
+            / f"_run_id_{run_id}_subject_id_{subject_id}"
+            / "smooth"
+        )
 
-def rm_smoothed_files(
-    subject_id: str, run_id: str, result_dir: str | Path, working_dir: str
-):
-    if isinstance(result_dir, str):
-        result_dir = Path(result_dir)
-    smooth_dir = (
-        result_dir
-        / working_dir
-        / "l1_analysis"
-        / f"_run_id_{run_id}_subject_id_{subject_id}"
-        / "smooth"
-    )
-
-    try:
-        shutil.rmtree(smooth_dir)
-    except OSError as e:
-        print(e)
-    else:
-        print("The directory was deleted successfully")
+        try:
+            shutil.rmtree(smooth_dir)
+        except OSError as e:
+            print(e)
+        else:
+            print("The directory was deleted successfully")

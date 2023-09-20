@@ -1,7 +1,13 @@
+import os
+import shutil
 from os.path import join as opj
 
+import nibabel as nib
+import numpy as np
+import pandas as pd
 from nipype import MapNode, Node, Workflow
 from nipype.algorithms.modelgen import SpecifyModel
+from nipype.interfaces.base import Bunch
 from nipype.interfaces.fsl import (
     BET,
     FILMGLS,
@@ -32,9 +38,6 @@ def get_session_infos(event_file):
     Returns :
     - subject_info : list of Bunch for 1st level analysis.
     """
-    import numpy as np
-    from nipype.interfaces.base import Bunch
-
     cond_names = ["trial", "gain", "loss"]
 
     onset = {}
@@ -94,12 +97,6 @@ def get_parameters_file(file, subject_id, run_id, result_dir, working_dir):
     Return :
     - parameters_file : paths to new files containing only desired parameters.
     """
-    import os
-    from os.path import join as opj
-
-    import numpy as np
-    import pandas as pd
-
     parameters_file = []
 
     df = pd.read_csv(file, sep="\t", header=0)
@@ -127,14 +124,11 @@ def get_parameters_file(file, subject_id, run_id, result_dir, working_dir):
 
 
 # Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
-def get_contrasts(subject_id):
+def get_contrasts():
     """
     Create the list of tuples that represents contrasts.
     Each contrast is in the form :
     (Name,Stat,[list of condition names],[weights on those conditions])
-
-    Parameters:
-        - subject_id: str, ID of the subject
 
     Returns:
         - contrasts: list of tuples, list of contrasts to analyze
@@ -157,10 +151,7 @@ def get_contrasts(subject_id):
     return contrasts
 
 
-def rm_smoothed_files(files, subject_id, run_id, result_dir, working_dir):
-    import shutil
-    from os.path import join as opj
-
+def rm_smoothed_files(subject_id, run_id, result_dir, working_dir):
     smooth_dir = opj(
         result_dir,
         working_dir,
@@ -235,10 +226,10 @@ def get_l1_analysis(
         DataSink(base_directory=result_dir, container=output_dir), name="datasink"
     )
 
-    ## Skullstripping
+    # Skullstripping
     skullstrip = Node(BET(frac=0.1, functional=True, mask=True), name="skullstrip")
 
-    ## Smoothing
+    # Smoothing
     smooth = Node(IsotropicSmooth(fwhm=5), name="smooth")
 
     # Node contrasts to get contrasts
@@ -879,14 +870,6 @@ def reorganize_results(result_dir, output_dir, n_sub, team_ID):
         - team_ID: str, ID of the team to reorganize results
 
     """
-    import gzip
-    import os
-    import shutil
-    from os.path import join as opj
-
-    import nibabel as nib
-    import numpy as np
-
     h1 = opj(
         result_dir,
         output_dir,
