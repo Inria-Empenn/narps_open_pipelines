@@ -23,11 +23,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v3
-      with:
-        python-version: 3.9
-
     - name: Create a list of tests for changed tests
       id: identify
       run: |
