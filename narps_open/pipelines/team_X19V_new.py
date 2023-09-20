@@ -50,7 +50,7 @@ class PipelineTeamX19V(Pipeline):
         return None
 
     # [INFO] This function is used in the subject level analysis pipelines using FSL
-    def get_session_infos(event_file):
+    def get_session_infos(self, event_file: str) -> list[type[Bunch]]:
         """
         Create Bunchs for specifyModel.
 

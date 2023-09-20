@@ -9,8 +9,9 @@ pytest on (a) test file(s) in the same directory.
 from os import remove
 from os.path import join, isfile
 from shutil import rmtree
+from pathlib import Path
 
-from pytest import helpers
+from pytest import helpers, fixture
 
 from narps_open.runner import PipelineRunner
 from narps_open.utils import get_subject_id
@@ -159,3 +160,19 @@ def test_pipeline_evaluation(team_id: str):
             file.write(f' | {[round(i, 2) for i in results]} |\n')
 
         assert passed
+
+@fixture
+def root_dir() -> Path:
+    return Path(__file__).parent.parent
+
+@fixture
+def events_file(root_dir):
+    return (
+        root_dir
+        / "data"
+        / "original"
+        / "ds001734"
+        / "sub-001"
+        / "func"
+        / "sub-001_task-MGT_run-01_events.tsv"
+    )
