@@ -190,12 +190,13 @@ def run_id() -> str:
 
 
 @fixture
-def run_list() -> list:
+def run_list() -> list[str]:
     return ["01", "02", "03", "04"]
 
 
 @fixture
-def events_file(bids_dir, subject_id, run_id):
+def events_file(bids_dir, subject_id, run_id) -> Path:
+    """Return path to an events file from frmiprep."""
     return (
         bids_dir
         / f"sub-{subject_id}"
@@ -205,7 +206,8 @@ def events_file(bids_dir, subject_id, run_id):
 
 
 @fixture
-def confounds_file(bids_dir, subject_id, run_id):
+def confounds_file(bids_dir, subject_id, run_id) -> Path:
+    """Return path to a confounds file from frmiprep."""
     return (
         bids_dir
         / "derivatives"
@@ -217,7 +219,8 @@ def confounds_file(bids_dir, subject_id, run_id):
 
 
 @fixture
-def smooth_dir(tmp_path, run_id, subject_id):
+def smooth_dir(tmp_path, run_id, subject_id) -> Path:
+    """Create a tmp dir that would host smoothed files for testing purposes."""
     smooth_dir = (
         tmp_path
         / "working_dir"
