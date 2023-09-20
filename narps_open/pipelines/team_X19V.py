@@ -24,8 +24,7 @@ from nipype.interfaces.utility import Function, IdentityInterface
 
 
 def get_session_infos(event_file):
-    """
-    Create Bunchs for specifyModel.
+    """Create Bunchs for specifyModel.
 
     Parameters :
     - event_file : str, file corresponding to the run and the subject to analyze
@@ -83,8 +82,7 @@ def get_session_infos(event_file):
 
 
 def get_parameters_file(file, subject_id, run_id, result_dir, working_dir):
-    """
-    Create new tsv files with only desired parameters per subject per run.
+    """Create new tsv files with only desired parameters per subject per run.
 
     Parameters :
     - filepaths : paths to subject parameters file (i.e. one per run)

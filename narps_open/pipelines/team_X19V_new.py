@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
+"""Classes and functions for the pipeline of team X19V."""
 
 
 from os.path import join
@@ -30,29 +31,37 @@ from narps_open.pipelines import Pipeline
 
 
 class PipelineTeamX19V(Pipeline):
-    """A class that defines the pipeline of team X19V"""
+    """A class that defines the pipeline of team X19V."""
 
     def __init__(self):
+        """Create a pipeline object."""
         super().__init__()
         self.fwhm = 5.0
         self.team_id = "X19V"
         self.contrast_list = ["0001", "0002", "0003"]
 
     def get_hypotheses_outputs():
+        """Get output for each hypothesis.
+
+        Not yet implemented.
+        """
         ...
 
     def get_preprocessing():
+        """Create preprocessing workflow.
+
+        Unused by this team.
+        """
         ...
 
     # [INFO] There was no run level analysis for the pipelines using FSL
     def get_run_level_analysis(self):
-        """Return a Nipype workflow describing the run level analysis part of the pipeline"""
+        """Return a Nipype workflow describing the run level analysis part of the pipeline."""
         return None
 
     # [INFO] This function is used in the subject level analysis pipelines using FSL
     def get_session_infos(self, event_file: str) -> list[type[Bunch]]:
-        """
-        Create Bunchs for specifyModel.
+        """Create Bunchs for specifyModel.
 
         Parameters :
         - event_file : str, file corresponding to the run and the subject to analyze
@@ -60,7 +69,6 @@ class PipelineTeamX19V(Pipeline):
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
         """
-
         cond_names = ["trial", "gain", "loss"]
 
         onset = {}
@@ -106,31 +114,38 @@ class PipelineTeamX19V(Pipeline):
 
         return subject_info
 
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts():
-        """
-        Create the list of tuples that represents contrasts.
+    # [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
+    def get_contrasts(self) -> list[tuple]:
+        """Create the list of tuples that represents contrasts.
+
         Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
+        (Name, Stat, [list of condition names], [weights on those conditions])
+
+        Parameters:
+            - subject_id: str, ID of the subject
 
         Returns:
             - contrasts: list of tuples, list of contrasts to analyze
         """
-        # List of condition names
-        conditions = ["trial", "trialxgain^1", "trialxloss^1"]
+        # list of condition names
+        conditions = ["trial", "gain", "loss"]
 
-        # Create contrasts
-        trial = ("trial", "T", conditions, [1, 0, 0])
-        effect_gain = ("effect_of_gain", "T", conditions, [0, 1, 0])
-        effect_loss = ("effect_of_loss", "T", conditions, [0, 0, 1])
+        # create contrasts
+        gain = ("gain", "T", conditions, [0, 1, 0])
 
-        # Contrast list
-        return [trial, effect_gain, effect_loss]
+        loss = ("loss", "T", conditions, [0, 0, 1])
+
+        gain_sup = ("gain_sup_loss", "T", conditions, [0, 1, -1])
+
+        loss_sup = ("loss_sup_gain", "T", conditions, [0, -1, 1])
+
+        # contrast list
+        contrasts = [gain, loss, gain_sup, loss_sup]
+
+        return contrasts
 
     def get_subject_level_analysis(self):
-        """Return a Nipype workflow describing the subject level analysis part of the pipeline"""
-
+        """Return a Nipype workflow describing the subject level analysis part of the pipeline."""
         # [INFO] The following part stays the same for all pipelines
 
         # Infosource Node - To iterate on subjects
@@ -239,9 +254,7 @@ class PipelineTeamX19V(Pipeline):
     def get_subgroups_contrasts(
         copes, varcopes, subject_list: list, participants_file: str
     ):
-        """
-        This function return the file list containing only the files
-        belonging to subject in the wanted group.
+        """Return the file list containing only the files belonging to subject in the wanted group.
 
         Parameters :
         - copes: original file list selected by select_files node
@@ -263,7 +276,6 @@ class PipelineTeamX19V(Pipeline):
         - equal_range_id : a list of subject ids in the equalRange group
         - varcopes_global : a list of all varcopes
         """
-
         equal_range_id = []
         equal_indifference_id = []
 
@@ -325,8 +337,7 @@ class PipelineTeamX19V(Pipeline):
         method: str,
         subject_list: list,
     ) -> dict:
-        """
-        Create dictionary of regressors for group analysis.
+        """Create dictionary of regressors for group analysis.
 
         Parameters:
             - equal_range_id: ids of subjects in equal range group
@@ -369,21 +380,18 @@ class PipelineTeamX19V(Pipeline):
         return regressors
 
     def get_group_level_analysis(self):
-        """
-        Return all workflows for the group level analysis.
+        """Return all workflows for the group level analysis.
 
         Returns;
             - a list of nipype.WorkFlow
         """
-
         methods = ["equalRange", "equalIndifference", "groupComp"]
         return [
             self.get_group_level_analysis_sub_workflow(method) for method in methods
         ]
 
     def get_group_level_analysis_sub_workflow(self, method):
-        """
-        Return a workflow for the group level analysis.
+        """Return a workflow for the group level analysis.
 
         Parameters:
             - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
