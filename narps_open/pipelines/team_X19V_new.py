@@ -2,8 +2,6 @@
 # coding: utf-8
 """Classes and functions for the pipeline of team X19V."""
 
-
-import os
 import shutil
 from os.path import join as opj
 from pathlib import Path
@@ -181,28 +179,16 @@ class PipelineTeamX19V(Pipeline):
 
         return contrasts
 
-    def get_subject_level_analysis(
-        self,
-        exp_dir: str | Path,
-        result_dir: str | Path,
-        working_dir: str | Path,
-        output_dir: str,
-    ):
+    def get_subject_level_analysis(self):
         """Return the first level analysis workflow.
 
         Parameters:
-                - exp_dir: str, directory where raw data are stored
                 - result_dir: str, directory where results will be stored
                 - working_dir: str, name of the sub-directory for intermediate results
-                - output_dir: str, name of the sub-directory for final results
 
         Returns:
                 - l1_analysis : Nipype WorkFlow
         """
-        exp_dir = str(exp_dir)
-        result_dir = str(result_dir)
-        working_dir = str(working_dir)
-
         # Infosource Node - To iterate on subject and runs
         infosource = Node(
             IdentityInterface(fields=["subject_id", "run_id"]), name="infosource"
@@ -239,12 +225,17 @@ class PipelineTeamX19V(Pipeline):
 
         # SelectFiles node - to select necessary files
         selectfiles = Node(
-            SelectFiles(template, base_directory=exp_dir), name="selectfiles"
+            SelectFiles(template, base_directory=self.directories.dataset_dir),
+            name="selectfiles",
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         datasink = Node(
-            DataSink(base_directory=result_dir, container=output_dir), name="datasink"
+            DataSink(
+                base_directory=str(self.directories.results_dir),
+                container=self.directories.output_dir,
+            ),
+            name="datasink",
         )
 
         # Skullstripping
@@ -295,8 +286,8 @@ class PipelineTeamX19V(Pipeline):
             name="parameters",
         )
 
-        parameters.inputs.result_dir = result_dir
-        parameters.inputs.working_dir = working_dir
+        parameters.inputs.result_dir = self.directories.results_dir
+        parameters.inputs.working_dir = self.directories.working_dir
 
         # First temporal derivatives of the two regressors were also used,
         # along with temporal filtering (60 s) of all the independent variable time-series.
@@ -329,12 +320,13 @@ class PipelineTeamX19V(Pipeline):
             name="remove_smooth",
         )
 
-        remove_smooth.inputs.result_dir = result_dir
-        remove_smooth.inputs.working_dir = working_dir
+        remove_smooth.inputs.result_dir = self.directories.results_dir
+        remove_smooth.inputs.working_dir = self.directories.working_dir
 
         # Create l1 analysis workflow and connect its nodes
         l1_analysis = Workflow(
-            base_dir=opj(result_dir, working_dir), name="l1_analysis"
+            base_dir=opj(self.directories.results_dir, self.directories.working_dir),
+            name="l1_analysis",
         )
 
         l1_analysis.connect(
