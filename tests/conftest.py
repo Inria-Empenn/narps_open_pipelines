@@ -190,11 +190,6 @@ def run_id() -> str:
 
 
 @fixture
-def run_list() -> list[str]:
-    return ["01", "02", "03", "04"]
-
-
-@fixture
 def events_file(bids_dir, subject_id, run_id) -> Path:
     """Return path to an events file from frmiprep."""
     return (

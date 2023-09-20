@@ -2,61 +2,63 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from narps_open.pipelines.team_X19V_new import PipelineTeamX19V, rm_smoothed_files
 
 
-def test_constructor():
-    """Test the creation of a PipelineTeamX19V object."""
-    pipeline = PipelineTeamX19V()
+@pytest.fixture
+def pipeline(bids_dir, tmp_path, subject_id):
+    pipeline = PipelineTeamX19V(bids_dir=bids_dir, subject_list=subject_id)
 
+    pipeline.directories.results_dir = tmp_path
+    pipeline.directories.set_output_dir_with_team_id(pipeline.team_id)
+    pipeline.directories.set_working_dir_with_team_id(pipeline.team_id)
+
+    return pipeline
+
+
+def test_constructor(pipeline, bids_dir):
+    """Test the creation of a PipelineTeamX19V object."""
     assert pipeline.fwhm == 5.0
     assert pipeline.team_id == "X19V"
     assert pipeline.contrast_list == ["0001", "0002", "0003"]
+    assert pipeline.subject_list == ["001"]
+    assert pipeline.directories.dataset_dir == str(bids_dir)
 
 
-def test_get_session_infos(events_file):
+def test_get_subject_infos(pipeline, events_file):
     """Test the get_session_infos method of a PipelineTeamX19V object."""
-    pipeline = PipelineTeamX19V()
+    run_info = pipeline.get_subject_infos(str(events_file))
 
-    subject_info = pipeline.get_session_infos(str(events_file))
-
-    assert subject_info[0].conditions == ["trial", "gain", "loss"]
-    assert subject_info[0].regressor_names is None
+    assert run_info[0].conditions == ["trial", "gain", "loss"]
+    assert run_info[0].regressor_names is None
 
 
-def test_get_parameters_file(confounds_file, subject_id, run_id, tmp_path):
+def test_get_parameters_file(pipeline, confounds_file):
     """Test the get_parameters_file method of a PipelineTeamX19V object."""
-    pipeline = PipelineTeamX19V()
-
-    result_dir = tmp_path
-    working_dir = "working_dir"
-    (result_dir / working_dir).mkdir()
-
     parameters_file = pipeline.get_parameters_file(
-        confounds_file, subject_id, run_id, result_dir, working_dir
+        file=confounds_file,
+        subject_id=pipeline.subject_list[0],
+        run_id=pipeline.run_list[0],
     )
 
     df = pd.read_csv(parameters_file[0], sep="\t")
     assert df.shape == (452, 6)
 
 
-def test_get_contrasts():
+def test_get_contrasts(pipeline):
     """Test the get_contrasts method of a PipelineTeamX19V object."""
-    pipeline = PipelineTeamX19V()
-
     contrasts = pipeline.get_contrasts()
 
     assert contrasts[0] == ("gain", "T", ["trial", "gain", "loss"], [0, 1, 0])
 
 
-def test_get_subject_level_analysis(bids_dir, subject_id, run_list, result_dir):
+def test_get_subject_level_analysis(pipeline, bids_dir, result_dir):
     """Test the get_subject_level_analysis method of a PipelineTeamX19V object.
 
     Only a smoke test for now.
     """
-    pipeline = PipelineTeamX19V()
-
     output_dir = f"NARPS-{pipeline.team_id}-reproduced"
     working_dir = Path(f"NARPS-{pipeline.team_id}-reproduced") / "intermediate_results"
 
@@ -65,9 +67,6 @@ def test_get_subject_level_analysis(bids_dir, subject_id, run_list, result_dir):
         result_dir=result_dir,
         output_dir=output_dir,
         working_dir=working_dir,
-        subject_list=[subject_id],
-        run_list=run_list,
-        TR=1,
     )
 
 

@@ -23,12 +23,18 @@ from narps_open.pipelines import Pipeline
 class PipelineTeamX19V(Pipeline):
     """A class that defines the pipeline of team X19V."""
 
-    def __init__(self):
+    def __init__(self, bids_dir: str | Path, subject_list: str | list[str]):
         """Create a pipeline object."""
         super().__init__()
         self.fwhm = 5.0
         self.team_id = "X19V"
         self.contrast_list = ["0001", "0002", "0003"]
+
+        self.directories.dataset_dir = str(bids_dir)
+
+        if isinstance(subject_list, str):
+            subject_list = [subject_list]
+        self.subject_list = subject_list
 
     def get_hypotheses_outputs():
         """Get output for each hypothesis.
@@ -49,27 +55,146 @@ class PipelineTeamX19V(Pipeline):
         """Return a Nipype workflow describing the run level analysis part of the pipeline."""
         return None
 
+    # [INFO] This function is used in the subject level analysis pipelines using FSL
+    def get_subject_infos(self, event_file: str) -> list[type[Bunch]]:
+        """Create Bunchs for specifyModel.
+
+        Parameters :
+        - event_file : str, file corresponding to the run and the subject to analyze
+
+        Returns :
+        - subject_info : list of Bunch for 1st level analysis.
+        """
+        cond_names = ["trial", "gain", "loss"]
+
+        onset = {}
+        duration = {}
+        amplitude = {}
+
+        for c in cond_names:  # For each condition.
+            onset.update({c: []})  # creates dictionary items with empty lists
+            duration.update({c: []})
+            amplitude.update({c: []})
+
+        with open(event_file, "rt") as f:
+            next(f)  # skip the header
+
+            for line in f:
+                info = line.strip().split()
+                # Creates list with onsets, duration and loss/gain for amplitude (FSL)
+                for c in cond_names:
+                    onset[c].append(float(info[0]))
+                    duration[c].append(float(4))
+                    if c == "gain":
+                        amplitude[c].append(float(info[2]))
+                    elif c == "loss":
+                        amplitude[c].append(float(info[3]))
+                    elif c == "trial":
+                        amplitude[c].append(float(1))
+
+        amplitude["gain"] = amplitude["gain"] - np.mean(amplitude["gain"])
+        amplitude["loss"] = amplitude["loss"] - np.mean(amplitude["loss"])
+
+        subject_info = []
+
+        subject_info.append(
+            Bunch(
+                conditions=cond_names,
+                onsets=[onset[k] for k in cond_names],
+                durations=[duration[k] for k in cond_names],
+                amplitudes=[amplitude[k] for k in cond_names],
+                regressor_names=None,
+                regressors=None,
+            )
+        )
+
+        return subject_info
+
+    def get_parameters_file(
+        self,
+        file: str | Path,
+        subject_id: str,
+        run_id: str,
+    ):
+        """Create new tsv files with only desired parameters per subject per run.
+
+        Parameters :
+        - filepaths : paths to subject parameters file (i.e. one per run)
+        - subject_id : subject for whom the 1st level analysis is made
+        - run_id: run for which the 1st level analysis is made
+        - result_dir: str, directory where results will be stored
+        - working_dir: str, name of the sub-directory for intermediate results
+
+        Return :
+        - parameters_file : paths to new files containing only desired parameters.
+        """
+        df = pd.read_csv(file, sep="\t", header=0)
+        temp_list = np.array(
+            [df["X"], df["Y"], df["Z"], df["RotX"], df["RotY"], df["RotZ"]]
+        )  # Parameters we want to use for the model
+        retained_parameters = pd.DataFrame(np.transpose(temp_list))
+
+        paramater_files_dir = Path(
+            self.directories.results_dir
+            / self.directories.working_dir
+            / "parameters_file"
+        )
+        paramater_files_dir.mkdir(parents=True, exist_ok=True)
+
+        new_path = (
+            paramater_files_dir / f"parameters_file_sub-{subject_id}_run{run_id}.tsv"
+        )
+        retained_parameters.to_csv(
+            new_path, sep="\t", index=False, header=False, na_rep="0.0"
+        )
+
+        parameters_file = [new_path]
+        return parameters_file
+
+    # [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
+    def get_contrasts(self) -> list[tuple]:
+        """Create the list of tuples that represents contrasts.
+
+        Each contrast is in the form :
+        (Name, Stat, [list of condition names], [weights on those conditions])
+
+        Parameters:
+            - subject_id: str, ID of the subject
+
+        Returns:
+            - contrasts: list of tuples, list of contrasts to analyze
+        """
+        # list of condition names
+        conditions = ["trial", "gain", "loss"]
+
+        # create contrasts
+        gain = ("gain", "T", conditions, [0, 1, 0])
+
+        loss = ("loss", "T", conditions, [0, 0, 1])
+
+        gain_sup = ("gain_sup_loss", "T", conditions, [0, 1, -1])
+
+        loss_sup = ("loss_sup_gain", "T", conditions, [0, -1, 1])
+
+        # contrast list
+        contrasts = [gain, loss, gain_sup, loss_sup]
+
+        return contrasts
+
     def get_subject_level_analysis(
         self,
         exp_dir: str | Path,
         result_dir: str | Path,
         working_dir: str | Path,
         output_dir: str,
-        subject_list: list[str],
-        run_list: list[str],
-        TR: float,
     ):
-        """
-        Returns the first level analysis workflow.
+        """Return the first level analysis workflow.
 
         Parameters:
                 - exp_dir: str, directory where raw data are stored
                 - result_dir: str, directory where results will be stored
                 - working_dir: str, name of the sub-directory for intermediate results
                 - output_dir: str, name of the sub-directory for final results
-                - subject_list: list of str, list of subject for which you want to do the analysis
-                - run_list: list of str, list of runs for which you want to do the analysis
-                - TR: float, time repetition used during acquisition
 
         Returns:
                 - l1_analysis : Nipype WorkFlow
@@ -82,7 +207,10 @@ class PipelineTeamX19V(Pipeline):
         infosource = Node(
             IdentityInterface(fields=["subject_id", "run_id"]), name="infosource"
         )
-        infosource.iterables = [("subject_id", subject_list), ("run_id", run_list)]
+        infosource.iterables = [
+            ("subject_id", self.subject_list),
+            ("run_id", self.run_list),
+        ]
 
         # Templates to select files node
         func_file = opj(
@@ -119,10 +247,10 @@ class PipelineTeamX19V(Pipeline):
             DataSink(base_directory=result_dir, container=output_dir), name="datasink"
         )
 
-        ## Skullstripping
+        # Skullstripping
         skullstrip = Node(BET(frac=0.1, functional=True, mask=True), name="skullstrip")
 
-        ## Smoothing
+        # Smoothing
         smooth = Node(IsotropicSmooth(fwhm=self.fwhm), name="smooth")
 
         # Node contrasts to get contrasts
@@ -140,14 +268,14 @@ class PipelineTeamX19V(Pipeline):
             Function(
                 input_names=["event_file"],
                 output_names=["subject_info"],
-                function=self.get_session_infos,
+                function=self.get_subject_infos,
             ),
             name="get_subject_infos",
         )
 
         specify_model = Node(
             SpecifyModel(
-                high_pass_filter_cutoff=60, input_units="secs", time_repetition=TR
+                high_pass_filter_cutoff=60, input_units="secs", time_repetition=self.tr
             ),
             name="specify_model",
         )
@@ -177,7 +305,7 @@ class PipelineTeamX19V(Pipeline):
         l1_design = Node(
             Level1Design(
                 bases={"dgamma": {"derivs": False}},
-                interscan_interval=TR,
+                interscan_interval=self.tr,
                 model_serial_correlations=True,
             ),
             name="l1_design",
@@ -266,139 +394,6 @@ class PipelineTeamX19V(Pipeline):
         )
 
         return l1_analysis
-
-    # [INFO] This function is used in the subject level analysis pipelines using FSL
-    def get_session_infos(self, event_file: str) -> list[type[Bunch]]:
-        """Create Bunchs for specifyModel.
-
-        Parameters :
-        - event_file : str, file corresponding to the run and the subject to analyze
-
-        Returns :
-        - subject_info : list of Bunch for 1st level analysis.
-        """
-        cond_names = ["trial", "gain", "loss"]
-
-        onset = {}
-        duration = {}
-        amplitude = {}
-
-        for c in cond_names:  # For each condition.
-            onset.update({c: []})  # creates dictionary items with empty lists
-            duration.update({c: []})
-            amplitude.update({c: []})
-
-        with open(event_file, "rt") as f:
-            next(f)  # skip the header
-
-            for line in f:
-                info = line.strip().split()
-                # Creates list with onsets, duration and loss/gain for amplitude (FSL)
-                for c in cond_names:
-                    onset[c].append(float(info[0]))
-                    duration[c].append(float(4))
-                    if c == "gain":
-                        amplitude[c].append(float(info[2]))
-                    elif c == "loss":
-                        amplitude[c].append(float(info[3]))
-                    elif c == "trial":
-                        amplitude[c].append(float(1))
-
-        amplitude["gain"] = amplitude["gain"] - np.mean(amplitude["gain"])
-        amplitude["loss"] = amplitude["loss"] - np.mean(amplitude["loss"])
-
-        subject_info = []
-
-        subject_info.append(
-            Bunch(
-                conditions=cond_names,
-                onsets=[onset[k] for k in cond_names],
-                durations=[duration[k] for k in cond_names],
-                amplitudes=[amplitude[k] for k in cond_names],
-                regressor_names=None,
-                regressors=None,
-            )
-        )
-
-        return subject_info
-
-    def get_parameters_file(
-        self,
-        file: str | Path,
-        subject_id: str,
-        run_id: str,
-        result_dir: str | Path,
-        working_dir: str,
-    ):
-        """Create new tsv files with only desired parameters per subject per run.
-
-        Parameters :
-        - filepaths : paths to subject parameters file (i.e. one per run)
-        - subject_id : subject for whom the 1st level analysis is made
-        - run_id: run for which the 1st level analysis is made
-        - result_dir: str, directory where results will be stored
-        - working_dir: str, name of the sub-directory for intermediate results
-
-        Return :
-        - parameters_file : paths to new files containing only desired parameters.
-        """
-        parameters_file = []
-
-        df = pd.read_csv(file, sep="\t", header=0)
-        temp_list = np.array(
-            [df["X"], df["Y"], df["Z"], df["RotX"], df["RotY"], df["RotZ"]]
-        )  # Parameters we want to use for the model
-        retained_parameters = pd.DataFrame(np.transpose(temp_list))
-
-        new_path = opj(
-            result_dir,
-            working_dir,
-            "parameters_file",
-            f"parameters_file_sub-{subject_id}_run{run_id}.tsv",
-        )
-        if not os.path.isdir(opj(result_dir, working_dir, "parameters_file")):
-            os.mkdir(opj(result_dir, working_dir, "parameters_file"))
-
-        with open(new_path, "w") as f:
-            f.write(
-                retained_parameters.to_csv(
-                    sep="\t", index=False, header=False, na_rep="0.0"
-                )
-            )
-
-        parameters_file.append(new_path)
-
-        return parameters_file
-
-    # [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
-    def get_contrasts(self) -> list[tuple]:
-        """Create the list of tuples that represents contrasts.
-
-        Each contrast is in the form :
-        (Name, Stat, [list of condition names], [weights on those conditions])
-
-        Parameters:
-            - subject_id: str, ID of the subject
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # list of condition names
-        conditions = ["trial", "gain", "loss"]
-
-        # create contrasts
-        gain = ("gain", "T", conditions, [0, 1, 0])
-
-        loss = ("loss", "T", conditions, [0, 0, 1])
-
-        gain_sup = ("gain_sup_loss", "T", conditions, [0, 1, -1])
-
-        loss_sup = ("loss_sup_gain", "T", conditions, [0, -1, 1])
-
-        # contrast list
-        contrasts = [gain, loss, gain_sup, loss_sup]
-
-        return contrasts
 
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
