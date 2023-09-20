@@ -3,9 +3,13 @@
 """Classes and functions for the pipeline of team X19V."""
 
 
-from os.path import join
+import os
+import shutil
+from os.path import join, join as opj
+from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 # [INFO] The import of base objects from Nipype, to create Workflows
 from nipype import Node, Workflow  # , JoinNode, MapNode
@@ -113,6 +117,54 @@ class PipelineTeamX19V(Pipeline):
         )
 
         return subject_info
+
+    def get_parameters_file(
+        self,
+        file: str | Path,
+        subject_id: str,
+        run_id: str,
+        result_dir: str | Path,
+        working_dir: str,
+    ):
+        """Create new tsv files with only desired parameters per subject per run.
+
+        Parameters :
+        - filepaths : paths to subject parameters file (i.e. one per run)
+        - subject_id : subject for whom the 1st level analysis is made
+        - run_id: run for which the 1st level analysis is made
+        - result_dir: str, directory where results will be stored
+        - working_dir: str, name of the sub-directory for intermediate results
+
+        Return :
+        - parameters_file : paths to new files containing only desired parameters.
+        """
+        parameters_file = []
+
+        df = pd.read_csv(file, sep="\t", header=0)
+        temp_list = np.array(
+            [df["X"], df["Y"], df["Z"], df["RotX"], df["RotY"], df["RotZ"]]
+        )  # Parameters we want to use for the model
+        retained_parameters = pd.DataFrame(np.transpose(temp_list))
+
+        new_path = opj(
+            result_dir,
+            working_dir,
+            "parameters_file",
+            f"parameters_file_sub-{subject_id}_run{run_id}.tsv",
+        )
+        if not os.path.isdir(opj(result_dir, working_dir, "parameters_file")):
+            os.mkdir(opj(result_dir, working_dir, "parameters_file"))
+
+        with open(new_path, "w") as f:
+            f.write(
+                retained_parameters.to_csv(
+                    sep="\t", index=False, header=False, na_rep="0.0"
+                )
+            )
+
+        parameters_file.append(new_path)
+
+        return parameters_file
 
     # [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
     def get_contrasts(self) -> list[tuple]:
@@ -545,3 +597,20 @@ class PipelineTeamX19V(Pipeline):
 
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
+
+
+def rm_smoothed_files(subject_id: str, run_id: str, result_dir: Path, working_dir: str):
+    smooth_dir = (
+        result_dir
+        / working_dir
+        / "l1_analysis"
+        / f"_run_id_{run_id}_subject_id_{subject_id}"
+        / "smooth"
+    )
+
+    try:
+        shutil.rmtree(smooth_dir)
+    except OSError as e:
+        print(e)
+    else:
+        print("The directory was deleted successfully")

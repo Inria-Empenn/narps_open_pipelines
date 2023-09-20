@@ -166,13 +166,37 @@ def root_dir() -> Path:
     return Path(__file__).parent.parent
 
 @fixture
-def events_file(root_dir):
+def subject_id() -> str:
+    return "001"
+
+@fixture
+def run_id() -> str:
+    return "01"
+
+@fixture
+def events_file(root_dir, subject_id, run_id):
     return (
         root_dir
         / "data"
         / "original"
         / "ds001734"
-        / "sub-001"
+        / f"sub-{subject_id}"
         / "func"
-        / "sub-001_task-MGT_run-01_events.tsv"
+        / f"sub-{subject_id}_task-MGT_run-{run_id}_events.tsv"
     )
+
+@fixture
+def confounds_file(root_dir, subject_id, run_id):
+    return (
+        root_dir
+        / "data"
+        / "original"
+        / "ds001734"
+        / "derivatives"
+        / "fmriprep"
+        / f"sub-{subject_id}"
+        / "func"
+        / f"sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv"
+    )
+
+
