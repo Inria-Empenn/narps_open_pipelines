@@ -40,7 +40,7 @@ datalad get data/original/ds001734/derivatives/fmriprep/sub-00[1-4] -J 12
 
 ## 4 - Set up the environment
 
-The Narps Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains software dependencies.
+The NARPS Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains software dependencies.
 
 [Install Docker](https://docs.docker.com/engine/install/) then pull the Docker image :
 
