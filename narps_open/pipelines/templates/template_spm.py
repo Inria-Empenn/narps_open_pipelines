@@ -559,3 +559,6 @@ class PipelineTeam48CD(Pipeline):
 
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
+
+    def get_hypotheses_outputs():
+        ...
