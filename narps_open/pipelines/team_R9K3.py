@@ -51,8 +51,9 @@ class PipelineTeamR9K3(Pipeline):
         if excluded_participants != "n/a":
             excluded_participants = excluded_participants.split(",")
             excluded_participants = [s.strip() for s in excluded_participants]
+            excluded_participants = [s.strip()[-3:] for s in excluded_participants]
             print(f"Excluding participants: {excluded_participants}")
-        self.subject_list = [s[-3:] for s in subject_list if s[-3:] not in excluded_participants]
+        self.subject_list = [s for s in subject_list if s not in excluded_participants]
 
     def get_preprocessing(self):
         """Smooth the fmriprep data."""
