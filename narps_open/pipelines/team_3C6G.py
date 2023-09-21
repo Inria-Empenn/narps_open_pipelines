@@ -13,9 +13,10 @@ eventually.
 # [TODO] Only import modules you use further in te code, remove others from the import section
 
 from os.path import join
+from itertools import product
 
 # [INFO] The import of base objects from Nipype, to create Workflows
-from nipype import Node, Workflow # , JoinNode, MapNode
+from nipype import Node, Workflow, MapNode
 
 # [INFO] a list of interfaces used to manpulate data
 from nipype.interfaces.utility import IdentityInterface, Function
