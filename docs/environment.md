@@ -4,7 +4,7 @@
 
 The NARPS Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains software dependencies.
 
-The simples way to start the container using the command below :
+The simplest way to start the container using the command below :
 
 ```bash
 docker run -it elodiegermani/open_pipeline
