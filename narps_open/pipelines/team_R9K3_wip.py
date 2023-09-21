@@ -8,7 +8,9 @@ from typing import List
 from nipype import Node, Workflow
 from nipype.algorithms.misc import Gunzip
 from nipype.algorithms.modelgen import (  # Functions used during L1 analysis
-    SpecifyModel, SpecifySPMModel)
+    SpecifyModel,
+    SpecifySPMModel,
+)
 from nipype.interfaces.base import Bunch
 from nipype.interfaces.io import DataSink, SelectFiles
 from nipype.interfaces.spm import Smooth
@@ -19,12 +21,12 @@ from narps_open.pipelines import Pipeline
 
 from .utils import fmriprep_data_template, raw_data_template
 
+description = TeamDescription("R9K3")
 
-description = TeamDescription('R9K3') 
 
 class PipelineTeamR9K3(Pipeline):
-
-    def get_preprocessing(self,
+    def get_preprocessing(
+        self,
         exp_dir: str,
         result_dir: str,
         working_dir: str,
@@ -50,7 +52,8 @@ class PipelineTeamR9K3(Pipeline):
         """
 
         infosource_preproc = Node(
-            IdentityInterface(fields=["subject_id", "run_id"]), name="infosource_preproc"
+            IdentityInterface(fields=["subject_id", "run_id"]),
+            name="infosource_preproc",
         )
 
         # Iterates over subject and runs
@@ -105,9 +108,6 @@ class PipelineTeamR9K3(Pipeline):
         )
 
         return preprocessing
-
-
-
 
     # FIXME: THIS FUNCTION IS USED IN THE FIRST LEVEL ANALYSIS PIPELINES OF SPM
     # THIS IS AN EXAMPLE THAT IS ADAPTED TO A SPECIFIC PIPELINE
@@ -199,7 +199,6 @@ class PipelineTeamR9K3(Pipeline):
 
         return subject_info
 
-
     # FIXME: THIS FUNCTION CREATES THE CONTRASTS THAT WILL BE ANALYZED IN THE FIRST LEVEL ANALYSIS
     # IT IS ADAPTED FOR A SPECIFIC PIPELINE AND SHOULD BE MODIFIED DEPENDING ON THE PIPELINE
     # YOU ARE TRYING TO REPRODUCE
@@ -230,9 +229,9 @@ class PipelineTeamR9K3(Pipeline):
 
         return contrasts
 
-
     # FUNCTION TO CREATE THE WORKFLOW OF A L1 ANALYSIS (SUBJECT LEVEL)
-    def get_l1_analysis(self, 
+    def get_l1_analysis(
+        self,
         exp_dir: str,
         result_dir: str,
         working_dir: str,
@@ -260,7 +259,13 @@ class PipelineTeamR9K3(Pipeline):
         # Infosource Node - To iterate on subjects
         infosource = Node(
             IdentityInterface(
-                fields=["subject_id", "exp_dir", "result_dir", "working_dir", "run_list"],
+                fields=[
+                    "subject_id",
+                    "exp_dir",
+                    "result_dir",
+                    "working_dir",
+                    "run_list",
+                ],
                 exp_dir=exp_dir,
                 result_dir=result_dir,
                 working_dir=working_dir,
@@ -326,7 +331,9 @@ class PipelineTeamR9K3(Pipeline):
         )
 
         # Create l1 analysis workflow and connect its nodes
-        l1_analysis = Workflow(base_dir=opj(result_dir, working_dir), name="l1_analysis")
+        l1_analysis = Workflow(
+            base_dir=opj(result_dir, working_dir), name="l1_analysis"
+        )
 
         l1_analysis.connect(
             [
@@ -339,18 +346,21 @@ class PipelineTeamR9K3(Pipeline):
                     node_variable[("func", "node_input_name")],
                 ),
                 # Input and output names can be found on NiPype documentation
-                (node_variable, datasink, [("node_output_name", "preprocess.@sym_link")]),
+                (
+                    node_variable,
+                    datasink,
+                    [("node_output_name", "preprocess.@sym_link")],
+                ),
             ]
         )
 
         return l1_analysis
 
-
     # THIS FUNCTION RETURNS THE LIST OF IDS AND FILES OF EACH GROUP OF PARTICIPANTS
     # TO DO SEPARATE GROUP LEVEL ANALYSIS AND BETWEEN GROUP ANALYSIS
     # THIS FUNCTIONS IS ADAPTED FOR AN SPM PIPELINE.
-    def get_subset_contrasts_spm(self,
-        file_list, subject_list: List[str], participants_file: str
+    def get_subset_contrasts_spm(
+        self, file_list, subject_list: List[str], participants_file: str
     ):
         """
         Parameters :
@@ -399,9 +409,9 @@ class PipelineTeamR9K3(Pipeline):
             equalRange_files,
         )
 
-
     # FUNCTION TO CREATE THE WORKFLOW OF A L2 ANALYSIS (GROUP LEVEL)
-    def get_l2_analysis(self,
+    def get_l2_analysis(
+        self,
         exp_dir: str,
         result_dir: str,
         working_dir: str,
@@ -430,7 +440,9 @@ class PipelineTeamR9K3(Pipeline):
         # THE FOLLOWING PART STAYS THE SAME FOR ALL PREPROCESSING PIPELINES
         # Infosource - a function free node to iterate over the list of subject names
         infosource_groupanalysis = Node(
-            IdentityInterface(fields=["contrast_id", "subjects"], subjects=subject_list),
+            IdentityInterface(
+                fields=["contrast_id", "subjects"], subjects=subject_list
+            ),
             name="infosource_groupanalysis",
         )
 
@@ -467,7 +479,12 @@ class PipelineTeamR9K3(Pipeline):
         # Node to select subset of contrasts
         sub_contrasts = Node(
             Function(
-                input_names=["file_list", "method", "subject_list", "participants_file"],
+                input_names=[
+                    "file_list",
+                    "method",
+                    "subject_list",
+                    "participants_file",
+                ],
                 output_names=[
                     "equalIndifference_id",
                     "equalRange_id",
@@ -526,7 +543,8 @@ class PipelineTeamR9K3(Pipeline):
         # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
         l2_analysis = Workflow(
-            base_dir=opj(result_dir, working_dir), name=f"l2_analysis_{method}_nsub_{n_sub}"
+            base_dir=opj(result_dir, working_dir),
+            name=f"l2_analysis_{method}_nsub_{n_sub}",
         )
         # FOR AN SPM PIPELINE
         l2_analysis.connect(
@@ -536,7 +554,11 @@ class PipelineTeamR9K3(Pipeline):
                     selectfiles_groupanalysis,
                     [("contrast_id", "contrast_id")],
                 ),
-                (infosource_groupanalysis, sub_contrasts, [("subjects", "subject_list")]),
+                (
+                    infosource_groupanalysis,
+                    sub_contrasts,
+                    [("subjects", "subject_list")],
+                ),
                 (
                     selectfiles_groupanalysis,
                     sub_contrasts,
@@ -585,16 +607,22 @@ class PipelineTeamR9K3(Pipeline):
 
         elif method == "groupComp":
             contrasts = [
-                ("Eq range vs Eq indiff in loss", "T", ["Group_{1}", "Group_{2}"], [1, -1])
+                (
+                    "Eq range vs Eq indiff in loss",
+                    "T",
+                    ["Group_{1}", "Group_{2}"],
+                    [1, -1],
+                )
             ]
 
         # FIXME: ADD OTHER NODES WITH THE DIFFERENT STEPS OF THE PIPELINE
 
         return l2_analysis
 
-
     # THIS FUNCTION IS USED TO REORGANIZE FINAL RESULTS OF THE PIPELINE
-    def reorganize_results(self, result_dir: str, output_dir: str, n_sub: int, team_ID: str):
+    def reorganize_results(
+        self, result_dir: str, output_dir: str, n_sub: int, team_ID: str
+    ):
         """
         Reorganize the results to analyze them.
 
@@ -655,7 +683,10 @@ class PipelineTeamR9K3(Pipeline):
             "_contrast_id_02",
         )
         h9 = opj(
-            result_dir, output_dir, f"l2_analysis_groupComp_nsub_{n_sub}", "_contrast_id_02"
+            result_dir,
+            output_dir,
+            f"l2_analysis_groupComp_nsub_{n_sub}",
+            "_contrast_id_02",
         )
 
         h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]

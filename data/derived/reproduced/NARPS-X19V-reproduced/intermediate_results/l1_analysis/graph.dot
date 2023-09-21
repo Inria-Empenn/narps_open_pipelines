@@ -1,0 +1,35 @@
+strict digraph  {
+"infosource (utility)";
+"selectfiles (io)";
+"contrasts (utility)";
+"parameters (utility)";
+"remove_smooth (utility)";
+"get_subject_infos (utility)";
+"skullstrip (fsl)";
+"specify_model (modelgen)";
+"l1_design (fsl)";
+"smooth (fsl)";
+"datasink (io)";
+"model_estimate (fsl)";
+"model_generation (fsl)";
+"infosource (utility)" -> "selectfiles (io)";
+"infosource (utility)" -> "contrasts (utility)";
+"infosource (utility)" -> "parameters (utility)";
+"infosource (utility)" -> "remove_smooth (utility)";
+"selectfiles (io)" -> "get_subject_infos (utility)";
+"selectfiles (io)" -> "parameters (utility)";
+"selectfiles (io)" -> "skullstrip (fsl)";
+"contrasts (utility)" -> "l1_design (fsl)";
+"parameters (utility)" -> "specify_model (modelgen)";
+"get_subject_infos (utility)" -> "specify_model (modelgen)";
+"skullstrip (fsl)" -> "smooth (fsl)";
+"skullstrip (fsl)" -> "datasink (io)";
+"specify_model (modelgen)" -> "l1_design (fsl)";
+"l1_design (fsl)" -> "model_generation (fsl)";
+"smooth (fsl)" -> "specify_model (modelgen)";
+"smooth (fsl)" -> "model_estimate (fsl)";
+"model_estimate (fsl)" -> "remove_smooth (utility)";
+"model_estimate (fsl)" -> "datasink (io)";
+"model_generation (fsl)" -> "model_estimate (fsl)";
+"model_generation (fsl)" -> "datasink (io)";
+}
