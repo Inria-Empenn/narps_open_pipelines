@@ -91,6 +91,11 @@ def test_rm_smoothed_files(pipeline):
     assert not smooth_dir.exists()
 
 
+def test_get_subject_level_analysis(pipeline):
+    pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
+    pipeline.get_subject_level_analysis()
+
+
 @pytest.mark.unit_test
 @pytest.mark.parametrize(
     "method, expected",
@@ -189,20 +194,13 @@ def generate_dummy_results(output_dir, n_sub, image: nb.Nifti1Image):
 def test_reorganize_results(pipeline, img_3d_rand):
     pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
 
-    result_dir = pipeline.directories.results_dir
-
     output_dir = pipeline.directories.output_dir
 
     n_sub = len(pipeline.subject_list)
 
     generate_dummy_results(output_dir=output_dir, n_sub=n_sub, image=img_3d_rand)
 
-    h = pipeline.reorganize_results(
-        result_dir=result_dir,
-        output_dir=output_dir,
-        n_sub=n_sub,
-        team_ID=pipeline.team_id,
-    )
+    h = pipeline.reorganize_results()
 
     tmp = [
         ("equalIndifference", 1),

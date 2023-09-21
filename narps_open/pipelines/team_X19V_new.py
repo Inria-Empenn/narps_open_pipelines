@@ -20,6 +20,7 @@ from nipype.interfaces.fsl import (
     Cluster,
     FEATModel,
     IsotropicSmooth,
+    L2Model,
     Level1Design,
     Merge,
     MultipleRegressDesign,
@@ -51,23 +52,12 @@ class PipelineTeamX19V(Pipeline):
             subject_list = [subject_list]
         self.subject_list = subject_list
 
-    def get_hypotheses_outputs():
-        """Get output for each hypothesis.
-
-        Not yet implemented.
-        """
-        ...
-
     def get_preprocessing():
         """Create preprocessing workflow.
 
         Unused by this team.
         """
         ...
-
-    def get_run_level_analysis(self):
-        """Return a Nipype workflow describing the run level analysis part of the pipeline."""
-        return None
 
     def get_subject_infos(self, event_file: str) -> list[type[Bunch]]:
         """Create Bunchs for specifyModel.
@@ -194,7 +184,7 @@ class PipelineTeamX19V(Pipeline):
 
         return contrasts
 
-    def get_subject_level_analysis(self):
+    def get_run_level_analysis(self):
         """Return the first level analysis workflow.
 
         Parameters:
@@ -221,13 +211,11 @@ class PipelineTeamX19V(Pipeline):
             "func",
             "sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz",
         )
-
         event_file = join(
             "sub-{subject_id}",
             "func",
             "sub-{subject_id}_task-MGT_run-{run_id}_events.tsv",
         )
-
         param_file = join(
             "derivatives",
             "fmriprep",
@@ -235,7 +223,6 @@ class PipelineTeamX19V(Pipeline):
             "func",
             "sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv",
         )
-
         template = {"func": func_file, "event": event_file, "param": param_file}
 
         # SelectFiles node - to select necessary files
@@ -402,6 +389,118 @@ class PipelineTeamX19V(Pipeline):
 
         return l1_analysis
 
+    def get_subject_level_analysis(self):
+        """Return the 2nd level of analysis workflow.
+
+        Returns:
+        - l2_analysis: Nipype WorkFlow
+        """
+        # Infosource Node - To iterate on subject and runs
+        infosource_2ndlevel = Node(
+            IdentityInterface(fields=["subject_id", "contrast_id"]),
+            name="infosource_2ndlevel",
+        )
+        infosource_2ndlevel.iterables = [
+            ("subject_id", self.subject_list),
+            ("contrast_id", self.contrast_list),
+        ]
+
+        # Templates to select files node
+        copes_file = join(
+            self.directories.output_dir,
+            "l1_analysis",
+            "_run_id_*_subject_id_{subject_id}",
+            "results",
+            "cope{contrast_id}.nii.gz",
+        )
+        varcopes_file = join(
+            self.directories.output_dir,
+            "l1_analysis",
+            "_run_id_*_subject_id_{subject_id}",
+            "results",
+            "varcope{contrast_id}.nii.gz",
+        )
+        mask_file = join(
+            self.directories.output_dir,
+            "l1_analysis",
+            "_run_id_*_subject_id_{subject_id}",
+            "sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz",
+        )
+        template = {"cope": copes_file, "varcope": varcopes_file, "mask": mask_file}
+
+        # SelectFiles node - to select necessary files
+        selectfiles_2ndlevel = Node(
+            SelectFiles(template, base_directory=self.directories.results_dir),
+            name="selectfiles_2ndlevel",
+        )
+
+        datasink_2ndlevel = Node(
+            DataSink(
+                base_directory=str(self.directories.results_dir),
+                container=self.directories.output_dir,
+            ),
+            name="datasink_2ndlevel",
+        )
+
+        # Generate design matrix
+        specify_model_2ndlevel = Node(
+            L2Model(num_copes=len(self.run_list)), name="l2model_2ndlevel"
+        )
+
+        # Merge copes and varcopes files for each subject
+        merge_copes_2ndlevel = Node(Merge(dimension="t"), name="merge_copes_2ndlevel")
+        merge_varcopes_2ndlevel = Node(
+            Merge(dimension="t"), name="merge_varcopes_2ndlevel"
+        )
+
+        # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
+        flame = Node(FLAMEO(run_mode="flame1"), name="flameo")
+
+        l2_analysis = Workflow(
+            base_dir=join(self.directories.results_dir, self.directories.working_dir),
+            name="l2_analysis",
+        )
+
+        l2_analysis.connect(
+            [
+                (
+                    infosource_2ndlevel,
+                    selectfiles_2ndlevel,
+                    [("subject_id", "subject_id"), ("contrast_id", "contrast_id")],
+                ),
+                (selectfiles_2ndlevel, merge_copes_2ndlevel, [("cope", "in_files")]),
+                (
+                    selectfiles_2ndlevel,
+                    merge_varcopes_2ndlevel,
+                    [("varcope", "in_files")],
+                ),
+                (selectfiles_2ndlevel, flame, [("mask", "mask_file")]),
+                (merge_copes_2ndlevel, flame, [("merged_file", "cope_file")]),
+                (merge_varcopes_2ndlevel, flame, [("merged_file", "var_cope_file")]),
+                (
+                    specify_model_2ndlevel,
+                    flame,
+                    [
+                        ("design_mat", "design_file"),
+                        ("design_con", "t_con_file"),
+                        ("design_grp", "cov_split_file"),
+                    ],
+                ),
+                (
+                    flame,
+                    datasink_2ndlevel,
+                    [
+                        ("zstats", "l2_analysis.@stats"),
+                        ("tstats", "l2_analysis.@tstats"),
+                        ("copes", "l2_analysis.@copes"),
+                        ("var_copes", "l2_analysis.@varcopes"),
+                    ],
+                ),
+            ]
+        )
+
+        return l2_analysis
+
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
     def get_subgroups_contrasts(
@@ -556,8 +655,7 @@ class PipelineTeamX19V(Pipeline):
         result_dir,
         data_dir,
     ):
-        """
-        Returns the group level of analysis workflow.
+        """Return the group level of analysis workflow.
 
         Parameters:
                 - exp_dir: str, directory where raw data are stored
@@ -838,73 +936,39 @@ class PipelineTeamX19V(Pipeline):
 
         return l3_analysis
 
-    def reorganize_results(self, result_dir, output_dir, n_sub, team_ID):
+    def get_hypotheses_outputs():
+        """Get output for each hypothesis.
+
+        Not yet implemented.
         """
-        Reorganize the results to analyze them.
+        ...
 
-        Parameters:
-            - result_dir: str, directory where results will be stored
-            - output_dir: str, name of the sub-directory for final results
-            - n_sub: float, number of subject used for the analysis
-            - team_ID: str, ID of the team to reorganize results
+    def reorganize_results(self):
+        """Reorganize the results to analyze them.
 
+        TODO must match behavior of get_hypotheses_outputs in parent class
         """
-        h1 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalIndifference_nsub_{n_sub}",
-            "_contrast_id_1",
-        )
-        h2 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalRange_nsub_{n_sub}",
-            "_contrast_id_1",
-        )
-        h3 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalIndifference_nsub_{n_sub}",
-            "_contrast_id_1",
-        )
-        h4 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalRange_nsub_{n_sub}",
-            "_contrast_id_1",
-        )
-        h5 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalIndifference_nsub_{n_sub}",
-            "_contrast_id_2",
-        )
-        h6 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalRange_nsub_{n_sub}",
-            "_contrast_id_2",
-        )
-        h7 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalIndifference_nsub_{n_sub}",
-            "_contrast_id_2",
-        )
-        h8 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_equalRange_nsub_{n_sub}",
-            "_contrast_id_2",
-        )
-        h9 = join(
-            result_dir,
-            output_dir,
-            f"l3_analysis_groupComp_nsub_{n_sub}",
-            "_contrast_id_2",
-        )
-
-        h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+        n_sub = len(self.subject_list)
+        tmp = [
+            ("equalIndifference", 1),
+            ("equalRange", 1),
+            ("equalIndifference", 1),
+            ("equalRange", 1),
+            ("equalIndifference", 2),
+            ("equalRange", 2),
+            ("equalIndifference", 2),
+            ("equalRange", 2),
+            ("groupComp", 2),
+        ]
+        h = [
+            join(
+                self.directories.results_dir,
+                self.directories.output_dir,
+                f"l3_analysis_{grp}_nsub_{n_sub}",
+                f"_contrast_id_{contrast}",
+            )
+            for grp, contrast in tmp
+        ]
 
         repro_unthresh = [
             join(filename, "zstat1.nii.gz")
@@ -920,15 +984,15 @@ class PipelineTeamX19V(Pipeline):
             for i, filename in enumerate(h)
         ]
 
-        if not os.path.isdir(join(result_dir, "NARPS-reproduction")):
-            os.mkdir(join(result_dir, "NARPS-reproduction"))
+        if not os.path.isdir(join(self.directories.results_dir, "NARPS-reproduction")):
+            os.mkdir(join(self.directories.results_dir, "NARPS-reproduction"))
 
         for i, filename in enumerate(repro_unthresh):
             f_in = filename
             f_out = join(
-                result_dir,
+                self.directories.results_dir,
                 "NARPS-reproduction",
-                f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_unthresholded.nii.gz",
+                f"team_{self.team_id}_nsub_{n_sub}_hypo{i+1}_unthresholded.nii.gz",
             )
             shutil.copyfile(f_in, f_out)
 
@@ -943,14 +1007,14 @@ class PipelineTeamX19V(Pipeline):
             nb.save(
                 new_spm,
                 join(
-                    result_dir,
+                    self.directories.results_dir,
                     "NARPS-reproduction",
-                    f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii.gz",
+                    f"team_{self.team_id}_nsub_{n_sub}_hypo{i+1}_thresholded.nii.gz",
                 ),
             )
             # f_out = join(result_dir, "final_results", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii.gz")
             # shutil.copyfile(f_in, f_out)
 
-        print(f"Results files of team {team_ID} reorganized.")
+        print(f"Results files of team {self.team_id} reorganized.")
 
         return h
