@@ -1,15 +1,44 @@
 # Access the descriptions of NARPS teams pipelines
 
-The file `narps_open/utils/description/analysis_pipelines_full_descriptions.tsv` contains the description provided by each team participating to NARPS.
-It is a convertion into tsv format (tab-separated values) of the [original .xlsx file published in NARPS](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx
+The file `narps_open/data/description/analysis_pipelines_full_descriptions.tsv` contains the description provided by each team participating to NARPS.
+It is a conversion into tsv format (tab-separated values) of the [original .xlsx file published in NARPS](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx
 ), which allows easier parsing with python.
 
-The file `narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
+The file `narps_open/data/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programmatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
 
-The class `TeamDescription` of module `narps_open.utils.description` acts as a parser for these two files. Here is an example on how to use it:
+The class `TeamDescription` of module `narps_open.data.description` acts as a parser for these two files.
+
+You can also use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`.
+
+```bash
+python narps_open/data/description -h
+# usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}]
+#
+# Get description of a NARPS pipeline.
+#
+# options:
+#   -h, --help            show this help message and exit
+#   -t TEAM, --team TEAM  the team ID
+#   -d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}, --dictionary {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}
+#                         the sub dictionary of team description
+
+python narps_open/data/description -t 2T6S -d general
+# {
+#    "teamID": "2T6S",
+#    "NV_collection_link": "https://neurovault.org/collections/4881/",
+#    "results_comments": "NA",
+#    "preregistered": "No",
+#    "link_preregistration_form": "We did not pre-register our analysis.",
+#    "regions_definition": "We employed the pre-hypothesized brain regions (vmPFC, vSTR, and amygdala) from Barta, McGuire, and Kable (2010, Neuroimage). Specific MNI coordinates are:\nvmPFC: x = 2, y = 46, z = -8\nleft vSTR: x = -12, y = 12, z = -6, right vSTR = x = 12, y = 10, z = -6\n(right) Amygdala: x = 24, y = -4, z = -18",
+#    "softwares": "SPM12 , \nfmriprep 1.1.4",
+#    "general_comments": "NA"
+# }
+```
+
+Of course the `narps_open.data.description` module is accessible programmatically, here is an example on how to use it:
 
 ```python
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 description = TeamDescription('2T6S') # Set the id of the team here
 # Access the object as a dict
 print(description)
@@ -34,31 +63,4 @@ description.categorized_for_analysis['analysis_SW_with_version']
 # Other keys in categorized_for_analysis are: ['region_definition_vmpfc', 'region_definition_striatum', 'region_definition_amygdala', 'analysis_SW', 'analysis_SW_with_version', 'smoothing_coef', 'testing', 'testing_thresh', 'correction_method', 'correction_thresh_']
 description.derived['n_participants']
 # Other keys in derived are: ['n_participants', 'excluded_participants', 'func_fwhm', 'con_fwhm']
-```
-
-You can also use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`.
-
-```bash
-python narps_open/utils/description -h
-# usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}]
-#
-# Get description of a NARPS pipeline.
-#
-# options:
-#   -h, --help            show this help message and exit
-#   -t TEAM, --team TEAM  the team ID
-#   -d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}, --dictionary {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}
-#                         the sub dictionary of team description
-
-python narps_open/utils/description -t 2T6S -d general
-# {
-#    "teamID": "2T6S",
-#    "NV_collection_link": "https://neurovault.org/collections/4881/",
-#    "results_comments": "NA",
-#    "preregistered": "No",
-#    "link_preregistration_form": "We did not pre-register our analysis.",
-#    "regions_definition": "We employed the pre-hypothesized brain regions (vmPFC, vSTR, and amygdala) from Barta, McGuire, and Kable (2010, Neuroimage). Specific MNI coordinates are:\nvmPFC: x = 2, y = 46, z = -8\nleft vSTR: x = -12, y = 12, z = -6, right vSTR = x = 12, y = 10, z = -6\n(right) Amygdala: x = 24, y = -4, z = -18",
-#    "softwares": "SPM12 , \nfmriprep 1.1.4",
-#    "general_comments": "NA"
-# }
 ```
