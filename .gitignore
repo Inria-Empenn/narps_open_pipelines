@@ -1,12 +1,16 @@
 
 # to avoid commiting data
 ./data/
+data/derived
 
 # neuro user in docker image
 neuro
 
 # nipype
 crash*pklz
+
+# libreoffice
+.~lock.*.tsv#
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

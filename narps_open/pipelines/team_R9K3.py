@@ -7,7 +7,6 @@ from os.path import join
 from pathlib import Path
 
 import pandas as pd
-
 from nipype import Node, Workflow  # , JoinNode, MapNode
 from nipype.algorithms.misc import Gunzip
 from nipype.interfaces.base import Bunch
@@ -24,6 +23,7 @@ from nipype.interfaces.utility import Function, IdentityInterface
 
 from narps_open.data.description import TeamDescription
 from narps_open.pipelines import Pipeline
+from narps_open.utils import fmriprep_data_template
 
 TEAM_ID = "R9K3"
 DESC = TeamDescription(TEAM_ID)
@@ -32,11 +32,13 @@ DESC = TeamDescription(TEAM_ID)
 class PipelineTeamR9K3(Pipeline):
     """A class that defines the pipeline of team R9K3"""
 
-    def __init__(self,  bids_dir: str | Path, subject_list: str | list[str] | None = None):
+    def __init__(
+        self, bids_dir: str | Path, subject_list: str | list[str] | None = None
+    ):
         super().__init__()
 
         self.fwhm = float(DESC.derived["func_fwhm"])
-        
+
         self.team_id = TEAM_ID
 
         self.directories.dataset_dir = str(bids_dir)
@@ -51,9 +53,10 @@ class PipelineTeamR9K3(Pipeline):
         if excluded_participants != "n/a":
             excluded_participants = excluded_participants.split(",")
             excluded_participants = [s.strip() for s in excluded_participants]
-            excluded_participants = [s.strip()[-3:] for s in excluded_participants]
-            print(f"Excluding participants: {excluded_participants}")
-        self.subject_list = [s for s in subject_list if s not in excluded_participants]
+            print(f"\nExcluding participants: {excluded_participants}")
+        self.subject_list = [
+            s[-3:] for s in subject_list if s[-3:] not in excluded_participants
+        ]
 
     def get_preprocessing(self):
         """Smooth the fmriprep data."""
@@ -67,24 +70,11 @@ class PipelineTeamR9K3(Pipeline):
         ]
 
         # Templates to select files node
-        file_templates = {
-            "anat": join("sub-{subject_id}", "anat", "sub-{subject_id}_T1w.nii.gz"),
-            "func": join(
-                "sub-{subject_id}",
-                "func",
-                "sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz",
-            ),
-            "magnitude": join(
-                "sub-{subject_id}", "fmap", "sub-{subject_id}_magnitude1.nii.gz"
-            ),
-            "phasediff": join(
-                "sub-{subject_id}", "fmap", "sub-{subject_id}_phasediff.nii.gz"
-            ),
-        }
-
         # Nodes
         select_files = Node(
-            SelectFiles(file_templates, base_directory=self.directories.dataset_dir),
+            SelectFiles(
+                fmriprep_data_template(), base_directory=self.directories.dataset_dir
+            ),
             name="select_files",
         )
 
@@ -112,7 +102,7 @@ class PipelineTeamR9K3(Pipeline):
                 (
                     select_files,
                     gunzip,
-                    [("func", "in_file")],
+                    [("func_preproc", "in_file")],
                 ),
                 (
                     gunzip,
@@ -161,13 +151,12 @@ class PipelineTeamR9K3(Pipeline):
     the two groups were assumed to be independent and have unequal variance.   
     """
 
-    def get_subject_infos(event_files: list, runs: list):
+    def get_subject_infos(self, event_files: list):
         """
         Create Bunchs for specifySPMModel.
 
         Parameters :
         - event_files: list of events files (one per run) for the subject
-        - runs: list of runs to use
 
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
@@ -180,12 +169,12 @@ class PipelineTeamR9K3(Pipeline):
         weights_loss = {}
 
         # Loop over number of runs
-        for run_id in range(len(runs)):
+        for run_id in range(len(self.run_list)):
             # Create dictionary items with empty lists
-            onset.update({s + "_run" + str(run_id + 1): [] for s in condition_names})
-            duration.update({s + "_run" + str(run_id + 1): [] for s in condition_names})
-            weights_gain.update({"gain_run" + str(run_id + 1): []})
-            weights_loss.update({"loss_run" + str(run_id + 1): []})
+            onset |= {s + "_run" + str(run_id + 1): [] for s in condition_names}
+            duration |= {s + "_run" + str(run_id + 1): [] for s in condition_names}
+            weights_gain[f"gain_run{str(run_id + 1)}"] = []
+            weights_loss[f"loss_run{str(run_id + 1)}"] = []
 
             with open(event_files[run_id], "rt") as event_file:
                 next(event_file)  # skip the header
@@ -197,8 +186,8 @@ class PipelineTeamR9K3(Pipeline):
                         val = (
                             condition + "_run" + str(run_id + 1)
                         )  # trial_run1 or accepting_run1
-                        val_gain = "gain_run" + str(run_id + 1)  # gain_run1
-                        val_loss = "loss_run" + str(run_id + 1)  # loss_run1
+                        val_gain = f"gain_run{str(run_id + 1)}"
+                        val_loss = f"loss_run{str(run_id + 1)}"
                         if condition == "trial":
                             onset[val].append(float(info[0]))  # onsets for trial_run1
                             duration[val].append(float(4))
@@ -214,10 +203,10 @@ class PipelineTeamR9K3(Pipeline):
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
         subject_info = []
-        for run_id in range(len(runs)):
+        for run_id in range(len(self.run_list)):
             conditions = [s + "_run" + str(run_id + 1) for s in condition_names]
-            gain = "gain_run" + str(run_id + 1)
-            loss = "loss_run" + str(run_id + 1)
+            gain = f"gain_run{str(run_id + 1)}"
+            loss = f"loss_run{str(run_id + 1)}"
 
             subject_info.insert(
                 run_id,

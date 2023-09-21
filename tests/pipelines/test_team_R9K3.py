@@ -13,19 +13,17 @@ Usage:
 
 from __future__ import annotations
 
-from narps_open.data.description import TeamDescription
-
-
-
-from nipype import Workflow
 from pathlib import Path
+
 import pytest
+from nipype import Workflow
 
+from narps_open.data.description import TeamDescription
 from narps_open.pipelines.team_R9K3 import PipelineTeamR9K3
-
 
 TEAM_ID = "R9K3"
 DESC = TeamDescription(TEAM_ID)
+
 
 @pytest.fixture
 def root_dir() -> Path:
@@ -63,7 +61,6 @@ def events_file(bids_dir, subject_id, run_id) -> Path:
     )
 
 
-
 @pytest.fixture
 def pipeline(bids_dir, tmp_path):
     """Set up the pipeline with one subject and the proper directories."""
@@ -75,10 +72,12 @@ def pipeline(bids_dir, tmp_path):
 
     return pipeline
 
+
 def test_init(pipeline):
     assert pipeline.fwhm == 6
     assert pipeline.team_id == "R9K3"
     assert len(pipeline.subject_list) == int(DESC.derived["n_participants"])
+
 
 def test_get_preprocessing(pipeline):
     preprocessing = pipeline.get_preprocessing()
@@ -89,10 +88,5 @@ def test_get_run_level_analysis(pipeline):
     assert pipeline.get_run_level_analysis() is None
 
 
-# def test_get_subject_infos(pipeline):
-#     pipeline.get_subject_infos(
-#         event_files=[
-#             "/home/remi/github/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_events.tsv"
-#         ],
-#         runs=[1],
-#     )
+def test_get_subject_infos(pipeline, events_file):
+    pipeline.get_subject_infos(event_files=[events_file])
