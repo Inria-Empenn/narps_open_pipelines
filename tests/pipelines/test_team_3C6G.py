@@ -60,7 +60,7 @@ class TestPipelinesTeam3C6G:
         assert len(pipeline.get_preprocessing_outputs()) == 56
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 11
-        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_group_level_outputs()) == 105
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
         # 2 - 4 subjects outputs
