@@ -5,7 +5,7 @@ General guidelines can be found [here](https://docs.github.com/en/get-started/qu
 ## Reproduce a pipeline :keyboard:
 :thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
 
-Need more information ? You can have a look to the pipeline decription [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md).
+Need more information ? You can have a look to the pipeline description [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md).
 
 When you are ready, [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**!
 
@@ -52,9 +52,11 @@ Create a separate branch for each issue you're working on. Do not make changes t
 Push your code as soon as possible.
 
 ### Create the Pull Request (PR) :inbox_tray:
-Once you pushed your first lines of code to the branch in your fork, visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start creating a PR for the NARPS Open Pipelines project. :warning: Please create a **Draft Pull Request** as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the GitHub documentation.
+Once you pushed your first lines of code to the branch in your fork, visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start creating a PR for the NARPS Open Pipelines project.
 
-Continue writing your code and push to the same branch. Make sure to respect all the items of the PR checklist.
+:warning: Please create a **Draft Pull Request** as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork), and please stick to the PR description template as much as possible.
+
+Continue writing your code and push to the same branch. Make sure you perform all the items of the PR checklist.
 
 ### Request Review :disguised_face:
 Once your PR is ready, you may add a reviewer to your PR, as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review) in the GitHub documentation.

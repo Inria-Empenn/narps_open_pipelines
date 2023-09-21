@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Write the work of NARPS' team 2T6S using Nipype """
+""" Write the work of NARPS team 2T6S using Nipype """
 
 from os.path import join
 from itertools import product
@@ -26,7 +26,7 @@ class PipelineTeam2T6S(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = '2T6S'
-        self.contrast_list = ['0001', '0002', '0003', '0004']
+        self.contrast_list = ['0001', '0002', '0003']
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team 2T6S """
@@ -78,8 +78,10 @@ class PipelineTeam2T6S(Pipeline):
                             duration[val].append(float(info[4])) # durations for trial (rpz by RT)
                         else: # trial with no response : duration of 4 s
                             duration[val].append(float(4))
-                        weights_gain[val_gain].append(float(info[2])) # weights gain for trial_run1
-                        weights_loss[val_loss].append(-1.0 * float(info[3])) # weights loss for trial_run1
+                        # weights gain for trial_run1
+                        weights_gain[val_gain].append(float(info[2]))
+                        # weights loss for trial_run1
+                        weights_loss[val_loss].append(-1.0 * float(info[3]))
 
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
@@ -123,11 +125,10 @@ class PipelineTeam2T6S(Pipeline):
         # Create contrasts
         trial = ('trial', 'T', conditions, [1, 0, 0])
         effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        positive_effect_loss = ('positive_effect_of_loss', 'T', conditions, [0, 0, 1])
-        negative_effect_loss = ('negative_effect_of_loss', 'T', conditions, [0, 0, -1])
+        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
 
         # Return contrast list
-        return [trial, effect_gain, positive_effect_loss, negative_effect_loss]
+        return [trial, effect_gain, effect_loss]
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
@@ -142,11 +143,11 @@ class PipelineTeam2T6S(Pipeline):
         Return :
         - parameters_file : paths to new files containing only desired parameters.
         """
-        from os import mkdir
+        from os import makedirs
         from os.path import join, isdir
 
-        import pandas as pd
-        import numpy as np
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
 
         # Handle the case where filepaths is a single path (str)
         if not isinstance(filepaths, list):
@@ -155,21 +156,20 @@ class PipelineTeam2T6S(Pipeline):
         # Create the parameters files
         parameters_file = []
         for file_id, file in enumerate(filepaths):
-            data_frame = pd.read_csv(file, sep = '\t', header=0)
+            data_frame = read_csv(file, sep = '\t', header=0)
 
             # Extract parameters we want to use for the model
-            temp_list = np.array([
+            temp_list = array([
                 data_frame['X'], data_frame['Y'], data_frame['Z'],
                 data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
-            retained_parameters = pd.DataFrame(np.transpose(temp_list))
+            retained_parameters = DataFrame(transpose(temp_list))
 
             # Write parameters to a parameters file
             # TODO : warning !!! filepaths must be ordered (1,2,3,4) for the following code to work
-            new_path =join(working_dir, 'parameters_file',
+            new_path = join(working_dir, 'parameters_file',
                 f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
-            if not isdir(join(working_dir, 'parameters_file')):
-                mkdir(join(working_dir, 'parameters_file'))
+            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
 
             with open(new_path, 'w') as writer:
                 writer.write(retained_parameters.to_csv(
@@ -188,11 +188,11 @@ class PipelineTeam2T6S(Pipeline):
 
         Parameters:
         - _: Node input only used for triggering the Node
-        - subject_id: str, TODO
-        - working_id: str, TODO
+        - subject_id: str, subject id from which to remove the unzipped file
+        - working_dir: str, path to the working directory
         """
-        from shutil import rmtree
         from os.path import join
+        from shutil import rmtree
 
         try:
             rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'gunzip_func'))
@@ -210,11 +210,11 @@ class PipelineTeam2T6S(Pipeline):
 
         Parameters:
         - _: Node input only used for triggering the Node
-        - subject_id: str, TODO
-        - working_id: str, TODO
+        - subject_id: str, subject id from which to remove the smoothed file
+        - working_dir: str, path to the working directory
         """
-        from shutil import rmtree
         from os.path import join
+        from shutil import rmtree
 
         try:
             rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'smooth'))
@@ -232,11 +232,7 @@ class PipelineTeam2T6S(Pipeline):
         """
         # Infosource Node - To iterate on subjects
         infosource = Node(IdentityInterface(
-            fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-            dataset_dir = self.directories.dataset_dir,
-            results_dir = self.directories.results_dir,
-            working_dir = self.directories.working_dir,
-            run_list = self.run_list),
+            fields = ['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
 
@@ -270,12 +266,13 @@ class PipelineTeam2T6S(Pipeline):
         smooth = Node(Smooth(fwhm = self.fwhm),
             name = 'smooth')
 
-        # Funcion node get_subject_infos - get subject specific condition information
+        # Function node get_subject_infos - get subject specific condition information
         subject_infos = Node(Function(
             function = self.get_subject_infos,
             input_names = ['event_files', 'runs'],
             output_names = ['subject_info']),
             name = 'subject_infos')
+        subject_infos.inputs.runs = self.run_list
 
         # SpecifyModel - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(
@@ -333,16 +330,13 @@ class PipelineTeam2T6S(Pipeline):
         l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
         l1_analysis.connect([
             (infosource, selectfiles, [('subject_id', 'subject_id')]),
-            (infosource, subject_infos, [('run_list', 'runs')]),
             (infosource, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (infosource, remove_smoothed_files, [('subject_id', 'subject_id')]),
+            (infosource, parameters, [('subject_id', 'subject_id')]),
             (subject_infos, specify_model, [('subject_info', 'subject_info')]),
             (contrasts, contrast_estimate, [('contrasts', 'contrasts')]),
             (selectfiles, parameters, [('param', 'filepaths')]),
             (selectfiles, subject_infos, [('event', 'event_files')]),
-            (infosource, parameters, [
-                ('subject_id', 'subject_id'),
-                ('working_dir', 'working_dir')]),
             (selectfiles, gunzip_func, [('func', 'in_file')]),
             (gunzip_func, smooth, [('out_file', 'in_files')]),
             (smooth, specify_model, [('smoothed_files', 'functional_runs')]),
@@ -397,13 +391,15 @@ class PipelineTeam2T6S(Pipeline):
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
+        - participants_file: str, file containing participants characteristics
 
         Returns :
         - equal_indifference_id : a list of subject ids in the equalIndifference group
         - equal_range_id : a list of subject ids in the equalRange group
-        - equal_indifference_files : a subset of file_list corresponding to subjects in the equalIndifference group
-        - equal_range_files : a subset of file_list corresponding to subjects in the equalRange group
+        - equal_indifference_files : a subset of file_list corresponding to
+            subjects in the equalIndifference group
+        - equal_range_files : a subset of file_list corresponding to
+            subjects in the equalRange group
         """
         equal_indifference_id = []
         equal_range_id = []
@@ -427,56 +423,6 @@ class PipelineTeam2T6S(Pipeline):
                 equal_range_files.append(file)
 
         return equal_indifference_id, equal_range_id, equal_indifference_files, equal_range_files
-
-    # @staticmethod # Starting python 3.10, staticmethod should be used here
-    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def reorganize_results(team_id, nb_sub, output_dir, results_dir):
-        """ Reorganize the results to analyze them. """
-        from os import mkdir
-        from os.path import join, isdir
-        from shutil import copyfile
-
-        hypotheses = [
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_02'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_equalRange_nsub_{nb_sub}', '_contrast_id_04'),
-            join(output_dir, f'l2_analysis_groupComp_nsub_{nb_sub}', '_contrast_id_03')
-        ]
-
-        # Build lists of files for unthresholded and thresholded maps
-        repro_unthresh = []
-        repro_thresh = []
-        for file_id, filename in enumerate(hypotheses):
-            if file_id in [4,5]:
-                repro_unthresh.append(join(filename, 'spmT_0002.nii'))
-                repro_thresh.append(join(filename, '_threshold1', 'spmT_0002_thr.nii'))
-            else:
-                repro_unthresh.append(join(filename, 'spmT_0001.nii'))
-                repro_thresh.append(join(filename, '_threshold0', 'spmT_0001_thr.nii'))
-
-        if not isdir(join(results_dir, 'NARPS-reproduction')):
-            mkdir(join(results_dir, 'NARPS-reproduction'))
-
-        for file_id, filename in enumerate(repro_unthresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_unthresholded.nii')
-            copyfile(f_in, f_out)
-
-        for file_id, filename in enumerate(repro_thresh):
-            f_in = filename
-            f_out = join(results_dir,
-                'NARPS-reproduction',
-                f'team-{team_id}_nsub-{nb_sub}_hypo-{file_id + 1}_thresholded.nii')
-            copyfile(f_in, f_out)
-
-        print(f'Results files of team {team_id} reorganized.')
 
     def get_group_level_analysis(self):
         """
@@ -505,8 +451,7 @@ class PipelineTeam2T6S(Pipeline):
         # Infosource - iterate over the list of contrasts
         infosource_groupanalysis = Node(
             IdentityInterface(
-                fields = ['contrast_id', 'subjects'],
-                subjects = self.subject_list),
+                fields = ['contrast_id', 'subjects']),
                 name = 'infosource_groupanalysis')
         infosource_groupanalysis.iterables = [('contrast_id', self.contrast_list)]
 
@@ -520,7 +465,7 @@ class PipelineTeam2T6S(Pipeline):
             }
 
         selectfiles_groupanalysis = Node(SelectFiles(
-            templates, base_directory=self.directories.results_dir, force_list= True),
+            templates, base_directory = self.directories.results_dir, force_list = True),
             name = 'selectfiles_groupanalysis')
 
         # Datasink - save important files
@@ -529,27 +474,17 @@ class PipelineTeam2T6S(Pipeline):
             ),
             name = 'datasink_groupanalysis')
 
-        # Function node reorganize_results - organize results once computed
-        reorganize_res = Node(Function(
-            function = self.reorganize_results,
-            input_names = ['team_id', 'nb_subjects', 'results_dir', 'output_dir']),
-            name = 'reorganize_res')
-        reorganize_res.inputs.team_id = self.team_id
-        reorganize_res.inputs.nb_subjects = nb_subjects
-        reorganize_res.inputs.results_dir = self.directories.results_dir
-        reorganize_res.inputs.output_dir = self.directories.output_dir
-
         # Function node get_subset_contrasts - select subset of contrasts
         sub_contrasts = Node(Function(
             function = self.get_subset_contrasts,
-            input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
+            input_names = ['file_list', 'subject_list', 'participants_file'],
             output_names = [
                 'equalIndifference_id',
                 'equalRange_id',
                 'equalIndifference_files',
                 'equalRange_files']),
             name = 'sub_contrasts')
-        sub_contrasts.inputs.method = method
+        sub_contrasts.inputs.subject_list = self.subject_list
 
         # Estimate model
         estimate_model = Node(EstimateModel(
@@ -574,8 +509,6 @@ class PipelineTeam2T6S(Pipeline):
         l2_analysis.connect([
             (infosource_groupanalysis, selectfiles_groupanalysis, [
                 ('contrast_id', 'contrast_id')]),
-            (infosource_groupanalysis, sub_contrasts, [
-                ('subjects', 'subject_list')]),
             (selectfiles_groupanalysis, sub_contrasts, [
                 ('contrast', 'file_list'),
                 ('participants', 'participants_file')]),
@@ -635,7 +568,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle equalRange and equalIndifference
         parameters = {
-            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
@@ -657,7 +590,7 @@ class PipelineTeam2T6S(Pipeline):
 
         # Handle groupComp
         parameters = {
-            'contrast_id': ['0001', '0002', '0003', '0004'],
+            'contrast_id': self.contrast_list,
             'method': ['groupComp'],
             'file': [
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
@@ -677,3 +610,55 @@ class PipelineTeam2T6S(Pipeline):
             for parameter_values in parameter_sets]
 
         return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 6
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 7
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 9
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
