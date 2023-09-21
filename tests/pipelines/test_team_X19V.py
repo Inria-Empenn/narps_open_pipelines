@@ -164,7 +164,7 @@ def test_get_subgroups_contrasts(pipeline):
 
 def generate_dummy_results(output_dir, n_sub, image: nb.Nifti1Image):
     """Generate dummy results for the reorganize_results test.
-    
+
     Creates more files than necessary.
     """
     for grp, contrast, sub_folder, basename in product(
@@ -204,53 +204,23 @@ def test_reorganize_results(pipeline, img_3d_rand):
         team_ID=pipeline.team_id,
     )
 
-    
+    tmp = [
+        ("equalIndifference", 1),
+        ("equalRange", 1),
+        ("equalIndifference", 1),
+        ("equalRange", 1),
+        ("equalIndifference", 2),
+        ("equalRange", 2),
+        ("equalIndifference", 2),
+        ("equalRange", 2),
+        ("groupComp", 2),
+    ]
     expected = [
         join(
             output_dir,
-            "l3_analysis_equalIndifference_nsub_6",
-            "_contrast_id_1",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalRange_nsub_6",
-            "_contrast_id_1",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalIndifference_nsub_6",
-            "_contrast_id_1",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalRange_nsub_6",
-            "_contrast_id_1",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalIndifference_nsub_6",
-            "_contrast_id_2",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalRange_nsub_6",
-            "_contrast_id_2",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalIndifference_nsub_6",
-            "_contrast_id_2",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_equalRange_nsub_6",
-            "_contrast_id_2",
-        ),
-        join(
-            output_dir,
-            "l3_analysis_groupComp_nsub_6",
-            "_contrast_id_2",
-        ),
+            f"l3_analysis_{grp}_nsub_{n_sub}",
+            f"_contrast_id_{contrast}",
+        )
+        for grp, contrast in tmp
     ]
-
     assert h == expected
