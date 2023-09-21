@@ -7,7 +7,7 @@ import nibabel as nb
 import pandas as pd
 import pytest
 
-from narps_open.pipelines.team_X19V_new import PipelineTeamX19V
+from narps_open.pipelines.team_X19V import PipelineTeamX19V
 
 
 @pytest.fixture
