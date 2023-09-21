@@ -94,17 +94,68 @@ def test_rm_smoothed_files(pipeline):
     [
         ("equalRange", {"group_mean": [1, 1, 1]}),
         ("equalIndifference", {"group_mean": [1, 1]}),
-        # TODO the following looks WRONG
+        # TODO the following looks WRONG given the function docstring
         (
             "groupComp",
             {"equalRange": [0, 1, 1, 1, 1], "equalIndifference": [1, 0, 0, 0, 0]},
         ),
     ],
 )
-def test_get_rergressors(pipeline, method, expected):
+def test_get_regressors(pipeline, method, expected):
+    """Test that the proper group level contrasts are returned."""
     regressors = pipeline.get_regressors(
         equal_range_id=["002", "004", "006"],
         equal_indifference_id=["001", "003"],
         method=method,
     )
     assert regressors == expected
+
+
+def test_get_subgroups_contrasts(pipeline, participant_tsv):
+    pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
+
+    copes = []
+    varcopes = []
+    for i in pipeline.subject_list:
+        copes.append(f"sub-{i}/cope.nii.gz")
+        varcopes.append(f"sub-{i}/varcope.nii.gz")
+
+    (
+        copes_equalIndifference,
+        copes_equalRange,
+        copes_global,
+        varcopes_equalIndifference,
+        varcopes_equalRange,
+        varcopes_global,
+        equalIndifference_id,
+        equalRange_id,
+    ) = pipeline.get_subgroups_contrasts(
+        copes,
+        varcopes,
+        subject_ids=pipeline.subject_list,
+        participants_file=participant_tsv,
+    )
+
+    assert equalIndifference_id == ["001", "003", "005"]
+    assert varcopes_equalIndifference == [
+        "sub-001/varcope.nii.gz",
+        "sub-003/varcope.nii.gz",
+        "sub-005/varcope.nii.gz",
+    ]
+    assert copes_equalIndifference == [
+        "sub-001/cope.nii.gz",
+        "sub-003/cope.nii.gz",
+        "sub-005/cope.nii.gz",
+    ]
+
+    assert equalRange_id == ["002", "004", "006"]
+    assert varcopes_equalRange == [
+        "sub-002/varcope.nii.gz",
+        "sub-004/varcope.nii.gz",
+        "sub-006/varcope.nii.gz",
+    ]
+    assert copes_equalRange == [
+        "sub-002/cope.nii.gz",
+        "sub-004/cope.nii.gz",
+        "sub-006/cope.nii.gz",
+    ]

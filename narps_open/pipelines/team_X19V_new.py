@@ -388,82 +388,81 @@ class PipelineTeamX19V(Pipeline):
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
     def get_subgroups_contrasts(
-        copes, varcopes, subject_list: list, participants_file: str
+        self,
+        copes: list[str],
+        varcopes: list[str],
+        subject_ids: list[str],
+        participants_file: str | Path,
     ):
-        """Return the file list containing only the files belonging to subject in the wanted group.
+        """Return the list of ids and files of each group of participants \
+           to do analyses for both groups, and one between the two groups.
 
         Parameters :
-        - copes: original file list selected by select_files node
-        - varcopes: original file list selected by select_files node
+        - copes: original file list selected by selectfiles node
+        - varcopes: original file list selected by selectfiles node
         - subject_ids: list of subject IDs that are analyzed
-        - participants_file: file containing participants characteristics
+        - participants_file: str, file containing participants characteristics
 
-        Returns :
-        - copes_equal_indifference : a subset of copes corresponding to subjects
-        in the equalIndifference group
-        - copes_equal_range : a subset of copes corresponding to subjects
-        in the equalRange group
-        - copes_global : a list of all copes
-        - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
-        in the equalIndifference group
-        - varcopes_equal_range : a subset of varcopes corresponding to subjects
-        in the equalRange group
-        - equal_indifference_id : a list of subject ids in the equalIndifference group
-        - equal_range_id : a list of subject ids in the equalRange group
-        - varcopes_global : a list of all varcopes
+        This function return the file list containing
+        only the files belonging to subject in the wanted group.
         """
-        equal_range_id = []
-        equal_indifference_id = []
+        equalRange_id = []
+        equalIndifference_id = []
 
-        # Reading file containing participants IDs and groups
-        with open(participants_file, "rt") as file:
-            next(file)  # skip the header
+        subject_list = [f"sub-{str(i)}" for i in subject_ids]
 
-            for line in file:
+        with open(participants_file, "rt") as f:
+            next(f)  # skip the header
+
+            for line in f:
                 info = line.strip().split()
 
-                # Checking for each participant if its ID was selected
-                # and separate people depending on their group
-                if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                    equal_indifference_id.append(info[0][-3:])
-                elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                    equal_range_id.append(info[0][-3:])
+                if info[0] in subject_list:
+                    subject_label = info[0][-3:]
 
-        copes_equal_indifference = []
-        copes_equal_range = []
-        copes_global = []
-        varcopes_equal_indifference = []
-        varcopes_equal_range = []
-        varcopes_global = []
+                    if info[1] == "equalIndifference":
+                        equalIndifference_id.append(subject_label)
+                    elif info[1] == "equalRange":
+                        equalRange_id.append(subject_label)
 
-        # Checking for each selected file if the corresponding participant was selected
-        # and add the file to the list corresponding to its group
-        for cope, varcope in zip(copes, varcopes):
-            sub_id = cope.split("/")
-            if sub_id[-2][-3:] in equal_indifference_id:
-                copes_equal_indifference.append(cope)
-            elif sub_id[-2][-3:] in equal_range_id:
-                copes_equal_range.append(cope)
-            if sub_id[-2][-3:] in subject_list:
-                copes_global.append(cope)
+        copes_equalIndifference = []
+        copes_equalRange = []
+        varcopes_equalIndifference = []
+        varcopes_equalRange = []
 
-            sub_id = varcope.split("/")
-            if sub_id[-2][-3:] in equal_indifference_id:
-                varcopes_equal_indifference.append(varcope)
-            elif sub_id[-2][-3:] in equal_range_id:
-                varcopes_equal_range.append(varcope)
-            if sub_id[-2][-3:] in subject_list:
-                varcopes_global.append(varcope)
+        for file in copes:
+            sub_id = file.split("/")
+            subject_label = sub_id[-2][-3:]
+            if subject_label in equalIndifference_id:
+                copes_equalIndifference.append(file)
+            elif subject_label in equalRange_id:
+                copes_equalRange.append(file)
+
+        for file in varcopes:
+            sub_id = file.split("/")
+            subject_label = sub_id[-2][-3:]
+            if subject_label in equalIndifference_id:
+                varcopes_equalIndifference.append(file)
+            elif subject_label in equalRange_id:
+                varcopes_equalRange.append(file)
+
+        print(len(equalRange_id))
+        print(len(equalIndifference_id))
+        print(len(copes_equalIndifference))
+        print(len(copes_equalRange))
+
+        copes_global = copes_equalIndifference + copes_equalRange
+        varcopes_global = varcopes_equalIndifference + varcopes_equalRange
 
         return (
-            copes_equal_indifference,
-            copes_equal_range,
-            varcopes_equal_indifference,
-            varcopes_equal_range,
-            equal_indifference_id,
-            equal_range_id,
+            copes_equalIndifference,
+            copes_equalRange,
             copes_global,
+            varcopes_equalIndifference,
+            varcopes_equalRange,
             varcopes_global,
+            equalIndifference_id,
+            equalRange_id,
         )
 
     # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines

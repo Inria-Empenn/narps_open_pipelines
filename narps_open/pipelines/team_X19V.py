@@ -511,6 +511,7 @@ def get_subgroups_contrasts(copes, varcopes, subject_ids, participants_file):
 
     for file in copes:
         sub_id = file.split("/")
+        print(sub_id)
         if sub_id[-2][-3:] in equalIndifference_id:
             copes_equalIndifference.append(file)
         elif sub_id[-2][-3:] in equalRange_id:

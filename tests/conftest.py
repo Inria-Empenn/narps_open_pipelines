@@ -215,6 +215,6 @@ def confounds_file(bids_dir, subject_id, run_id) -> Path:
 
 
 @fixture
-def participant_tsv(bids_dir) -> pd.DataFrame:
+def participant_tsv(bids_dir) -> Path:
     """Return the participant tsv file as a DataFrame."""
-    return pd.DataFrame(bids_dir / "participants.tsv", sep="\t")
+    return bids_dir / "participants.tsv"
