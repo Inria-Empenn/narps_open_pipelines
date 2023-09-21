@@ -7,7 +7,11 @@ import nibabel as nb
 import pandas as pd
 import pytest
 
-from narps_open.pipelines.team_X19V import PipelineTeamX19V
+from narps_open.pipelines.team_X19V import (
+    PipelineTeamX19V,
+    get_contrasts,
+    get_subject_infos,
+)
 
 
 @pytest.fixture
@@ -33,15 +37,6 @@ def test_constructor(pipeline, bids_dir):
 
 
 @pytest.mark.unit_test
-def test_get_subject_infos(pipeline, events_file):
-    """Test the get_session_infos method of a PipelineTeamX19V object."""
-    run_info = pipeline.get_subject_infos(str(events_file))
-
-    assert run_info[0].conditions == ["trial", "gain", "loss"]
-    assert run_info[0].regressor_names is None
-
-
-@pytest.mark.unit_test
 def test_get_parameters_file(pipeline, confounds_file):
     """Test the get_parameters_file method of a PipelineTeamX19V object."""
     parameters_file = pipeline.get_parameters_file(
@@ -52,14 +47,6 @@ def test_get_parameters_file(pipeline, confounds_file):
 
     df = pd.read_csv(parameters_file[0], sep="\t")
     assert df.shape == (452, 6)
-
-
-@pytest.mark.unit_test
-def test_get_contrasts(pipeline):
-    """Test the get_contrasts method of a PipelineTeamX19V object."""
-    contrasts = pipeline.get_contrasts()
-
-    assert contrasts[0] == ("gain", "T", ["trial", "gain", "loss"], [0, 1, 0])
 
 
 @pytest.mark.unit_test
@@ -99,11 +86,6 @@ def test_rm_smoothed_files(pipeline):
     pipeline.rm_smoothed_files(subject_id, run_id)
 
     assert not smooth_dir.exists()
-
-
-def test_get_subject_level_analysis(pipeline):
-    pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
-    pipeline.get_subject_level_analysis()
 
 
 @pytest.mark.unit_test
@@ -232,3 +214,20 @@ def test_reorganize_results(pipeline, img_3d_rand):
         for grp, contrast in tmp
     ]
     assert h == expected
+
+
+@pytest.mark.unit_test
+def test_get_contrasts():
+    """Test the get_contrasts method of a PipelineTeamX19V object."""
+    contrasts = get_contrasts()
+
+    assert contrasts[0] == ("gain", "T", ["trial", "gain", "loss"], [0, 1, 0])
+
+
+@pytest.mark.unit_test
+def test_get_subject_infos(events_file):
+    """Test the get_session_infos method of a PipelineTeamX19V object."""
+    run_info = get_subject_infos(str(events_file))
+
+    assert run_info[0].conditions == ["trial", "gain", "loss"]
+    assert run_info[0].regressor_names is None

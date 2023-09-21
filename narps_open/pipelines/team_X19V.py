@@ -9,7 +9,6 @@ from pathlib import Path
 
 import nibabel as nb
 import numpy as np
-import pandas as pd
 from nipype import MapNode, Node, Workflow
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.base import Bunch
@@ -59,66 +58,12 @@ class PipelineTeamX19V(Pipeline):
         """
         ...
 
-    def get_subject_infos(self, event_file: str) -> list[type[Bunch]]:
-        """Create Bunchs for specifyModel.
-
-        Parameters :
-        - event_file : str, file corresponding to the run and the subject to analyze
-
-        Returns :
-        - subject_info : list of Bunch for 1st level analysis.
-        """
-        cond_names = ["trial", "gain", "loss"]
-
-        onset = {}
-        duration = {}
-        amplitude = {}
-
-        for c in cond_names:  # For each condition.
-            onset.update({c: []})  # creates dictionary items with empty lists
-            duration.update({c: []})
-            amplitude.update({c: []})
-
-        with open(event_file, "rt") as f:
-            next(f)  # skip the header
-
-            for line in f:
-                info = line.strip().split()
-                # Creates list with onsets, duration and loss/gain for amplitude (FSL)
-                for c in cond_names:
-                    onset[c].append(float(info[0]))
-                    duration[c].append(float(4))
-                    if c == "gain":
-                        amplitude[c].append(float(info[2]))
-                    elif c == "loss":
-                        amplitude[c].append(float(info[3]))
-                    elif c == "trial":
-                        amplitude[c].append(float(1))
-
-        amplitude["gain"] = amplitude["gain"] - np.mean(amplitude["gain"])
-        amplitude["loss"] = amplitude["loss"] - np.mean(amplitude["loss"])
-
-        subject_info = []
-
-        subject_info.append(
-            Bunch(
-                conditions=cond_names,
-                onsets=[onset[k] for k in cond_names],
-                durations=[duration[k] for k in cond_names],
-                amplitudes=[amplitude[k] for k in cond_names],
-                regressor_names=None,
-                regressors=None,
-            )
-        )
-
-        return subject_info
-
     def get_parameters_file(
         self,
         file: str | Path,
         subject_id: str,
         run_id: str,
-    ):
+    ) -> list[Path]:
         """Create new tsv files with only desired parameters per subject per run.
 
         Parameters :
@@ -131,6 +76,9 @@ class PipelineTeamX19V(Pipeline):
         Return :
         - parameters_file : paths to new files containing only desired parameters.
         """
+        import numpy as np
+        import pandas as pd
+
         df = pd.read_csv(file, sep="\t", header=0)
         temp_list = np.array(
             [df["X"], df["Y"], df["Z"], df["RotX"], df["RotY"], df["RotZ"]]
@@ -153,36 +101,6 @@ class PipelineTeamX19V(Pipeline):
 
         parameters_file = [new_path]
         return parameters_file
-
-    # [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
-    def get_contrasts(self) -> list[tuple]:
-        """Create the list of tuples that represents contrasts.
-
-        Each contrast is in the form :
-        (Name, Stat, [list of condition names], [weights on those conditions])
-
-        Parameters:
-            - subject_id: str, ID of the subject
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # list of condition names
-        conditions = ["trial", "gain", "loss"]
-
-        # create contrasts
-        gain = ("gain", "T", conditions, [0, 1, 0])
-
-        loss = ("loss", "T", conditions, [0, 0, 1])
-
-        gain_sup = ("gain_sup_loss", "T", conditions, [0, 1, -1])
-
-        loss_sup = ("loss_sup_gain", "T", conditions, [0, -1, 1])
-
-        # contrast list
-        contrasts = [gain, loss, gain_sup, loss_sup]
-
-        return contrasts
 
     def get_run_level_analysis(self):
         """Return the first level analysis workflow.
@@ -249,7 +167,7 @@ class PipelineTeamX19V(Pipeline):
         # Node contrasts to get contrasts
         contrasts = Node(
             Function(
-                function=self.get_contrasts,
+                function=get_contrasts,
                 input_names=["subject_id"],
                 output_names=["contrasts"],
             ),
@@ -276,13 +194,7 @@ class PipelineTeamX19V(Pipeline):
         parameters = Node(
             Function(
                 function=self.get_parameters_file,
-                input_names=[
-                    "file",
-                    "subject_id",
-                    "run_id",
-                    "result_dir",
-                    "working_dir",
-                ],
+                input_names=["file", "subject_id", "run_id"],
                 output_names=["parameters_file"],
             ),
             name="parameters",
@@ -657,7 +569,6 @@ class PipelineTeamX19V(Pipeline):
         Returns:
                 - l3_analysis: Nipype WorkFlow
         """
-
         # Infosource Node - To iterate on subject and runs
         infosource_3rdlevel = Node(
             IdentityInterface(
@@ -825,42 +736,46 @@ class PipelineTeamX19V(Pipeline):
             ]
         )
 
-        if method == "equalIndifference" or method == "equalRange":
+        if method == "equalIndifference":
             specifymodel_3rdlevel.inputs.contrasts = [
                 ["group_mean", "T", ["group_mean"], [1]],
                 ["group_mean_neg", "T", ["group_mean"], [-1]],
             ]
 
-            if method == "equalIndifference":
-                l3_analysis.connect(
-                    [
-                        (
-                            subgroups_contrasts,
-                            merge_copes_3rdlevel,
-                            [("copes_equalIndifference", "in_files")],
-                        ),
-                        (
-                            subgroups_contrasts,
-                            merge_varcopes_3rdlevel,
-                            [("varcopes_equalIndifference", "in_files")],
-                        ),
-                    ]
-                )
-            elif method == "equalRange":
-                l3_analysis.connect(
-                    [
-                        (
-                            subgroups_contrasts,
-                            merge_copes_3rdlevel,
-                            [("copes_equalRange", "in_files")],
-                        ),
-                        (
-                            subgroups_contrasts,
-                            merge_varcopes_3rdlevel,
-                            [("varcopes_equalRange", "in_files")],
-                        ),
-                    ]
-                )
+            l3_analysis.connect(
+                [
+                    (
+                        subgroups_contrasts,
+                        merge_copes_3rdlevel,
+                        [("copes_equalIndifference", "in_files")],
+                    ),
+                    (
+                        subgroups_contrasts,
+                        merge_varcopes_3rdlevel,
+                        [("varcopes_equalIndifference", "in_files")],
+                    ),
+                ]
+            )
+        elif method == "equalRange":
+            specifymodel_3rdlevel.inputs.contrasts = [
+                ["group_mean", "T", ["group_mean"], [1]],
+                ["group_mean_neg", "T", ["group_mean"], [-1]],
+            ]
+
+            l3_analysis.connect(
+                [
+                    (
+                        subgroups_contrasts,
+                        merge_copes_3rdlevel,
+                        [("copes_equalRange", "in_files")],
+                    ),
+                    (
+                        subgroups_contrasts,
+                        merge_varcopes_3rdlevel,
+                        [("varcopes_equalRange", "in_files")],
+                    ),
+                ]
+            )
 
         elif method == "groupComp":
             specifymodel_3rdlevel.inputs.contrasts = [
@@ -1012,3 +927,87 @@ class PipelineTeamX19V(Pipeline):
         print(f"Results files of team {self.team_id} reorganized.")
 
         return h
+
+
+def get_subject_infos(event_file: str):
+    """Create Bunchs for specifyModel.
+
+    Parameters :
+    - event_file : str, file corresponding to the run and the subject to analyze
+
+    Returns :
+    - subject_info : list of Bunch for 1st level analysis.
+    """
+    cond_names = ["trial", "gain", "loss"]
+
+    onset = {}
+    duration = {}
+    amplitude = {}
+
+    for c in cond_names:  # For each condition.
+        onset[c] = []
+        duration[c] = []
+        amplitude[c] = []
+
+    with open(event_file, "rt") as f:
+        next(f)  # skip the header
+
+        for line in f:
+            info = line.strip().split()
+            # Creates list with onsets, duration and loss/gain for amplitude (FSL)
+            for c in cond_names:
+                onset[c].append(float(info[0]))
+                duration[c].append(float(4))
+                if c == "gain":
+                    amplitude[c].append(float(info[2]))
+                elif c == "loss":
+                    amplitude[c].append(float(info[3]))
+                elif c == "trial":
+                    amplitude[c].append(float(1))
+
+    amplitude["gain"] = amplitude["gain"] - np.mean(amplitude["gain"])
+    amplitude["loss"] = amplitude["loss"] - np.mean(amplitude["loss"])
+
+    subject_info = [
+        Bunch(
+            conditions=cond_names,
+            onsets=[onset[k] for k in cond_names],
+            durations=[duration[k] for k in cond_names],
+            amplitudes=[amplitude[k] for k in cond_names],
+            regressor_names=None,
+            regressors=None,
+        )
+    ]
+
+    return subject_info
+
+
+# [INFO] Linear contrast effects: 'Gain' vs. baseline, 'Loss' vs. baseline.
+def get_contrasts() -> list[tuple]:
+    """Create the list of tuples that represents contrasts.
+
+    Each contrast is in the form :
+    (Name, Stat, [list of condition names], [weights on those conditions])
+
+    Parameters:
+        - subject_id: str, ID of the subject
+
+    Returns:
+        - contrasts: list of tuples, list of contrasts to analyze
+    """
+    # list of condition names
+    conditions = ["trial", "gain", "loss"]
+
+    # create contrasts
+    gain = ("gain", "T", conditions, [0, 1, 0])
+
+    loss = ("loss", "T", conditions, [0, 0, 1])
+
+    gain_sup = ("gain_sup_loss", "T", conditions, [0, 1, -1])
+
+    loss_sup = ("loss_sup_gain", "T", conditions, [0, -1, 1])
+
+    # contrast list
+    contrasts = [gain, loss, gain_sup, loss_sup]
+
+    return contrasts
