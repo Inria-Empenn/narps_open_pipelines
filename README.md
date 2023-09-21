@@ -53,7 +53,7 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 
 ### Contributing 
 
-:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involed !
+:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
 ## References
 
@@ -65,3 +65,13 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 ## Funding
 
 This project is supported by Région Bretagne (Boost MIND). 
+
+## Credits
+
+This project is developed in the Empenn team by Boris Clenet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
+
+In addition, this project was presented and received contributions during the following events:
+ - OHBM Brainhack 2022 (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
+ - e-ReproNim FENS NENS Cluster Brainhack: <ADD_NAMES_HERE>
+ - OHBM Brainhack 2023 (July 2023): <ADD_NAMES_HERE>
+ - ORIGAMI lab hackathon (Sept 2023): 

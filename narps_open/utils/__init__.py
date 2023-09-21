@@ -4,10 +4,14 @@ from __future__ import annotations
 
 """ A set of utils functions for the narps_open package """
 
-from os.path import join, abspath, dirname, realpath
+from os import listdir
+from os.path import isfile, join, abspath, dirname, realpath, splitext
 from pathlib import Path
 
 import pandas as pd
+
+from nibabel import load
+from hashlib import sha256
 
 def show_download_progress(count, block_size, total_size):
     """ A hook function to be passed to urllib.request.urlretrieve in order to
@@ -29,10 +33,48 @@ def show_download_progress(count, block_size, total_size):
     # Showing download progress
     print('Downloading', display_value, end='\r')
 
+def hash_image(path_img: str) -> str:
+    """ Return the sha256 hash of a nifti image
+        Arguments:
+        - path_img, str: path to the nifti image
+    """
+
+    # Load image
+    image = load(path_img)
+
+    # Hash data
+    hasher = sha256()
+    for element in image.affine.ravel():
+        hasher.update(element)
+    for element in image.header:
+        hasher.update(element.encode(encoding='utf-8'))
+    for element in image.get_fdata().ravel():
+        hasher.update(element)
+
+    return hasher.hexdigest()
+
+def hash_dir_images(path: str) -> str:
+    """ Return the sha256 hash of hashes of nifti images inside a directory
+        Arguments:
+        - path, str: path to the directory
+    """
+    # Create the list of images
+    image_list = []
+    for file in listdir(path):
+        if isfile(join(path, file)) and file.endswith('.nii.gz'):
+            image_list.append(join(path, file))
+
+    # Hash data
+    hasher = sha256()
+    for image in sorted(image_list):
+        hasher.update(hash_image(image).encode(encoding = 'utf-8'))
+
+    return hasher.hexdigest()
+
 def get_subject_id(file_name: str) -> str:
     """ Return the id of the subject corresponding to the passed file name.
         Return None if the file name is not associated with any subject.
-        TODO : a feature to be handled globaly to parse data in a file name.
+        TODO : a feature to be handled globally to parse data in a file name.
     """
     key = 'subject_id'
     if key not in file_name:

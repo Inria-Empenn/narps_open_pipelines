@@ -1,0 +1,4 @@
+[codespell]
+skip = .git,*.pdf,*.svg,analysis_pipelines_full_descriptions.tsv
+# softwares - key in data structures etc
+ignore-words-list = te,fpr,fwe,softwares

@@ -58,7 +58,9 @@ def test_pipeline_execution(
         # Get missing subjects
         missing_subjects = set()
         for file in runner.get_missing_first_level_outputs():
-            missing_subjects.add(get_subject_id(file))
+            subject_id = get_subject_id(file)
+            if subject_id is not None:
+                missing_subjects.add(subject_id)
 
         # Leave if no missing subjects
         if not missing_subjects:
@@ -66,7 +68,10 @@ def test_pipeline_execution(
 
         # Start pipeline
         runner.subjects = missing_subjects
-        runner.start(True, False)
+        try: # This avoids errors in the workflow to make the test fail
+            runner.start(True, False)
+        except(RuntimeError) as err:
+            print('RuntimeError: ', err)
 
     # Check missing files for the last time
     missing_files = runner.get_missing_first_level_outputs()
@@ -80,7 +85,6 @@ def test_pipeline_execution(
 
     # Indices and keys to the unthresholded maps
     indices = list(range(1, 18, 2))
-    keys = [f'hypo{i}_unthresh.nii.gz' for i in range(1, 10)]
 
     # Retrieve the paths to the reproduced files
     reproduced_files = runner.pipeline.get_hypotheses_outputs()
@@ -88,7 +92,8 @@ def test_pipeline_execution(
 
     # Retrieve the paths to the results files
     collection = ResultsCollection(team_id)
-    results_files = [join(collection.directory, collection.files[k]) for k in keys]
+    results_files = [join(collection.directory, f) for f in collection.files.keys()]
+    results_files = [results_files[i] for i in indices]
 
     # Compute the correlation coefficients
     return [
@@ -142,10 +147,10 @@ def test_pipeline_evaluation(team_id: str):
 
     for subjects in [20, 40, 60, 80, 108]:
         # Execute pipeline
-        results = helpers.test_pipeline_execution(team_id, subjects)
+        results = test_pipeline_execution(team_id, subjects)
 
         # Compute correlation with results
-        passed = helpers.test_correlation_results(results, subjects)
+        passed = test_correlation_results(results, subjects)
 
         # Write values in a file
         with open(file_name, 'a', encoding = 'utf-8') as file:

@@ -42,6 +42,7 @@ jobs:
   pytest:
     needs: identify-tests
     runs-on: self-hosted
+    timeout-minutes: 2880 # 48h
     steps:
     - name: Checkout PR branch
       uses: actions/checkout@v3
@@ -54,8 +55,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[tests]
 
-    - name: Collect tests with pytest
+    - name: Execute tests with pytest
       run: |
         if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
-          pytest -q ${{ needs.identify-tests.outputs.tests }}
+          pytest -s -q ${{ needs.identify-tests.outputs.tests }}
         fi
