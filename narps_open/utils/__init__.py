@@ -192,3 +192,27 @@ def fmriprep_data_template() -> dict:
     )
 
     return {"func_preproc": func_preproc, "confounds_file": confounds_file}
+
+def get_vox_dims(volume : list | str) -> list:
+    ''' 
+    Function that gives the voxel dimension of an image. 
+    Not used here but if we use it, modify the connection to : 
+    (?, normalize_func, [('?', 'apply_to_files'),
+                                    (('?', get_vox_dims),
+                                     'write_voxel_sizes')])
+
+    Args:
+        volume: list | str
+            List of str or str that represent a path to a Nifti image. 
+
+    Returns: 
+        list: 
+            size of the voxels in the volume or in the first volume of the list.
+    '''
+    import nibabel as nb
+    if isinstance(volume, list):
+        volume = volume[0]
+    nii = nb.load(volume)
+    hdr = nii.header
+    voxdims = hdr.get_zooms()
+    return [float(voxdims[0]), float(voxdims[1]), float(voxdims[2])]
