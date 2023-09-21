@@ -1,6 +1,9 @@
 """Tests for team X19V."""
+from itertools import product
+from os.path import join
 from pathlib import Path
 
+import nibabel as nb
 import pandas as pd
 import pytest
 
@@ -111,7 +114,7 @@ def test_get_regressors(pipeline, method, expected):
     assert regressors == expected
 
 
-def test_get_subgroups_contrasts(pipeline, participant_tsv):
+def test_get_subgroups_contrasts(pipeline):
     pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
 
     copes = []
@@ -123,10 +126,10 @@ def test_get_subgroups_contrasts(pipeline, participant_tsv):
     (
         copes_equalIndifference,
         copes_equalRange,
-        copes_global,
+        _,
         varcopes_equalIndifference,
         varcopes_equalRange,
-        varcopes_global,
+        _,
         equalIndifference_id,
         equalRange_id,
     ) = pipeline.get_subgroups_contrasts(
@@ -157,3 +160,97 @@ def test_get_subgroups_contrasts(pipeline, participant_tsv):
         "sub-004/cope.nii.gz",
         "sub-006/cope.nii.gz",
     ]
+
+
+def generate_dummy_results(output_dir, n_sub, image: nb.Nifti1Image):
+    """Generate dummy results for the reorganize_results test.
+    
+    Creates more files than necessary.
+    """
+    for grp, contrast, sub_folder, basename in product(
+        ["equalIndifference", "equalRange", "groupComp"],
+        [1, 2],
+        ["", "_cluster0"],
+        ["zstat1", "zstat1_threshold"],
+    ):
+        file = (
+            Path(output_dir)
+            / f"l3_analysis_{grp}_nsub_{n_sub}"
+            / f"_contrast_id_{contrast}"
+            / sub_folder
+            / f"{basename}.nii.gz"
+        )
+
+        file.parent.mkdir(parents=True, exist_ok=True)
+
+        nb.save(image, file)
+
+
+def test_reorganize_results(pipeline, img_3d_rand):
+    pipeline.subject_list = ["001", "002", "003", "004", "005", "006"]
+
+    result_dir = pipeline.directories.results_dir
+
+    output_dir = pipeline.directories.output_dir
+
+    n_sub = len(pipeline.subject_list)
+
+    generate_dummy_results(output_dir=output_dir, n_sub=n_sub, image=img_3d_rand)
+
+    h = pipeline.reorganize_results(
+        result_dir=result_dir,
+        output_dir=output_dir,
+        n_sub=n_sub,
+        team_ID=pipeline.team_id,
+    )
+
+    
+    expected = [
+        join(
+            output_dir,
+            "l3_analysis_equalIndifference_nsub_6",
+            "_contrast_id_1",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalRange_nsub_6",
+            "_contrast_id_1",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalIndifference_nsub_6",
+            "_contrast_id_1",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalRange_nsub_6",
+            "_contrast_id_1",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalIndifference_nsub_6",
+            "_contrast_id_2",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalRange_nsub_6",
+            "_contrast_id_2",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalIndifference_nsub_6",
+            "_contrast_id_2",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_equalRange_nsub_6",
+            "_contrast_id_2",
+        ),
+        join(
+            output_dir,
+            "l3_analysis_groupComp_nsub_6",
+            "_contrast_id_2",
+        ),
+    ]
+
+    assert h == expected

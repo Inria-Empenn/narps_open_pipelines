@@ -11,7 +11,8 @@ from os.path import isfile, join
 from pathlib import Path
 from shutil import rmtree
 
-import pandas as pd
+import numpy as np
+from nibabel import Nifti1Image
 from pytest import fixture, helpers
 
 from narps_open.data.results import ResultsCollection
@@ -218,3 +219,31 @@ def confounds_file(bids_dir, subject_id, run_id) -> Path:
 def participant_tsv(bids_dir) -> Path:
     """Return the participant tsv file as a DataFrame."""
     return bids_dir / "participants.tsv"
+
+
+@fixture
+def rng():
+    """Return a seeded random number generator."""
+    return np.random.RandomState(42)
+
+
+@fixture
+def affine_eye():
+    """Return an identity matrix affine."""
+    return np.eye(4)
+
+
+@fixture
+def shape_3d_default():
+    """Return default shape for a 3D image."""
+    return (10, 10, 10)
+
+
+@fixture
+def img_3d_rand(rng, affine_eye, shape_3d_default):
+    """Return random 3D Nifti1Image in MNI space.
+
+    Mostly used for set up in other fixtures in other testing modules.
+    """
+    data = rng.rand(*shape_3d_default)
+    return Nifti1Image(data, affine_eye)
