@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # coding: utf-8
 
+from __future__ import annotations
+
 from os.path import join
+from pathlib import Path
+
+import pandas as pd
 
 from nipype import Node, Workflow  # , JoinNode, MapNode
 from nipype.algorithms.misc import Gunzip
@@ -27,16 +32,30 @@ DESC = TeamDescription(TEAM_ID)
 class PipelineTeamR9K3(Pipeline):
     """A class that defines the pipeline of team R9K3"""
 
-    def __init__(self):
+    def __init__(self,  bids_dir: str | Path, subject_list: str | list[str] | None = None):
         super().__init__()
+
         self.fwhm = float(DESC.derived["func_fwhm"])
+        
         self.team_id = TEAM_ID
 
+        self.directories.dataset_dir = str(bids_dir)
+
+        if subject_list is None:
+            participant_tsv = Path(self.directories.dataset_dir) / "participants.tsv"
+            df = pd.read_csv(participant_tsv, sep="\t")
+            subject_list = df["participant_id"].tolist()
+        if isinstance(subject_list, str):
+            subject_list = [subject_list]
+        excluded_participants = DESC.derived["excluded_participants"]
+        if excluded_participants != "n/a":
+            excluded_participants = excluded_participants.split(",")
+            excluded_participants = [s.strip() for s in excluded_participants]
+            print(f"Excluding participants: {excluded_participants}")
+        self.subject_list = [s[-3:] for s in subject_list if s[-3:] not in excluded_participants]
+
     def get_preprocessing(self):
-        """Return a Nipype worflow describing the prerpocessing part of the pipeline"""
-
-        # [INFO] The following part stays the same for all preprocessing pipelines
-
+        """Smooth the fmriprep data."""
         # IdentityInterface node - allows to iterate over subjects and runs
         info_source = Node(
             IdentityInterface(fields=["subject_id", "run_id"]), name="info_source"
