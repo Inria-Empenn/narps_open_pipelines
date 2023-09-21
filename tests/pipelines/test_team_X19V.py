@@ -132,8 +132,6 @@ def test_get_subgroups_contrasts(pipeline, participant_tsv):
     ) = pipeline.get_subgroups_contrasts(
         copes,
         varcopes,
-        subject_ids=pipeline.subject_list,
-        participants_file=participant_tsv,
     )
 
     assert equalIndifference_id == ["001", "003", "005"]

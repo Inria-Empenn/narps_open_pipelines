@@ -391,8 +391,6 @@ class PipelineTeamX19V(Pipeline):
         self,
         copes: list[str],
         varcopes: list[str],
-        subject_ids: list[str],
-        participants_file: str | Path,
     ):
         """Return the list of ids and files of each group of participants \
            to do analyses for both groups, and one between the two groups.
@@ -400,8 +398,6 @@ class PipelineTeamX19V(Pipeline):
         Parameters :
         - copes: original file list selected by selectfiles node
         - varcopes: original file list selected by selectfiles node
-        - subject_ids: list of subject IDs that are analyzed
-        - participants_file: str, file containing participants characteristics
 
         This function return the file list containing
         only the files belonging to subject in the wanted group.
@@ -409,7 +405,9 @@ class PipelineTeamX19V(Pipeline):
         equalRange_id = []
         equalIndifference_id = []
 
-        subject_list = [f"sub-{str(i)}" for i in subject_ids]
+        subject_list = [f"sub-{str(i)}" for i in self.subject_list]
+
+        participants_file = Path(self.directories.dataset_dir) / "participants.tsv"
 
         with open(participants_file, "rt") as f:
             next(f)  # skip the header
