@@ -14,11 +14,10 @@ Usage:
 from pytest import mark
 
 from numpy.testing import assert_array_almost_equal
-import numpy as np
 import pandas as pd
 
 from narps_open.utils import show_download_progress
-from narps_open.utils.utils import compute_expected_value
+from narps_open.utils import compute_expected_value
 
 
 class TestUtils:
@@ -43,22 +42,23 @@ class TestUtils:
         captured = capfd.readouterr()
         assert captured.out == "Downloading ⣽\r"
 
+    @staticmethod
+    @mark.unit_test
+    def test_compute_expected_value(tmp_path):
+        onsets = {"gain": [1, 2, 3], "loss": [1, 2, 3]}
 
-def test_compute_expected_value(tmp_path):
-    onsets = {"gain": [1, 2, 3], "loss": [1, 2, 3]}
+        computed = compute_expected_value(onsets=onsets)
+        assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
 
-    computed = compute_expected_value(onsets=onsets)
-    assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
+        df = pd.DataFrame(onsets)
+        computed = compute_expected_value(onsets=df)
+        assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
 
-    df = pd.DataFrame(onsets)
-    computed = compute_expected_value(onsets=df)
-    assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
+        events_tsv = tmp_path / "events.tsv"
+        df.to_csv(events_tsv, sep="\t")
+        computed = compute_expected_value(onsets=events_tsv)
+        assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
 
-    events_tsv = tmp_path / "events.tsv"
-    df.to_csv(events_tsv, sep="\t")
-    computed = compute_expected_value(onsets=events_tsv)
-    assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
-
-    events_tsv = str(events_tsv)
-    computed = compute_expected_value(onsets=events_tsv)
-    assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)
+        events_tsv = str(events_tsv)
+        computed = compute_expected_value(onsets=events_tsv)
+        assert_array_almost_equal(computed["EV"], [0.447, 0.894, 1.342], decimal=3)

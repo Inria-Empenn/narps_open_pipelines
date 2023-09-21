@@ -1,9 +1,13 @@
 #!/usr/bin/python
 # coding: utf-8
+from __future__ import annotations
 
 """ A set of utils functions for the narps_open package """
 
 from os.path import join, abspath, dirname, realpath
+from pathlib import Path
+
+import pandas as pd
 
 def show_download_progress(count, block_size, total_size):
     """ A hook function to be passed to urllib.request.urlretrieve in order to
@@ -150,3 +154,48 @@ def fmriprep_data_template() -> dict:
     )
 
     return {"func_preproc": func_preproc, "confounds_file": confounds_file}
+
+
+def compute_expected_value(onsets: dict[str, list[float]] | pd.DataFrame | str | Path):
+    """Compute expected value regressor for a run.
+
+    Parameters
+    ----------
+    onsets : dict[str, list[float]] | pd.DataFrame | str | Path
+             Events for a run.
+             Pathlike TSV file with columns 'gain' and 'loss'.
+             If a dict, must have keys 'gain' and 'loss'.
+             If a DataFrame, must have columns 'gain' and 'loss'.
+
+    Returns
+    -------
+    onsets : pd.DataFrame
+             Onsets with expected value column added.
+    """
+    # # compute euclidian distance to the indifference line defined by
+    # # gain twice as big as losses
+    # % https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+    # a = 0.5;
+    # b = -1;
+    # c = 0;
+    # x = onsets{iRun#.gain;
+    # y = onsets{iRun}.loss;
+    # dist = abs(a * x + b * y + c) / (a^2 + b^2)^.5;
+    # onsets{iRun}.EV = dist; % create an "expected value" regressor
+    a = 0.5
+    b = -1
+    c = 0
+
+    if isinstance(onsets, (str, Path)):
+        onsets = pd.read_csv(onsets, sep="\t")
+
+    if isinstance(onsets, dict):
+        onsets = pd.DataFrame(onsets)
+
+    x = onsets["gain"]
+    y = onsets["loss"]
+
+    dist = abs(a * x + b * y + c) / (a**2 + b**2) ** 0.5
+    onsets["EV"] = dist
+
+    return onsets

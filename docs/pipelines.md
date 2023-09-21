@@ -124,6 +124,16 @@ As explained before, all pipeline inherit from the `narps_open.pipelines.Pipelin
 * `fwhm` : full width at half maximum for the smoothing kernel (in mm) :
 * `tr` : repetition time of the fMRI acquisition (equals 1.0s)
 
+## Utility functions
+
+You can find several utility functions in the `narps_open.utils` module. 
+
+- raw_data_template
+- fmriprep_data_template
+- compute_expected_value
+
+Feel free to use them in your pipeline.
+
 ## Test your pipeline
 
 First have a look at the [testing topic of the documentation](./docs/testing.md). It explains how testing works for inside project and how you should write the tests related to your pipeline.
