@@ -43,9 +43,10 @@ class PipelineTeamR9K3(Pipeline):
 
         self.directories.dataset_dir = str(bids_dir)
 
+        self.participants_tsv = Path(self.directories.dataset_dir) / "participants.tsv"
+
         if subject_list is None:
-            participant_tsv = Path(self.directories.dataset_dir) / "participants.tsv"
-            df = pd.read_csv(participant_tsv, sep="\t")
+            df = pd.read_csv(self.participants_tsv, sep="\t")
             subject_list = df["participant_id"].tolist()
         if isinstance(subject_list, str):
             subject_list = [subject_list]
@@ -125,35 +126,34 @@ class PipelineTeamR9K3(Pipeline):
         return None
 
     """
-    In first level analyses, three regressors of interest were included in the model: 
+    In first level analyses, three regressors of interest were included in the model:
 
-    1) task-related activity, 
-    2) task-related activity modulated by the amount of gain, and 
-    3) task-related activity modulated by the amount of loss. 
+    1) task-related activity,
+    2) task-related activity modulated by the amount of gain, and
+    3) task-related activity modulated by the amount of loss.
 
-    The regressor for the basic task-related activity was defined 
-    as a vector of ones at every trial onset and zeros at all other time points 
-    (event duration = 0 s). 
+    The regressor for the basic task-related activity was defined
+    as a vector of ones at every trial onset and zeros at all other time points
+    (event duration = 0 s).
 
-    Within each functional run, each parametric modulator 
-    (the raw gain or loss values) was scaled such that its maximum value became 1. 
-    All three regressors were convolved with the canonical hemodynamic response function. 
-    The two modulated regressors were orthogonalized against the original task regressor. 
-    Temporal/dispersion derivatives of the regressors were not included. 
+    Within each functional run, each parametric modulator
+    (the raw gain or loss values) was scaled such that its maximum value became 1.
+    All three regressors were convolved with the canonical hemodynamic response function.
+    The two modulated regressors were orthogonalized against the original task regressor.
+    Temporal/dispersion derivatives of the regressors were not included.
 
-    In both first and second level analyses, model parameters were estimated 
-    using the classical (Restricted Maximum Likelihood) method as implemented in SPM12. 
+    In both first and second level analyses, model parameters were estimated
+    using the classical (Restricted Maximum Likelihood) method as implemented in SPM12.
 
-    For second level analyses, we used a mixed-effects approach with weighted least squares. 
+    For second level analyses, we used a mixed-effects approach with weighted least squares.
 
-    In the second level analysis performed to test hypothesis 9 
-    (two-sample t-test comparing the equal indifference group and the equal range group), 
-    the two groups were assumed to be independent and have unequal variance.   
+    In the second level analysis performed to test hypothesis 9
+    (two-sample t-test comparing the equal indifference group and the equal range group),
+    the two groups were assumed to be independent and have unequal variance.
     """
 
     def get_subject_infos(self, event_files: list):
-        """
-        Create Bunchs for specifySPMModel.
+        """Create Bunchs for specifySPMModel.
 
         Parameters :
         - event_files: list of events files (one per run) for the subject
@@ -188,14 +188,17 @@ class PipelineTeamR9K3(Pipeline):
                         )  # trial_run1 or accepting_run1
                         val_gain = f"gain_run{str(run_id + 1)}"
                         val_loss = f"loss_run{str(run_id + 1)}"
+
                         if condition == "trial":
                             onset[val].append(float(info[0]))  # onsets for trial_run1
                             duration[val].append(float(4))
                             weights_gain[val_gain].append(float(info[2]))
                             weights_loss[val_loss].append(float(info[3]))
+
                         elif condition == "accepting" and "accept" in info[5]:
                             onset[val].append(float(info[0]) + float(info[4]))
                             duration[val].append(float(0))
+
                         elif condition == "rejecting" and "reject" in info[5]:
                             onset[val].append(float(info[0]) + float(info[4]))
                             duration[val].append(float(0))
@@ -232,12 +235,11 @@ class PipelineTeamR9K3(Pipeline):
         return subject_info
 
     # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts():
-        """
-        Create the list of tuples that represents contrasts.
+    def get_contrasts(self):
+        """Create the list of tuples that represents contrasts.
+
         Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
+        (Name, Stat, [list of condition names], [weights on those conditions])
 
         Returns:
             - contrasts: list of tuples, list of contrasts to analyze
@@ -254,10 +256,7 @@ class PipelineTeamR9K3(Pipeline):
         return [trial, effect_gain, effect_loss]
 
     def get_subject_level_analysis(self):
-        """Return a Nipype worflow describing the subject level analysis part of the pipeline"""
-
-        # [INFO] The following part stays the same for all pipelines
-
+        """Return a Nipype worflow describing the subject level analysis part of the pipeline."""
         # Infosource Node - To iterate on subjects
         info_source = Node(
             IdentityInterface(
@@ -309,7 +308,7 @@ class PipelineTeamR9K3(Pipeline):
         # Subject Infos node - get subject specific condition information
         subject_infos = Node(
             Function(
-                input_names=["event_files", "runs"],
+                input_names=["event_files"],
                 output_names=["subject_info"],
                 function=self.get_subject_infos,
             ),
@@ -321,23 +320,11 @@ class PipelineTeamR9K3(Pipeline):
         # Contrasts node - to get contrasts
         contrasts = Node(
             Function(
-                input_names=["subject_id"],
                 output_names=["contrasts"],
                 function=self.get_contrasts,
             ),
             name="contrasts",
         )
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the begining of the file.
-        node_name = Node(node_function, name="node_name")
-
-        # [TODO] Add other nodes with the different steps of the pipeline
 
         # [INFO] The following part defines the nipype workflow and the connections between nodes
 
@@ -361,21 +348,17 @@ class PipelineTeamR9K3(Pipeline):
 
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
-    def get_subset_contrasts(file_list, subject_list: list, participants_file: str):
-        """
-        This function return the file list containing only the files belonging
-        to the subjects in the wanted group.
+    def get_subset_contrasts(self, file_list):
+        """Return list containing only the files belonging to the subjects in the wanted group.
 
         Parameters :
         - file_list : original file list selected by selectfiles node
-        - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
 
         Returns :
         - equal_indifference_id : a list of subject ids in the equalIndifference group
         - equal_range_id : a list of subject ids in the equalRange group
         - equal_indifference_files : a subset of file_list corresponding to subjects
-        in the equalIndifference group
+          in the equalIndifference group
         - equal_range_files : a subset of file_list corresponding to subjects
         in the equalRange group
         """
@@ -385,20 +368,24 @@ class PipelineTeamR9K3(Pipeline):
         equal_range_files = []
 
         # Reading file containing participants IDs and groups
-        with open(participants_file, "rt") as file:
+        with open(self.participants_tsv, "rt") as file:
             next(file)  # skip the header
+
             for line in file:
                 info = line.strip().split()
-                if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                    equal_indifference_id.append(info[0][-3:])
-                elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                    equal_range_id.append(info[0][-3:])
+                subject_label = info[0][-3:]
+                if subject_label in self.subject_list:
+                    if info[1] == "equalIndifference":
+                        equal_indifference_id.append(subject_label)
+                    elif info[1] == "equalRange":
+                        equal_range_id.append(subject_label)
 
         for file in file_list:
             sub_id = file.split("/")
-            if sub_id[-2][-3:] in equal_indifference_id:
+            subject_label = sub_id[-2][-3:]
+            if subject_label in equal_indifference_id:
                 equal_indifference_files.append(file)
-            elif sub_id[-2][-3:] in equal_range_id:
+            elif subject_label in equal_range_id:
                 equal_range_files.append(file)
 
         return (
