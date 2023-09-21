@@ -227,7 +227,7 @@ class PipelineTeamX19V(Pipeline):
 
         # SelectFiles node - to select necessary files
         selectfiles = Node(
-            SelectFiles(template, base_directory=self.directories.dataset_dir),
+            SelectFiles(template, base_directory=str(self.directories.dataset_dir)),
             name="selectfiles",
         )
 
@@ -430,7 +430,7 @@ class PipelineTeamX19V(Pipeline):
 
         # SelectFiles node - to select necessary files
         selectfiles_2ndlevel = Node(
-            SelectFiles(template, base_directory=self.directories.results_dir),
+            SelectFiles(template, base_directory=str(self.directories.results_dir)),
             name="selectfiles_2ndlevel",
         )
 
@@ -628,6 +628,7 @@ class PipelineTeamX19V(Pipeline):
         return regressors
 
     def rm_smoothed_files(self, subject_id: str, run_id: str):
+        """Remove directories containting smoothed files."""
         smooth_dir = (
             Path(self.directories.results_dir)
             / self.directories.working_dir
@@ -645,31 +646,18 @@ class PipelineTeamX19V(Pipeline):
 
     def get_group_level_analysis(
         self,
-        subject_list,
-        n_sub,
-        contrast_list,
         method,
-        exp_dir,
-        output_dir,
-        working_dir,
-        result_dir,
-        data_dir,
     ):
         """Return the group level of analysis workflow.
 
         Parameters:
-                - exp_dir: str, directory where raw data are stored
-                - result_dir: str, directory where results will be stored
-                - working_dir: str, name of the sub-directory for intermediate results
-                - output_dir: str, name of the sub-directory for final results
-                - subject_list: list of str, list of subject for which you want to do the preprocessing
-                - contrast_list: list of str, list of contrasts to analyze
                 - method: one of "equalRange", "equalIndifference" or "groupComp"
-                - n_sub: int, number of subject to include
+
 
         Returns:
-                - l2_analysis: Nipype WorkFlow
+                - l3_analysis: Nipype WorkFlow
         """
+
         # Infosource Node - To iterate on subject and runs
         infosource_3rdlevel = Node(
             IdentityInterface(
@@ -682,35 +670,37 @@ class PipelineTeamX19V(Pipeline):
                     "subject_list",
                     "method",
                 ],
-                exp_dir=exp_dir,
-                result_dir=result_dir,
-                output_dir=output_dir,
-                working_dir=working_dir,
-                subject_list=subject_list,
+                exp_dir=self.directories.dataset_dir,
+                result_dir=self.directories.results_dir,
+                output_dir=self.directories.output_dir,
+                working_dir=self.directories.working_dir,
+                subject_list=self.subject_list,
                 method=method,
             ),
             name="infosource_3rdlevel",
         )
-        infosource_3rdlevel.iterables = [("contrast_id", contrast_list)]
+        infosource_3rdlevel.iterables = [("contrast_id", self.contrast_list)]
 
         # Templates to select files node
         copes_file = join(
-            output_dir,
+            self.directories.output_dir,
             "l2_analysis",
             "_contrast_id_{contrast_id}_subject_id_*",
             "cope1.nii.gz",
         )
 
         varcopes_file = join(
-            output_dir,
+            self.directories.output_dir,
             "l2_analysis",
             "_contrast_id_{contrast_id}_subject_id_*",
             "varcope1.nii.gz",
         )
 
-        participants_file = join(exp_dir, "participants.tsv")
+        participants_file = join(self.directories.dataset_dir, "participants.tsv")
 
-        mask_file = join(data_dir, "NARPS-X19V", "hypo1_unthresh.nii.gz")
+        mask_file = join(
+            self.directories.dataset_dir, "..", "NARPS-X19V", "hypo1_unthresh.nii.gz"
+        )
 
         template = {
             "cope": copes_file,
@@ -721,12 +711,15 @@ class PipelineTeamX19V(Pipeline):
 
         # SelectFiles node - to select necessary files
         selectfiles_3rdlevel = Node(
-            SelectFiles(template, base_directory=result_dir),
+            SelectFiles(template, base_directory=str(self.directories.results_dir)),
             name="selectfiles_3rdlevel",
         )
 
         datasink_3rdlevel = Node(
-            DataSink(base_directory=result_dir, container=output_dir),
+            DataSink(
+                base_directory=str(self.directories.results_dir),
+                container=self.directories.output_dir,
+            ),
             name="datasink_3rdlevel",
         )
 
@@ -773,7 +766,7 @@ class PipelineTeamX19V(Pipeline):
             name="regs",
         )
         regs.inputs.method = method
-        regs.inputs.subject_list = subject_list
+        regs.inputs.subject_list = self.subject_list
 
         smoothest = MapNode(
             SmoothEstimate(), name="smoothest", iterfield=["zstat_file"]
@@ -791,8 +784,9 @@ class PipelineTeamX19V(Pipeline):
             synchronize=True,
         )
 
+        n_sub = len(self.subject_list)
         l3_analysis = Workflow(
-            base_dir=join(result_dir, working_dir),
+            base_dir=join(self.directories.results_dir, self.directories.working_dir),
             name=f"l3_analysis_{method}_nsub_{n_sub}",
         )
 

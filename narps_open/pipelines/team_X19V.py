@@ -704,7 +704,7 @@ def get_group_workflow(
                 "subject_list",
             ],
             output_names=["regressors"],
-            function=get_regs,
+            function=self.get_regs,
         ),
         name="regs",
     )
@@ -761,42 +761,46 @@ def get_group_workflow(
         ]
     )
 
-    if method == "equalIndifference" or method == "equalRange":
+    if method == "equalIndifference":
         specifymodel_3rdlevel.inputs.contrasts = [
             ["group_mean", "T", ["group_mean"], [1]],
             ["group_mean_neg", "T", ["group_mean"], [-1]],
         ]
 
-        if method == "equalIndifference":
-            l3_analysis.connect(
-                [
-                    (
-                        subgroups_contrasts,
-                        merge_copes_3rdlevel,
-                        [("copes_equalIndifference", "in_files")],
-                    ),
-                    (
-                        subgroups_contrasts,
-                        merge_varcopes_3rdlevel,
-                        [("varcopes_equalIndifference", "in_files")],
-                    ),
-                ]
-            )
-        elif method == "equalRange":
-            l3_analysis.connect(
-                [
-                    (
-                        subgroups_contrasts,
-                        merge_copes_3rdlevel,
-                        [("copes_equalRange", "in_files")],
-                    ),
-                    (
-                        subgroups_contrasts,
-                        merge_varcopes_3rdlevel,
-                        [("varcopes_equalRange", "in_files")],
-                    ),
-                ]
-            )
+        l3_analysis.connect(
+            [
+                (
+                    subgroups_contrasts,
+                    merge_copes_3rdlevel,
+                    [("copes_equalIndifference", "in_files")],
+                ),
+                (
+                    subgroups_contrasts,
+                    merge_varcopes_3rdlevel,
+                    [("varcopes_equalIndifference", "in_files")],
+                ),
+            ]
+        )
+    elif method == "equalRange":
+        specifymodel_3rdlevel.inputs.contrasts = [
+            ["group_mean", "T", ["group_mean"], [1]],
+            ["group_mean_neg", "T", ["group_mean"], [-1]],
+        ]
+
+        l3_analysis.connect(
+            [
+                (
+                    subgroups_contrasts,
+                    merge_copes_3rdlevel,
+                    [("copes_equalRange", "in_files")],
+                ),
+                (
+                    subgroups_contrasts,
+                    merge_varcopes_3rdlevel,
+                    [("varcopes_equalRange", "in_files")],
+                ),
+            ]
+        )
 
     elif method == "groupComp":
         specifymodel_3rdlevel.inputs.contrasts = [

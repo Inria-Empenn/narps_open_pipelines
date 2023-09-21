@@ -72,6 +72,16 @@ def test_get_subject_level_analysis(pipeline):
 
 
 @pytest.mark.unit_test
+@pytest.mark.parametrize("method", ["equalRange", "equalIndifference", "groupComp"])
+def test_get_group_level_analysis(pipeline, method):
+    """Test the get_group_level_analysis method of a PipelineTeamX19V object.
+
+    Only a smoke test for now.
+    """
+    pipeline.get_group_level_analysis(method=method)
+
+
+@pytest.mark.unit_test
 def test_rm_smoothed_files(pipeline):
     """Test the remove smoothed files function."""
     subject_id = pipeline.subject_list[0]
