@@ -193,7 +193,7 @@ def fmriprep_data_template() -> dict:
 
     return {"func_preproc": func_preproc, "confounds_file": confounds_file}
 
-def get_vox_dims(volume : list | str) -> list:
+def get_vox_dims(volume : list) -> list:
     ''' 
     Function that gives the voxel dimension of an image. 
     Not used here but if we use it, modify the connection to : 
