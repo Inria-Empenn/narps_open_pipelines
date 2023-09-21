@@ -13,10 +13,11 @@ Usage:
 from os.path import join
 
 import pandas as pd
-from pytest import mark
 from numpy.testing import assert_array_almost_equal
+from pytest import mark
 
-from narps_open.utils import show_download_progress, hash_image, hash_dir_images, compute_expected_value
+from narps_open.utils import (compute_expected_value, hash_dir_images,
+                              hash_image, show_download_progress)
 from narps_open.utils.configuration import Configuration
 
 
@@ -28,8 +29,7 @@ class TestUtils:
     def test_show_download_progress(
         capfd,
     ):  # using pytest's capfd fixture to get stdout
-        """Test the show_download_progress function"""
-
+        """Test the show_download_progress function."""
         show_download_progress(25, 1, 100)
         captured = capfd.readouterr()
         assert captured.out == "Downloading 25 %\r"
@@ -45,6 +45,7 @@ class TestUtils:
     @staticmethod
     @mark.unit_test
     def test_compute_expected_value(tmp_path):
+        """Test the compute_expected_value function."""
         onsets = {"gain": [1, 2, 3], "loss": [1, 2, 3]}
 
         computed = compute_expected_value(onsets=onsets)
@@ -66,8 +67,7 @@ class TestUtils:
     @staticmethod
     @mark.unit_test
     def test_hash_image():
-        """ Test the hash_image function """
-
+        """Test the hash_image function."""
         # Get test_data for hash
         test_image_path = join(
             Configuration()['directories']['test_data'],
@@ -80,8 +80,7 @@ class TestUtils:
     @staticmethod
     @mark.unit_test
     def test_hash_dir_images():
-        """ Test the hash_dir_images function """
-
+        """Test the hash_dir_images function."""
         # Get test_data for hash
         test_path = join(
             Configuration()['directories']['test_data'],

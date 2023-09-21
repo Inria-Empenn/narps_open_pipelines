@@ -4,14 +4,14 @@ from __future__ import annotations
 
 """ A set of utils functions for the narps_open package """
 
+from hashlib import sha256
 from os import listdir
-from os.path import isfile, join, abspath, dirname, realpath, splitext
+from os.path import abspath, dirname, isfile, join, realpath, splitext
 from pathlib import Path
 
 import pandas as pd
-
 from nibabel import load
-from hashlib import sha256
+
 
 def show_download_progress(count, block_size, total_size):
     """ A hook function to be passed to urllib.request.urlretrieve in order to
