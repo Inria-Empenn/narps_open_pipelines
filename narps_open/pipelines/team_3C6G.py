@@ -451,9 +451,9 @@ class PipelineTeam3C6G(Pipeline):
         templates = {
             'func': join(
                 self.directories.results_dir,
-                'preprocess',
+                'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
-                'complete_filename_{subject_id}_complete_filename.nii',
+                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
             ),
             'event': join(
                 self.directories.dataset_dir,
@@ -463,11 +463,10 @@ class PipelineTeam3C6G(Pipeline):
             ),
             'parameters': join(
                 self.directories.results_dir,
-                'preprocess',
+                'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
-                'complete_filename_{subject_id}_complete_filename.txt',
+                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
             )
-
         }
 
         # SelectFiles node - to select necessary files
@@ -597,7 +596,7 @@ class PipelineTeam3C6G(Pipeline):
             ),
             (
                 contrast_estimate, 
-                datasink, 
+                data_sink, 
                 [('con_images', 'l1_analysis.@con_images'),
                 ('spmT_images', 'l1_analysis.@spmT_images'),
                 ('spm_mat_file', 'l1_analysis.@spm_mat_file')]

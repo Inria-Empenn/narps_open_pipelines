@@ -50,7 +50,7 @@ class TestPipelinesTeam3C6G:
         pipeline.run_list = ['01']
         assert len(pipeline.get_preprocessing_outputs()) == 14
         assert len(pipeline.get_run_level_outputs()) == 0
-        #assert len(pipeline.get_subject_level_outputs()) == 7
+        assert len(pipeline.get_subject_level_outputs()) == 7
         #assert len(pipeline.get_group_level_outputs()) == 63
         #assert len(pipeline.get_hypotheses_outputs()) == 18
 
@@ -59,7 +59,7 @@ class TestPipelinesTeam3C6G:
         pipeline.run_list = ['01', '02', '03', '04']
         assert len(pipeline.get_preprocessing_outputs()) == 56
         assert len(pipeline.get_run_level_outputs()) == 0
-        #assert len(pipeline.get_subject_level_outputs()) == 7
+        assert len(pipeline.get_subject_level_outputs()) == 7
         #assert len(pipeline.get_group_level_outputs()) == 63
         #assert len(pipeline.get_hypotheses_outputs()) == 18
 
@@ -68,7 +68,7 @@ class TestPipelinesTeam3C6G:
         pipeline.run_list = ['01', '02', '03', '04']
         assert len(pipeline.get_preprocessing_outputs()) == 224
         assert len(pipeline.get_run_level_outputs()) == 0
-        #assert len(pipeline.get_subject_level_outputs()) == 28
+        assert len(pipeline.get_subject_level_outputs()) == 28
         #assert len(pipeline.get_group_level_outputs()) == 63
         #assert len(pipeline.get_hypotheses_outputs()) == 18
 
