@@ -37,6 +37,7 @@ from nipype.interfaces.fsl import (
 # [INFO] In order to inherit from Pipeline
 from narps_open.pipelines import Pipeline
 
+
 class PipelineTeam3C6G(Pipeline):
     """ A class that defines the pipeline of team 3C6G """
 
@@ -49,6 +50,116 @@ class PipelineTeam3C6G(Pipeline):
         self.fwhm = 6.0
         self.team_id = '3C6G'
         self.contrast_list = ['0001', '0002', '0003', '0004', '0005']
+
+    # [INFO] This function is used in the subject level analysis pipelines using SPM
+    # [TODO] Adapt this example to your specific pipeline
+
+    def get_subject_infos(event_files: list, runs: list):
+        """
+         -MGT task (taken from .tsv files, duration = 4) with canonical HRF (no derivatives)
+        -Parametric modulator gain (from "gain" column in event .tsv file)
+        - Parametric modulator loss (from "loss" column in event .tsv file)
+        -highpass DCT filtering in SPM (using default period of 1/128 s)
+        -6 movement regressors from realignment
+
+        Create Bunchs for specifySPMModel.
+
+        Parameters :
+        - event_files: list of events files (one per run) for the subject
+        - runs: list of runs to use
+
+        Returns :
+        - subject_info : list of Bunch for 1st level analysis.
+        """
+        from nipype.interfaces.base import Bunch
+
+        condition_names = ['trial']
+        onset = {}
+        duration = {}
+        weights_gain = {}
+        weights_loss = {}
+
+        # Loop over number of runs
+        for run_id in range(len(runs)):
+
+            # Create dictionary items with empty lists
+            onset.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
+            duration.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
+            weights_gain.update({'gain_run' + str(run_id + 1): []})
+            weights_loss.update({'loss_run' + str(run_id + 1): []})
+
+            with open(event_files[run_id], 'rt') as event_file:
+                next(event_file)  # skip the header
+
+                for line in event_file:
+                    info = line.strip().split()
+
+                    for condition in condition_names:
+                        val = condition + '_run' + str(run_id + 1)  # trial_run1 or accepting_run1
+                        val_gain = 'gain_run' + str(run_id + 1)  # gain_run1
+                        val_loss = 'loss_run' + str(run_id + 1)  # loss_run1
+                        if condition == 'trial':
+                            onset[val].append(float(info[0]))  # onsets for trial_run1
+                            duration[val].append(float(4))
+                            weights_gain[val_gain].append(float(info[2]))
+                            weights_loss[val_loss].append(float(info[3]))
+
+        # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
+        # But names must not have '_run1' etc because we concatenate runs
+        subject_info = []
+        for run_id in range(len(runs)):
+
+            conditions = [s + '_run' + str(run_id + 1) for s in condition_names]
+            gain = 'gain_run' + str(run_id + 1)
+            loss = 'loss_run' + str(run_id + 1)
+
+            subject_info.insert(
+                run_id,
+                Bunch(
+                    conditions = condition_names,
+                    onsets = [onset[c] for c in conditions],
+                    durations = [duration[c] for c in conditions],
+                    amplitudes = None,
+                    tmod = None,
+                    pmod = [
+                        Bunch(
+                            name = ['gain', 'loss'],
+                            poly = [1, 1],
+                            param = [weights_gain[gain], weights_loss[loss]],
+                        ),
+                        None,
+                    ],
+                    regressor_names = None,
+                    regressors = None,
+                ),
+            )
+
+        return subject_info
+
+    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
+    # [TODO] Adapt this example to your specific pipeline
+    def get_contrasts():
+        """
+        Create the list of tuples that represents contrasts.
+        Each contrast is in the form :
+        (Name,Stat,[list of condition names],[weights on those conditions])
+
+        Returns:
+            - contrasts: list of tuples, list of contrasts to analyze
+        """
+        # List of condition names
+        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
+
+        # Create contrasts
+        trial = ('trial', 'T', conditions, [1, 0, 0])
+        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
+        neg_effect_gain = ('neg_effect_of_gain', 'T', conditions, [0, -1, 0])
+        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
+        neg_effect_loss = ('neg_effect_of_loss', 'T', conditions, [0, 0, -1])
+
+        contrasts = [trial, effect_gain, effect_loss, neg_effect_gain, neg_effect_loss]
+
+        return contrasts
 
     def get_vox_dims(volume : list) -> list:
         ''' 
@@ -320,115 +431,6 @@ class PipelineTeam3C6G(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
-    # [INFO] This function is used in the subject level analysis pipelines using SPM
-    # [TODO] Adapt this example to your specific pipeline
-    def get_subject_infos(event_files: list, runs: list):
-        """
-         -MGT task (taken from .tsv files, duration = 4) with canonical HRF (no derivatives)
-        -Parametric modulator gain (from "gain" column in event .tsv file)
-        - Parametric modulator loss (from "loss" column in event .tsv file)
-        -highpass DCT filtering in SPM (using default period of 1/128 s)
-        -6 movement regressors from realignment
-
-        Create Bunchs for specifySPMModel.
-
-        Parameters :
-        - event_files: list of events files (one per run) for the subject
-        - runs: list of runs to use
-
-        Returns :
-        - subject_info : list of Bunch for 1st level analysis.
-        """
-        from nipype.interfaces.base import Bunch
-
-        condition_names = ['trial']
-        onset = {}
-        duration = {}
-        weights_gain = {}
-        weights_loss = {}
-
-        # Loop over number of runs
-        for run_id in range(len(runs)):
-
-            # Create dictionary items with empty lists
-            onset.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            duration.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            weights_gain.update({'gain_run' + str(run_id + 1): []})
-            weights_loss.update({'loss_run' + str(run_id + 1): []})
-
-            with open(event_files[run_id], 'rt') as event_file:
-                next(event_file)  # skip the header
-
-                for line in event_file:
-                    info = line.strip().split()
-
-                    for condition in condition_names:
-                        val = condition + '_run' + str(run_id + 1)  # trial_run1 or accepting_run1
-                        val_gain = 'gain_run' + str(run_id + 1)  # gain_run1
-                        val_loss = 'loss_run' + str(run_id + 1)  # loss_run1
-                        if condition == 'trial':
-                            onset[val].append(float(info[0]))  # onsets for trial_run1
-                            duration[val].append(float(4))
-                            weights_gain[val_gain].append(float(info[2]))
-                            weights_loss[val_loss].append(float(info[3]))
-
-        # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
-        # But names must not have '_run1' etc because we concatenate runs
-        subject_info = []
-        for run_id in range(len(runs)):
-
-            conditions = [s + '_run' + str(run_id + 1) for s in condition_names]
-            gain = 'gain_run' + str(run_id + 1)
-            loss = 'loss_run' + str(run_id + 1)
-
-            subject_info.insert(
-                run_id,
-                Bunch(
-                    conditions = condition_names,
-                    onsets = [onset[c] for c in conditions],
-                    durations = [duration[c] for c in conditions],
-                    amplitudes = None,
-                    tmod = None,
-                    pmod = [
-                        Bunch(
-                            name = ['gain', 'loss'],
-                            poly = [1, 1],
-                            param = [weights_gain[gain], weights_loss[loss]],
-                        ),
-                        None,
-                    ],
-                    regressor_names = None,
-                    regressors = None,
-                ),
-            )
-
-        return subject_info
-
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts():
-        """
-        Create the list of tuples that represents contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # List of condition names
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
-
-        # Create contrasts
-        trial = ('trial', 'T', conditions, [1, 0, 0])
-        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        neg_effect_gain = ('neg_effect_of_gain', 'T', conditions, [0, -1, 0])
-        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
-        neg_effect_loss = ('neg_effect_of_loss', 'T', conditions, [0, 0, -1])
-
-        contrasts = [trial, effect_gain, effect_loss, neg_effect_gain, neg_effect_loss]
-
-        return contrasts
-
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
@@ -451,7 +453,7 @@ class PipelineTeam3C6G(Pipeline):
         # [TODO] Change the name of the files depending on the filenames of results of preprocessing
         templates = {
             'func': join(
-                self.directories.results_dir,
+                self.directories.output_dir,
                 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
                 'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
@@ -463,7 +465,7 @@ class PipelineTeam3C6G(Pipeline):
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
             ),
             'parameters': join(
-                self.directories.results_dir,
+                self.directories.output_dir,
                 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
@@ -472,7 +474,7 @@ class PipelineTeam3C6G(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(templates, base_directory = self.directories.output_dir),
             name = 'select_files'
         )
 
