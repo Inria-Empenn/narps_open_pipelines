@@ -4,8 +4,8 @@
 """ This template can be use to test a pipeline.
 
     - Replace all occurrences of XXXX by the actual id of the team.
-    - All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
-    eventually.
+    - All lines starting with [INFO], are meant to help you during the reproduction,
+    these can be removed eventually.
     - Also remove lines starting with [TODO], once you did what they suggested.
     - Remove this docstring once you are done with coding the tests.
 """
@@ -25,6 +25,7 @@ Usage:
 # [INFO]      - pytest.mark allows to categorize tests as unitary or pipeline tests
 from pytest import helpers, mark
 
+# [INFO] Only for type testing
 from nipype import Workflow
 
 # [INFO] Of course, import the class you want to test, here the Pipeline class for the team XXXX
@@ -36,7 +37,7 @@ class TestPipelinesTeamXXXX:
 
     # [TODO] Write one or several unit_test (and mark them as such)
     # [TODO]    ideally for each method of the class you test.
-    
+
     # [INFO] Here is one example for the __init__() method
     @staticmethod
     @mark.unit_test

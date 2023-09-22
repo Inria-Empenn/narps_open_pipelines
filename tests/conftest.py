@@ -18,6 +18,11 @@ from narps_open.utils.correlation import get_correlation_coefficient
 from narps_open.utils.configuration import Configuration
 from narps_open.data.results import ResultsCollection
 
+# A list of test files to be ignored
+collect_ignore = [
+    'tests/pipelines/templates/test_team_XXXX.py' # test template
+    ]
+
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
 
