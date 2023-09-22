@@ -126,6 +126,9 @@ As explained before, all pipeline inherit from the `narps_open.pipelines.Pipelin
 
 ## Test your pipeline
 
-First have a look at the [testing topic of the documentation](/docs/testing.md). It explains how testing works for inside project and how you should write the tests related to your pipeline.
+First have a look at the [testing page of the documentation](/docs/testing.md). It explains how testing works for the project and how you should write the tests related to your pipeline.
 
-Feel free to have a look at [tests/pipelines/test_team_2T6S.py](/tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives a good example.
+All tests must be contained in a single file named `tests/pipelines/test_team_<team_id>.py`. You can start by copy-pasting the template file : [tests/pipelines/templates/test_team_XXXX.py](/tests/pipelines/templates/test_team_XXXX.py) inside the `tests/pipelines/` directory, replacing `XXXX` with the team id. Then, follow the tips inside the template and don't forget to replace `XXXX` with the actual team id, inside the document as well.
+
+> [!NOTE]  
+> Feel free to have a look at [tests/pipelines/test_team_2T6S.py](/tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives an example.
