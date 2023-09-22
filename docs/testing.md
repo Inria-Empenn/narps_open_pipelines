@@ -55,7 +55,7 @@ Use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to i
 | Type of test | marker | Description |
 | ----------- | ----------- | ----------- |
 | unit tests | `unit_test` | Unitary test a method/function |
-| pipeline tests | `pieline_test` | Compute a whole pipeline and check its outputs are close enough with the team's results |
+| pipeline tests | `pipeline_test` | Compute a whole pipeline and check its outputs are close enough with the team's results |
 
 ## Save time by downsampling data
 

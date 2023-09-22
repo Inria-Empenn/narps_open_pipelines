@@ -126,6 +126,6 @@ As explained before, all pipeline inherit from the `narps_open.pipelines.Pipelin
 
 ## Test your pipeline
 
-First have a look at the [testing topic of the documentation](./docs/testing.md). It explains how testing works for inside project and how you should write the tests related to your pipeline.
+First have a look at the [testing topic of the documentation](/docs/testing.md). It explains how testing works for inside project and how you should write the tests related to your pipeline.
 
-Feel free to have a look at [tests/pipelines/test_team_2T6S.py](./tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives a good example.
+Feel free to have a look at [tests/pipelines/test_team_2T6S.py](/tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives a good example.

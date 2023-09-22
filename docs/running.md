@@ -61,4 +61,4 @@ python narps_open/runner.py -t 2T6S -r 4 -f
 python narps_open/runner.py -t 2T6S -r 4 -f -c # Check the output files without launching the runner
 ```
 
-In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
+In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](/docs/configuration.md).
