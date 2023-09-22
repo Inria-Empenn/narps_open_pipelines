@@ -266,12 +266,7 @@ class PipelineTeamQ6O0(Pipeline):
             - l1_analysis : nipype.WorkFlow
         """
         # Infosource Node - To iterate on subjects
-        infosource = Node(IdentityInterface(
-            fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-            dataset_dir = self.directories.dataset_dir,
-            results_dir = self.directories.results_dir,
-            working_dir = self.directories.working_dir,
-            run_list = self.run_list),
+        infosource = Node(IdentityInterface( fields = ['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
 
@@ -359,9 +354,9 @@ class PipelineTeamQ6O0(Pipeline):
         # Function nodes get_contrasts_* - get the contrasts
         contrasts_gain = Node(Function(
             function = self.get_contrasts_gain,
-            input_names=['subject_id'],
-            output_names=['contrasts']),
-            name='contrasts_gain')
+            input_names = ['subject_id'],
+            output_names = ['contrasts']),
+            name = 'contrasts_gain')
 
         contrasts_loss = Node(Function(
             function = self.get_contrasts_loss,
@@ -371,10 +366,10 @@ class PipelineTeamQ6O0(Pipeline):
 
         # EstimateContrast - estimates contrasts
         contrast_estimate_gain = Node(EstimateContrast(),
-            name="contrast_estimate_gain")
+            name = 'contrast_estimate_gain')
 
         contrast_estimate_loss = Node(EstimateContrast(),
-            name="contrast_estimate_loss")
+            name = 'contrast_estimate_loss')
 
         # Function node remove_gunzip_files - remove output of the gunzip node
         remove_gunzip_files = Node(Function(
