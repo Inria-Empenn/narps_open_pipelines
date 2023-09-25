@@ -126,6 +126,22 @@ As explained before, all pipeline inherit from the `narps_open.pipelines.Pipelin
 * `fwhm` : full width at half maximum for the smoothing kernel (in mm) :
 * `tr` : repetition time of the fMRI acquisition (equals 1.0s)
 
+## Set your pipeline as implemented
+
+Inside `narps_open/pipelines/__init__.py`, set the pipeline as implemented. I.e.: if the pipeline you reproduce is 2T6S, update the line :
+
+```python
+    '2T6S': None,
+```
+
+with :
+
+```python
+    '2T6S': 'PipelineTeam2T6S',
+```
+
+inside the `implemented_pipelines` dictionary.
+
 ## Test your pipeline
 
 First have a look at the [testing page of the documentation](/docs/testing.md). It explains how testing works for the project and how you should write the tests related to your pipeline.
