@@ -36,7 +36,7 @@ def mock_api_issue(mocker):
     """
     response = Response()
     response.status_code = 200
-    def json_func():
+    def json_func_page_0():
         return [
             {
                 "html_url": "url_issue_2",
@@ -50,7 +50,13 @@ def mock_api_issue(mocker):
                 "title" : "Pull request for pipeline 2T6S",
                 "pull_request" : {},
                 "body" : "Work has been done."
-            },
+            }
+        ]
+
+    json_func_page_1 = json_func_page_0
+
+    def json_func_page_2():
+        return [
             {
                 "html_url": "url_issue_4",
                 "number": 4,
@@ -64,6 +70,10 @@ def mock_api_issue(mocker):
                 "body" : "Something about 2T6S."
             }
         ]
+
+    def json_func_page_3():
+        return []
+
     response.json = json_func
     mocker.patch('narps_open.utils.status.get', return_value = response)
     mocker.patch(

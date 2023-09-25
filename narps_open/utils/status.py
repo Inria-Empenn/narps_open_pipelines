@@ -21,10 +21,10 @@ def get_opened_issues():
     request_url += '?page={page_number}'
 
     issues = []
-    page = True # Will later be replaced by a dict
+    page = True # Will later be replaced by a table
     page_number = 1 # According to the doc, first page is not page 0
     # https://docs.github.com/en/rest/issues/issues#list-repository-issues
-    while page : # TODO check if page is empty
+    while bool(page) is True : # Test if the page is empty
         response = get(request_url.format(page_number = str(page_number)), timeout = 2)
         response.raise_for_status()
         page = response.json()
