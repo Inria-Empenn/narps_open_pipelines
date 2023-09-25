@@ -20,10 +20,11 @@ def get_opened_issues():
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
     request_url += '?page={page_number}'
 
-    issues = {}
+    issues = []
     page = True # Will later be replaced by a dict
-    page_number = 0
-    while bool(page) :
+    page_number = 1 # According to the doc, first page is not page 0
+    # https://docs.github.com/en/rest/issues/issues#list-repository-issues
+    while page : # TODO check if page is empty
         response = get(request_url.format(page_number = str(page_number)), timeout = 2)
         response.raise_for_status()
         page = response.json()
