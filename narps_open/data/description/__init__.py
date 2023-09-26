@@ -5,6 +5,7 @@
 
 from os.path import join
 from csv import DictReader
+from json import dumps
 from importlib_resources import files
 
 class TeamDescription(dict):
@@ -24,6 +25,9 @@ class TeamDescription(dict):
         super().__init__()
         self.team_id = team_id
         self._load()
+
+    def __str__(self):
+        return dumps(self, indent = 4)
 
     @property
     def general(self) -> dict:
@@ -54,6 +58,35 @@ class TeamDescription(dict):
     def derived(self) -> dict:
         """ Getter for the sub dictionary containing derived team description """
         return self._get_sub_dict('derived')
+
+    def markdown(self):
+        """ Return the team description as a string formatted in markdown """
+        return_string = f'# NARPS team description : {self.team_id}\n'
+
+        dictionaries = [
+            self.general,
+            self.exclusions,
+            self.preprocessing,
+            self.analysis,
+            self.categorized_for_analysis,
+            self.derived
+            ]
+
+        names = [
+            'General',
+            'Exclusions',
+            'Preprocessing',
+            'Analysis',
+            'Categorized for analysis',
+            'Derived'
+            ]
+
+        for dictionary, name in zip(dictionaries, names):
+            return_string += f'## {name}\n'
+            for key in dictionary:
+                return_string += f'* `{key}` : {dictionary[key]}\n'
+
+        return return_string
 
     def _get_sub_dict(self, key_first_part:str) -> dict:
         """ Return a sub-dictionary of self, with keys that contain key_first_part.
