@@ -34,48 +34,62 @@ def mock_api_issue(mocker):
         which is actually imported as `get` inside the `narps_open.utils.status` module.
         Hence, we patch the `narps_open.utils.status.get` method.
     """
-    response = Response()
-    response.status_code = 200
-    def json_func_page_0():
-        return [
-            {
-                "html_url": "url_issue_2",
-                "number": 2,
-                "title" : "Issue for pipeline UK24",
-                "body" : "Nothing to add here."
-            },
-            {
-                "html_url": "url_pull_3",
-                "number": 3,
-                "title" : "Pull request for pipeline 2T6S",
-                "pull_request" : {},
-                "body" : "Work has been done."
-            }
-        ]
 
-    json_func_page_1 = json_func_page_0
+    # Create a method to mock requests.get
+    def mocked_requests_get(url, params=None, **kwargs):
 
-    def json_func_page_2():
-        return [
-            {
-                "html_url": "url_issue_4",
-                "number": 4,
-                "title" : None,
-                "body" : "This is a malformed issue about C88N."
-            },
-            {
-                "html_url": "url_issue_5",
-                "number": 5,
-                "title" : "Issue about 2T6S",
-                "body" : "Something about 2T6S."
-            }
-        ]
+        response = Response()
+        response.status_code = 200
+        def json_func_page_0():
+            return [
+                {
+                    "html_url": "url_issue_2",
+                    "number": 2,
+                    "title" : "Issue for pipeline UK24",
+                    "body" : "Nothing to add here."
+                },
+                {
+                    "html_url": "url_pull_3",
+                    "number": 3,
+                    "title" : "Pull request for pipeline 2T6S",
+                    "pull_request" : {},
+                    "body" : "Work has been done."
+                }
+            ]
 
-    def json_func_page_3():
-        return []
+        json_func_page_1 = json_func_page_0
 
-    response.json = json_func
-    mocker.patch('narps_open.utils.status.get', return_value = response)
+        def json_func_page_2():
+            return [
+                {
+                    "html_url": "url_issue_4",
+                    "number": 4,
+                    "title" : None,
+                    "body" : "This is a malformed issue about C88N."
+                },
+                {
+                    "html_url": "url_issue_5",
+                    "number": 5,
+                    "title" : "Issue about 2T6S",
+                    "body" : "Something about 2T6S."
+                }
+            ]
+
+        def json_func_page_3():
+            return []
+
+        if '?page=1' in url:
+            response.json = json_func_page_1
+        elif '?page=2' in url:
+            response.json = json_func_page_2
+        elif '?page=3' in url:
+            response.json = json_func_page_3
+        else:
+            response.json = json_func_page_0
+
+        return response
+
+    mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get)
     mocker.patch(
         'narps_open.utils.status.get_teams_with_pipeline_files',
         return_value = ['2T6S', 'UK24', 'Q6O0']
@@ -104,8 +118,6 @@ class TestUtilsStatus:
             which is actually imported as `get` inside the `narps_open.utils.status` module.
             Hence, we patch the `narps_open.utils.status.get` method.
         """
-        get_opened_issues()
-
         # Create a mock API response for 404 error
         response = Response()
         response.status_code = 404
@@ -124,18 +136,27 @@ class TestUtilsStatus:
         assert len(get_opened_issues()) == 0
 
         # Create a mock API response for the general usecase
-        response = Response()
-        response.status_code = 200
-        def json_func():
-            return [
-                {
-                    "html_url": "urls",
-                    "number": 2,
-                }
-            ]
-        response.json = json_func
+        def mocked_requests_get(url, params=None, **kwargs):
+            response = Response()
+            response.status_code = 200
+            def json_func_page_1():
+                return [
+                    {
+                        "html_url": "urls",
+                        "number": 2,
+                    }
+                ]
+            def json_func_page_2():
+                return []
 
-        mocker.patch('narps_open.utils.status.get', return_value = response)
+            if '?page=2' in url:
+                response.json = json_func_page_2
+            else:
+                response.json = json_func_page_1
+
+            return response
+
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get)
         issues = get_opened_issues()
         assert len(issues) == 1
         assert issues[0]['html_url'] == 'urls'

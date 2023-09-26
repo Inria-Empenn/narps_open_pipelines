@@ -18,7 +18,7 @@ from narps_open.pipelines import implemented_pipelines
 def get_opened_issues():
     """ Return a list of opened issues and pull requests for the NARPS Open Pipelines project """
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
-    request_url += '?page={page_number}'
+    request_url += '?page={page_number}?per_page=100'
 
     issues = []
     page = True # Will later be replaced by a table
@@ -29,6 +29,7 @@ def get_opened_issues():
         response.raise_for_status()
         page = response.json()
         issues += page
+        page_number += 1
 
     return issues
 
