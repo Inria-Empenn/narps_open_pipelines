@@ -49,3 +49,5 @@ else:
         print(dumps(information.categorized_for_analysis, indent = 4))
     elif arguments.dictionary == 'derived':
         print(dumps(information.derived, indent = 4))
+    else:
+        print(dumps(information, indent = 4))
