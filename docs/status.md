@@ -36,7 +36,7 @@ print(pipeline_info['status'])
 report.markdown() # Returns a string containing the markdown
 ```
 
-You can also use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`.
+You can also use the command-line tool as so.
 
 ```bash
 python narps_open/utils/status -h

@@ -103,7 +103,8 @@ class TestResultsCollection2T6S:
         """ Test the rectify method """
 
         # Get raw data
-        orig_directory = join(Configuration()['directories']['test_data'], 'results', 'team_2T6S')
+        orig_directory = join(
+            Configuration()['directories']['test_data'], 'data', 'results', 'team_2T6S')
 
         # Create test data
         test_directory = join(Configuration()['directories']['test_runs'], 'results_team_2T6S')
