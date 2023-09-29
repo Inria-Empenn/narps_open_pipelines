@@ -78,7 +78,7 @@ class PipelineTeamT54A(Pipeline):
                             onset[condition].append(float(info[0]))
                             duration[condition].append(float(info[4]))
                             amplitude[condition].append(float(1))
-                        elif condition == 'difficonditionulty':
+                        elif condition == 'difficulty':
                             onset[condition].append(float(info[0]))
                             duration[condition].append(float(info[4]))
                             amplitude[condition].append(
@@ -396,9 +396,9 @@ class PipelineTeamT54A(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'l1_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
                 'varcope{contrast_id}.nii.gz'),
-
-            ##### TODO not dataset here
-            'mask': join(self.directories.dataset_dir, 'NARPS-T54A', 'hypo1_cope.nii.gz')
+            'mask': join(self.directories.output_dir,
+                'l1_analysis', '_run_id_*_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
         }
 
         # SelectFiles node - to select necessary files
@@ -598,8 +598,9 @@ class PipelineTeamT54A(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}', 'varcope1.nii.gz'),
             'participants' : join(self.directories.dataset_dir, 'participants.tsv'),
-            ##### TODO not dataset here
-            'mask' : join(data_dir, 'NARPS-T54A', 'hypo2_unthresh_Z.nii.gz')
+            'mask': join(self.directories.output_dir,
+                'l1_analysis', '_run_id_*_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
             }
 
         # SelectFiles node - to select necessary files
@@ -812,4 +813,4 @@ class PipelineTeamT54A(Pipeline):
         return [join(self.directories.output_dir, f) for f in files]
 
 ##### TODO : what is this ?
-system('export PATH=$PATH:/local/egermani/ICA-AROMA')
+#system('export PATH=$PATH:/local/egermani/ICA-AROMA')
