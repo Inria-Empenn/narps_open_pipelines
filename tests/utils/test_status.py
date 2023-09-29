@@ -108,9 +108,12 @@ def mocked_requests_get_4(url, params=None, **kwargs):
     if 'issues' not in url:
         def mocked_json():
             return mocked_repo_info_4
-    else:
+    elif '?page=1' in url:
         def mocked_json():
             return mocked_issues_4
+    else:
+        def mocked_json():
+            return []
 
     response.json = mocked_json
     return response
@@ -189,7 +192,6 @@ class TestUtilsStatus:
 
         # General usecase 4 issues
         mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
-
         issues = get_opened_issues()
         assert len(issues) == 4
         assert issues[0]['html_url'] == 'url_issue_2'
