@@ -146,6 +146,7 @@ def mock_api_issue(mocker):
         which is actually imported as `get` inside the `narps_open.utils.status` module.
         Hence, we patch the `narps_open.utils.status.get` method.
     """
+
     mocker.patch(
         'narps_open.utils.status.get_teams_with_pipeline_files',
         return_value = ['2T6S', 'UK24', 'Q6O0']
@@ -188,6 +189,7 @@ class TestUtilsStatus:
 
         # General usecase 4 issues
         mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
+
         issues = get_opened_issues()
         assert len(issues) == 4
         assert issues[0]['html_url'] == 'url_issue_2'

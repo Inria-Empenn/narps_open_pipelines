@@ -17,6 +17,7 @@ from narps_open.pipelines import implemented_pipelines
 
 def get_opened_issues():
     """ Return a list of opened issues and pull requests for the NARPS Open Pipelines project """
+
     # First get the number of issues of the project
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines'
     response = get(request_url, timeout = 2)
