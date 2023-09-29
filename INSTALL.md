@@ -1,4 +1,4 @@
-# HOW TO INSTALL NARPS OPEN PIPELINES ? 
+# How to install NARPS Open Pipelines ? 
 
 ## 1 - Get the code
 

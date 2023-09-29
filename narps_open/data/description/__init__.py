@@ -5,6 +5,7 @@
 
 from os.path import join
 from csv import DictReader
+from json import dumps
 from importlib_resources import files
 
 class TeamDescription(dict):
@@ -14,16 +15,19 @@ class TeamDescription(dict):
     """
 
     description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_full_descriptions.tsv')
     derived_description_file = join(
-        files('narps_open.utils.description'),
+        files('narps_open.data.description'),
         'analysis_pipelines_derived_descriptions.tsv')
 
     def __init__(self, team_id):
         super().__init__()
         self.team_id = team_id
         self._load()
+
+    def __str__(self):
+        return dumps(self, indent = 4)
 
     @property
     def general(self) -> dict:
@@ -55,6 +59,35 @@ class TeamDescription(dict):
         """ Getter for the sub dictionary containing derived team description """
         return self._get_sub_dict('derived')
 
+    def markdown(self):
+        """ Return the team description as a string formatted in markdown """
+        return_string = f'# NARPS team description : {self.team_id}\n'
+
+        dictionaries = [
+            self.general,
+            self.exclusions,
+            self.preprocessing,
+            self.analysis,
+            self.categorized_for_analysis,
+            self.derived
+            ]
+
+        names = [
+            'General',
+            'Exclusions',
+            'Preprocessing',
+            'Analysis',
+            'Categorized for analysis',
+            'Derived'
+            ]
+
+        for dictionary, name in zip(dictionaries, names):
+            return_string += f'## {name}\n'
+            for key in dictionary:
+                return_string += f'* `{key}` : {dictionary[key]}\n'
+
+        return return_string
+
     def _get_sub_dict(self, key_first_part:str) -> dict:
         """ Return a sub-dictionary of self, with keys that contain key_first_part.
             The first part of the keys are removed, e.g.:
@@ -82,7 +115,7 @@ class TeamDescription(dict):
                 ...
             Furthermore, we parse the csv derived_description_file.
             The first line of this file being already a second level identifier,
-            the firest level identifier will always be 'derived'.
+            the first level identifier will always be 'derived'.
             This gives -for example- the following key for the dictionary:
                 'derived.n_participants'
         """

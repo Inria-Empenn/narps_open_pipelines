@@ -3,11 +3,20 @@ title = "Testing configuration for the NARPS open pipelines project"
 config_type = "testing"
 
 [directories]
-dataset = "tests/data/original/ds001734/"
-reproduced_results = "tests/data/reproduced/"
-narps_results = "tests/data/results/"
+dataset = "run/data/ds001734/"
+reproduced_results = "run/data/reproduced/"
+narps_results = "run/data/results/"
 test_data = "tests/test_data/"
 test_runs = "run/"
 
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
+nb_trials = 3 # Maximum number of executions to have the pipeline executed completely
+
+[results]
+neurovault_naming = true # true if results files are saved using the neurovault naming, false if they use naming of narps
+
+[testing]
+
+[testing.pipelines]
+correlation_thresholds = [0.30, 0.70, 0.79, 0.85, 0.93] # Correlation between reproduced hypotheses files and results, respectively for [20, 40, 60, 80, 108] subjects.

@@ -62,7 +62,7 @@ implemented_pipelines = {
     'O6R6': None,
     'P5F3': None,
     'Q58J': None,
-    'Q6O0': None,
+    'Q6O0': 'PipelineTeamQ6O0',
     'R42Q': None,
     'R5K7': None,
     'R7D1': None,
@@ -266,16 +266,56 @@ class Pipeline(ABC):
 
     @abstractmethod
     def get_preprocessing(self):
-        """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
+        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
     @abstractmethod
     def get_run_level_analysis(self):
-        """ Return a Nipype worflow describing the run level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
 
     @abstractmethod
     def get_subject_level_analysis(self):
-        """ Return a Nipype worflow describing the subject level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
     @abstractmethod
     def get_group_level_analysis(self):
-        """ Return a Nipype worflow describing the group level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the group level analysis part of the pipeline """
+
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+        return []
+
+    def get_run_level_outputs(self):
+        """ Return the names of the files the run level analysis is supposed to generate. """
+        return []
+
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+        return []
+
+    def get_group_level_outputs(self):
+        """ Return the names of the files the group level analysis is supposed to generate. """
+        return []
+
+    @abstractmethod
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS.
+            Files must be in the following order:
+            hypo1_thresh.nii.gz
+            hypo1_unthresh.nii.gz
+            hypo2_thresh.nii.gz
+            hypo2_unthresh.nii.gz
+            hypo3_thresh.nii.gz
+            hypo3_unthresh.nii.gz
+            hypo4_thresh.nii.gz
+            hypo4_unthresh.nii.gz
+            hypo5_thresh.nii.gz
+            hypo5_unthresh.nii.gz
+            hypo6_thresh.nii.gz
+            hypo6_unthresh.nii.gz
+            hypo7_thresh.nii.gz
+            hypo7_unthresh.nii.gz
+            hypo8_thresh.nii.gz
+            hypo8_unthresh.nii.gz
+            hypo9_thresh.nii.gz
+            hypo9_unthresh.nii.gz
+        """

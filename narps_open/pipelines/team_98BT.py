@@ -73,14 +73,14 @@ def get_dartel_template_wf(exp_dir, result_dir, working_dir, output_dir, subject
 
 def get_fieldmap_infos(info_fmap, magnitude):
     """
-    Function to get informations necessary to compute the fieldmap. 
+    Function to get information necessary to compute the fieldmap. 
 
     Parameters: 
-        - info_fmap: str, file with fieldmap informations
+        - info_fmap: str, file with fieldmap information
         - magnitude: list of str, list of magnitude files
 
     Returns: 
-        - TE: float, echo time obtained from fieldmap informations file
+        - TE: float, echo time obtained from fieldmap information file
         - magnitude_file: str, necessary file to compute fieldmap
     """
     import json 
@@ -601,7 +601,7 @@ def get_subset_contrasts(file_list, method, subject_list, participants_file):
     Parameters :
     - file_list : original file list selected by selectfiles node 
     - subject_list : list of subject IDs that are in the wanted group for the analysis
-    - participants_file: str, file containing participants caracteristics
+    - participants_file: str, file containing participants characteristics
     - method: str, one of "equalRange", "equalIndifference" or "groupComp"
     
     This function return the file list containing only the files belonging to subject in the wanted group.

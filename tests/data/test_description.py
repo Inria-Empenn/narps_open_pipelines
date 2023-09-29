@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Tests of the 'narps_open.utils.description' module.
+""" Tests of the 'narps_open.data.description' module.
 
 Launch this test with PyTest
 
@@ -11,9 +11,12 @@ Usage:
     pytest -q test_description.py -k <selected_test>
 """
 
+from os.path import join
+
 from pytest import raises, mark
 
-from narps_open.utils.description import TeamDescription
+from narps_open.utils.configuration import Configuration
+from narps_open.data.description import TeamDescription
 
 class TestUtilsDescription:
     """ A class that contains all the unit tests for the description module."""
@@ -31,7 +34,7 @@ class TestUtilsDescription:
         with raises(AttributeError):
             TeamDescription('wrong_id')
 
-        # Instatiation is ok
+        # Instantiation is ok
         assert TeamDescription('2T6S') is not None
 
     @staticmethod
@@ -86,3 +89,36 @@ class TestUtilsDescription:
         assert description['general.softwares'] == 'FSL 5.0.11, MRIQC, FMRIPREP'
         assert isinstance(description.general, dict)
         assert description.general['softwares'] == 'FSL 5.0.11, MRIQC, FMRIPREP'
+
+    @staticmethod
+    @mark.unit_test
+    def test_markdown():
+        """ Test writing a TeamDescription as Markdown """
+
+        # Generate markdown from description
+        description = TeamDescription('9Q6R')
+        markdown = description.markdown()
+
+        # Compare markdown with test file
+        test_file_path = join(
+            Configuration()['directories']['test_data'],
+            'data', 'description', 'test_markdown.md'
+            )
+        with open(test_file_path, 'r', encoding = 'utf-8') as file:
+            assert markdown == file.read()
+
+    @staticmethod
+    @mark.unit_test
+    def test_str():
+        """ Test writing a TeamDescription as JSON """
+
+        # Generate report
+        description = TeamDescription('9Q6R')
+
+        # Compare string version of the description with test file
+        test_file_path = join(
+            Configuration()['directories']['test_data'],
+            'data', 'description', 'test_str.json'
+            )
+        with open(test_file_path, 'r', encoding = 'utf-8') as file:
+            assert str(description) == file.read()

@@ -1,0 +1,64 @@
+## Disclaimer - This GitHub Actions workflow updates the  work progress status for pipelines.
+
+# Name the workflow
+name: pipeline_status
+
+# Define when it runs
+on:
+  push:
+    paths:
+      - 'narps_open/pipelines/team**'
+      - 'narps_open/utils/status.py'
+    branches:
+      - main
+  issues:
+    types: [opened, edited, deleted, closed, reopened]
+
+# Jobs that define the workflow
+jobs:
+
+  # A job to update the pipelines statuses
+  update-status:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v3
+      with:
+        ref: main
+
+    - name: Checkout wiki
+      uses: actions/checkout@v3
+      with:
+        repository: ${{github.repository}}.wiki
+        path: wiki
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9
+
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+
+    - name: Update the wiki file with new pipeline statuses
+      run: |
+        python narps_open/utils/status.py --md > wiki/pipeline_status.md
+        cd wiki
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+        # Test if there are changes in the repository before commiting
+        if [[ $(git diff --name-only) ]]; then
+          git add .
+          git commit -m "Pipeline status updated"
+          git push
+        fi
