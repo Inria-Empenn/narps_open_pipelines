@@ -25,6 +25,118 @@ from narps_open.utils.status import (
     PipelineStatusReport
     )
 
+mocked_issues_4 = [
+    {
+        "html_url": "url_issue_2",
+        "number": 2,
+        "title" : "Issue for pipeline UK24",
+        "body" : "Nothing to add here."
+    },
+    {
+        "html_url": "url_pull_3",
+        "number": 3,
+        "title" : "Pull request for pipeline 2T6S",
+        "pull_request" : {},
+        "body" : "Work has been done."
+    },
+    {
+        "html_url": "url_issue_4",
+        "number": 4,
+        "title" : None,
+        "body" : "This is a malformed issue about C88N."
+    },
+    {
+        "html_url": "url_issue_5",
+        "number": 5,
+        "title" : "Issue about 2T6S",
+        "body" : "Something about 2T6S."
+    }
+]
+
+mocked_issues_40_1 = [
+    {
+        "html_url": "url_issue_55",
+        "number": i,
+        "title" : "Issue for pipeline UK24",
+        "body" : "Nothing to add here."
+    } for i in range(0,30)
+]
+
+mocked_issues_40_2 = [
+    {
+        "html_url": "url_issue_55",
+        "number": i,
+        "title" : "Issue for pipeline UK24",
+        "body" : "Nothing to add here."
+    } for i in range(0,10)
+]
+
+mocked_repo_info_0 = {
+    "open_issues": 0
+}
+
+mocked_repo_info_4 = {
+    "open_issues": 4
+}
+
+mocked_repo_info_40 = {
+    "open_issues": 40
+}
+
+def mocked_requests_get_0(url, params=None, **kwargs):
+    """ Create a method to mock requests.get in case there are no issues """
+
+    response = Response()
+    response.status_code = 200
+
+    if 'issues' not in url:
+        def mocked_json():
+            return mocked_repo_info_0
+    else:
+        def mocked_json():
+            return []
+
+    response.json = mocked_json
+    return response
+
+def mocked_requests_get_4(url, params=None, **kwargs):
+    """ Create a method to mock requests.get in case there are less than 30 issues """
+
+    response = Response()
+    response.status_code = 200
+
+    if 'issues' not in url:
+        def mocked_json():
+            return mocked_repo_info_4
+    else:
+        def mocked_json():
+            return mocked_issues_4
+
+    response.json = mocked_json
+    return response
+
+def mocked_requests_get_40(url, params=None, **kwargs):
+    """ Create a method to mock requests.get in case there are more than 30 issues """
+
+    response = Response()
+    response.status_code = 200
+
+    if 'issues' not in url:
+        def mocked_json():
+            return mocked_repo_info_40
+    elif '?page=1' in url:
+        def mocked_json():
+            return mocked_issues_40_1
+    elif '?page=2' in url:
+        def mocked_json():
+            return mocked_issues_40_2
+    else:
+        def mocked_json():
+            return []
+
+    response.json = mocked_json
+    return response
+
 @fixture
 def mock_api_issue(mocker):
     """ Create a mock GitHub API response for successful query on open issues
@@ -34,62 +146,6 @@ def mock_api_issue(mocker):
         which is actually imported as `get` inside the `narps_open.utils.status` module.
         Hence, we patch the `narps_open.utils.status.get` method.
     """
-
-    # Create a method to mock requests.get
-    def mocked_requests_get(url, params=None, **kwargs):
-
-        response = Response()
-        response.status_code = 200
-        def json_func_page_0():
-            return [
-                {
-                    "html_url": "url_issue_2",
-                    "number": 2,
-                    "title" : "Issue for pipeline UK24",
-                    "body" : "Nothing to add here."
-                },
-                {
-                    "html_url": "url_pull_3",
-                    "number": 3,
-                    "title" : "Pull request for pipeline 2T6S",
-                    "pull_request" : {},
-                    "body" : "Work has been done."
-                }
-            ]
-
-        json_func_page_1 = json_func_page_0
-
-        def json_func_page_2():
-            return [
-                {
-                    "html_url": "url_issue_4",
-                    "number": 4,
-                    "title" : None,
-                    "body" : "This is a malformed issue about C88N."
-                },
-                {
-                    "html_url": "url_issue_5",
-                    "number": 5,
-                    "title" : "Issue about 2T6S",
-                    "body" : "Something about 2T6S."
-                }
-            ]
-
-        def json_func_page_3():
-            return []
-
-        if '?page=1' in url:
-            response.json = json_func_page_1
-        elif '?page=2' in url:
-            response.json = json_func_page_2
-        elif '?page=3' in url:
-            response.json = json_func_page_3
-        else:
-            response.json = json_func_page_0
-
-        return response
-
-    mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get)
     mocker.patch(
         'narps_open.utils.status.get_teams_with_pipeline_files',
         return_value = ['2T6S', 'UK24', 'Q6O0']
@@ -118,7 +174,7 @@ class TestUtilsStatus:
             which is actually imported as `get` inside the `narps_open.utils.status` module.
             Hence, we patch the `narps_open.utils.status.get` method.
         """
-        # Create a mock API response for 404 error
+        # Behavior for 404 error
         response = Response()
         response.status_code = 404
 
@@ -126,41 +182,27 @@ class TestUtilsStatus:
         with raises(HTTPError):
             get_opened_issues()
 
-        # Create a mock API response for the no issues case
-        response = Response()
-        response.status_code = 200
-        def json_func():
-            return []
-        response.json = json_func
-        mocker.patch('narps_open.utils.status.get', return_value = response)
+        # No issues case
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_0)
         assert len(get_opened_issues()) == 0
 
-        # Create a mock API response for the general usecase
-        def mocked_requests_get(url, params=None, **kwargs):
-            response = Response()
-            response.status_code = 200
-            def json_func_page_1():
-                return [
-                    {
-                        "html_url": "urls",
-                        "number": 2,
-                    }
-                ]
-            def json_func_page_2():
-                return []
-
-            if '?page=2' in url:
-                response.json = json_func_page_2
-            else:
-                response.json = json_func_page_1
-
-            return response
-
-        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get)
+        # General usecase 4 issues
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
         issues = get_opened_issues()
-        assert len(issues) == 1
-        assert issues[0]['html_url'] == 'urls'
+        assert len(issues) == 4
+        assert issues[0]['html_url'] == 'url_issue_2'
         assert issues[0]['number'] == 2
+        assert issues[0]['title'] == 'Issue for pipeline UK24'
+        assert issues[0]['body'] == 'Nothing to add here.'
+
+        # General usecase 40 issues
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_40)
+        issues = get_opened_issues()
+        assert len(issues) == 40
+        assert issues[0]['html_url'] == 'url_issue_55'
+        assert issues[0]['number'] == 0
+        assert issues[0]['title'] == 'Issue for pipeline UK24'
+        assert issues[0]['body'] == 'Nothing to add here.'
 
     @staticmethod
     @mark.unit_test
@@ -175,8 +217,11 @@ class TestUtilsStatus:
 
     @staticmethod
     @mark.unit_test
-    def test_generate(mock_api_issue):
+    def test_generate(mock_api_issue, mocker):
         """ Test generating a PipelineStatusReport """
+
+        # Mock requests.get
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
 
         # Test the generation
         report = PipelineStatusReport()
@@ -223,8 +268,11 @@ class TestUtilsStatus:
 
     @staticmethod
     @mark.unit_test
-    def test_markdown(mock_api_issue):
+    def test_markdown(mock_api_issue, mocker):
         """ Test writing a PipelineStatusReport as Markdown """
+
+        # Mock requests.get
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
 
         # Generate markdown from report
         report = PipelineStatusReport()
@@ -241,8 +289,11 @@ class TestUtilsStatus:
 
     @staticmethod
     @mark.unit_test
-    def test_str(mock_api_issue):
+    def test_str(mock_api_issue, mocker):
         """ Test writing a PipelineStatusReport as JSON """
+
+        # Mock requests.get
+        mocker.patch('narps_open.utils.status.get', side_effect = mocked_requests_get_4)
 
         # Generate report
         report = PipelineStatusReport()
