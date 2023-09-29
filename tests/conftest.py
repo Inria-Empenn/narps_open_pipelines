@@ -92,7 +92,7 @@ def test_pipeline_execution(
 
     # Retrieve the paths to the results files
     collection = ResultsCollection(team_id)
-    results_files = [join(collection.directory, f) for f in collection.files.keys()]
+    results_files = [join(collection.directory, f) for f in sorted(collection.files.keys())]
     results_files = [results_files[i] for i in indices]
 
     # Compute the correlation coefficients

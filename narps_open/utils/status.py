@@ -18,10 +18,20 @@ from narps_open.pipelines import implemented_pipelines
 def get_opened_issues():
     """ Return a list of opened issues and pull requests for the NARPS Open Pipelines project """
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
-    response = get(request_url, timeout = 2)
-    response.raise_for_status()
+    request_url += '?page={page_number}?per_page=100'
 
-    return response.json()
+    issues = []
+    page = True # Will later be replaced by a table
+    page_number = 1 # According to the doc, first page is not page 0
+    # https://docs.github.com/en/rest/issues/issues#list-repository-issues
+    while bool(page) is True : # Test if the page is empty
+        response = get(request_url.format(page_number = str(page_number)), timeout = 2)
+        response.raise_for_status()
+        page = response.json()
+        issues += page
+        page_number += 1
+
+    return issues
 
 def get_teams_with_pipeline_files():
     """ Return a set of teams having a file for their pipeline in the repository """
