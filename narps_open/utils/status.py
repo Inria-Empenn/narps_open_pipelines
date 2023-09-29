@@ -26,7 +26,7 @@ def get_opened_issues():
 
     # Get all opened issues
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
-    request_url += '?page={page_number}?per_page=30'
+    request_url += '?page={page_number}'
 
     issues = []
     page = True # Will later be replaced by a table
@@ -38,10 +38,6 @@ def get_opened_issues():
         page = response.json()
         issues += page
         page_number += 1
-
-        # Leave if there is only one page (in this case, the `page` query parameter has no effect)
-        if nb_issues < 30:
-            break
 
     return issues
 
