@@ -3,8 +3,8 @@
 
 """ Write the work of NARPS' team C88N using Nipype """
 
-#from os import
 from os.path import join
+from itertools import product
 
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
@@ -381,22 +381,30 @@ class PipelineTeamC88N(Pipeline):
     def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
 
-        # Contrat maps
+        # Handle gain files
         templates = [join(
             self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
-
-        # SPM.mat file
+            'l1_analysis_gain', '_subject_id_{subject_id}', 'con_0001.nii')]
         templates += [join(
             self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
-
-        # spmT maps
+            'l1_analysis_gain', '_subject_id_{subject_id}', 'SPM.mat')]
         templates += [join(
             self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
+            'l1_analysis_gain', '_subject_id_{subject_id}', 'spmT_0001.nii')]
+
+        # Handle loss files
+        contrast_list = ['0001', '0002']
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis_loss', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in contrast_list]
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis_loss', '_subject_id_{subject_id}', 'SPM.mat')]
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis_loss', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in contrast_list]
 
         # Format with subject_ids
         return_list = []
@@ -509,16 +517,6 @@ class PipelineTeamC88N(Pipeline):
             ),
             name = 'datasink_groupanalysis')
 
-        # Function node reorganize_results - organize results once computed
-        reorganize_res = Node(Function(
-            function = self.reorganize_results,
-            input_names = ['team_id', 'nb_subjects', 'results_dir', 'output_dir']),
-            name = 'reorganize_res')
-        reorganize_res.inputs.team_id = self.team_id
-        reorganize_res.inputs.nb_subjects = nb_subjects
-        reorganize_res.inputs.results_dir = self.directories.results_dir
-        reorganize_res.inputs.output_dir = self.directories.output_dir
-
         # Node to select subset of contrasts
         sub_contrasts = Node(Function(
             function = self.get_subset_contrasts,
@@ -608,3 +606,127 @@ class PipelineTeamC88N(Pipeline):
         estimate_contrast.inputs.contrasts = contrasts
 
         return l2_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+
+        ## Contrast id 0001
+        parameters = {
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'model_type' : ['gain', 'loss'],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_0001_model_type_{model_type}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        ## Contrast id 0002
+        parameters = {
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_0002_model_type_loss',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_0001_model_type_loss',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_gain', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', 'spmT_0002.nii'),
+            # Hypothesis 6
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', 'spmT_0002.nii'),
+            # Hypothesis 7
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', 'spmT_0001.nii'),
+            # Hypothesis 9
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0001_model_type_loss', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
