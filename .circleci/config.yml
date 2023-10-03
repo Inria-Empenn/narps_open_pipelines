@@ -1,0 +1,52 @@
+---
+version: 2.1
+jobs:
+  build:
+    machine:
+      # https://circleci.com/developer/machine/image/ubuntu-2204
+      image: ubuntu-2204:2022.10.2
+    steps:
+    - checkout
+    - run:
+        name: build docker image
+        command: |
+          cp ./circleci/build_docker.sh build_docker.sh 
+          bash build_docker.sh
+    - persist_to_workspace:
+        root: /home/circleci
+        paths:
+        - docker/image.tar
+
+  deploy:
+    machine:
+      image: ubuntu-2204:2022.10.2
+    steps:
+    - attach_workspace:
+        at: /tmp/workspace
+    - checkout
+    - run: docker load -i /tmp/workspace/docker/image.tar
+    - run:
+        name: push to dockerhub
+        command: |
+          cp ./circleci/push_docker.sh push_docker.sh 
+          bash push_docker.sh
+
+workflows:
+  build_deploy:
+    jobs:
+    - build:
+        filters:
+          branches:
+            only: /.*/
+          tags:
+            only: /.*/
+    - deploy:
+        context:
+        - dockerhub
+        requires:
+        - build
+        filters:
+          branches:
+            only: /.*/
+          tags:
+            only: /.*/
