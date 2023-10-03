@@ -1,0 +1,2 @@
+include narps_open/utils/configuration/*.toml
+include narps_open/data/description/*.tsv

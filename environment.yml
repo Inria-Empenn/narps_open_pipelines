@@ -4,12 +4,7 @@ channels:
   - defaults
 dependencies:
   - python=3.8.0
-  - pip
-  - traits 
-  - jupyter 
-  - nilearn 
-  - graphviz 
-  - nipype 
-  - scikit-image
+  - pip==23.2.1
   - pip:
-    - matplotlib
+    - .
+
