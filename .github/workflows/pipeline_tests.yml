@@ -73,14 +73,12 @@ jobs:
           pytest -s -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
         fi
 
-    - name: Export test results
+    - name: Cache test results
       if: ${{ always() }}
-      run: |
-        for team in ${{ needs.identify-tests.outputs.teams }}
-        do
-          report_value=$(<test_pipeline-$team.txt)
-          echo "report_team-$team=$report_value" >> $GITHUB_ENV
-        done
+      uses: actions/cache@v3
+      with:
+        key: cache-test-results-${{github.run_id}}
+        path: test_pipeline-*.txt
 
     - name: Archive pipeline execution failures
       if: ${{ failure() }} # Run only if previous job fails
@@ -97,6 +95,13 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
+
+    - name: Restore cache with test results
+      uses: actions/cache@v3
+      with:
+        key: cache-test-results-${{github.run_id}}
+        path: test_pipeline-*.txt
+
     - name: Report results on step summary
       run: |
         # Start report
@@ -112,7 +117,7 @@ jobs:
         for team in ${{ needs.identify-tests.outputs.teams }}
         do
           # Retrieve the report from GITHUB_ENV, as set up by the pytest job
-          echo $(report_team-$team) >> $GITHUB_STEP_SUMMARY
+          cat test_pipeline-$team.txt >> $GITHUB_STEP_SUMMARY
         done
 
     - name: Checkout wiki
@@ -126,15 +131,15 @@ jobs:
         # Loop through test report files & write them to the corresponding wiki page
         for team in ${{ needs.identify-tests.outputs.teams }}
         do
-          echo "# Correlation values for pipeline $team" > wiki/pipeline_$team.md
-          echo "Unthresholded maps, reproduced vs. results" >> wiki/pipeline_$team.md
-          echo "Correlation values are sorted from hypotheses 1 to 9" >> wiki/pipeline_$team.md
-          echo "These values were calculated by GitHub Actions run [# $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" >> wiki/pipeline_$team.md
+          echo "# Correlation values for pipeline $team \n" > wiki/pipeline_$team.md
+          echo "Unthresholded maps, reproduced vs. results \n" >> wiki/pipeline_$team.md
+          echo "Correlation values are sorted from hypotheses 1 to 9 \n" >> wiki/pipeline_$team.md
+          echo "These values were calculated by GitHub Actions run [# $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) \n" >> wiki/pipeline_$team.md
           echo "| Team    | Number of subjects | Test status | Correlation values |" >> wiki/pipeline_$team.md
           echo "| -------- | ------- | ------- | ------- |" >> wiki/pipeline_$team.md
 
           # Retrieve the report from GITHUB_ENV, as set up by the pytest job
-          echo $(report_team-$team) >> wiki/pipeline_$team.md
+          cat test_pipeline-$team.txt >> wiki/pipeline_$team.md
         done
 
         # Push changes
