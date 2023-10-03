@@ -605,11 +605,11 @@ class PipelineTeamT54A(Pipeline):
 
         # SelectFiles node - to select necessary files
         selectfiles_group_level = Node(SelectFiles(
-            templates, base_directory = self.directories.result_dir),
+            templates, base_directory = self.directories.results_dir),
             name = 'selectfiles_group_level')
 
         datasink_group_level = Node(DataSink(
-            base_directory = self.directories.result_dir
+            base_directory = self.directories.output_dir
             ),
             name='datasink_group_level')
 
