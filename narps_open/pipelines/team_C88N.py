@@ -251,7 +251,7 @@ class PipelineTeamC88N(Pipeline):
         smooth = Node(Smooth(fwhm = self.fwhm),
             name = 'smooth')
 
-        # Funcion node get_subject_infos - get subject specific condition information
+        # Function node get_subject_infos - get subject specific condition information
         subject_infos_gain = Node(Function(
             function = self.get_subject_infos,
             input_names = ['event_files', 'modulation'],
@@ -420,7 +420,7 @@ class PipelineTeamC88N(Pipeline):
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants caracteristics
+        - participants_file: str, file containing participants characteristics
 
         This function return the file list containing only the files belonging to
         subject in the wanted group.
@@ -486,7 +486,7 @@ class PipelineTeamC88N(Pipeline):
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
 
-        # Infosource - iterate over the list of constrasts
+        # Infosource - iterate over the list of contrasts
         infosource_groupanalysis = Node(
             IdentityInterface(
                 fields = ['model_type', 'contrast_id', 'subjects'],
