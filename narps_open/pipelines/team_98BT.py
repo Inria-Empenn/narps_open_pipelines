@@ -4,9 +4,9 @@
 """ Write the work of NARPS team 98BT using Nipype """
 
 from os.path import join
-from json import load
+from itertools import product
 
-from nipype import Workflow, Node, MapNode
+from nipype import Workflow, Node, MapNode, JoinNode
 from nipype.interfaces.utility import IdentityInterface, Function, Rename
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
@@ -18,8 +18,10 @@ from nipype.interfaces.spm import (
     )
 from nipype.interfaces.fsl import ExtractROI
 from nipype.algorithms.modelgen import SpecifySPMModel
+from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
 from narps_open.pipelines import Pipeline
+from narps_open.data.task import Pipeline
 
 class PipelineTeam98BT(Pipeline):
     """ A class that defines the pipeline of team 98BT. """
@@ -28,19 +30,16 @@ class PipelineTeam98BT(Pipeline):
         super().__init__()
         self.fwhm = 8.0
         self.team_id = '98BT'
-        self.contrast_list = []
-
-        # Get Information from the task
-        with open(join(self.directories.dataset_dir, 'task-MGT_bold.json'), 'rt') as file:
-            task_info = load(file)
-        self.slice_timing = task_info['SliceTiming']
-        self.number_of_slices = len(self.slice_timing)
-        self.acquisition_time = self.tr / self.number_of_slices
-        self.effective_echo_spacing = task_info['EffectiveEchoSpacing']
-        self.total_readout_time = self.number_of_slices * self.effective_echo_spacing
+        self.contrast_list = ['0001', '0002', '0003', '0004']
 
     def get_dartel_template_sub_workflow(self):
         """
+        Create a dartel workflow, as first part of the preprocessing.
+
+        DARTEL allows to create a study-specific template in 3D volume space.
+        This study template can then be used for normalizating each subject’s
+        scans to the MNI space.
+
         Returns:
             - dartel : nipype.WorkFlow
         """
@@ -83,7 +82,7 @@ class PipelineTeam98BT(Pipeline):
         rename_dartel.inputs.subject_id = self.subject_list
         rename_dartel.inputs.keep_ext = True
 
-        dartel_workflow = spm_wf.create_DARTEL_template(name='dartel_workflow')
+        dartel_workflow = create_DARTEL_template(name = 'dartel_workflow')
         dartel_workflow.inputs.inputspec.template_prefix = 'template'
 
         # DataSink Node - store the wanted results in the wanted repository
@@ -256,7 +255,7 @@ class PipelineTeam98BT(Pipeline):
         # Function node remove_temporary_files - remove temporary files
         remove_temporary_files = Node(Function(
             function = self.remove_temporary_files,
-            input_names = ['_', 'subject_id', 'run_id', 'result_dir', 'working_dir'],
+            input_names = ['_', 'subject_id', 'run_id', 'working_dir'],
             output_names = []),
             name = 'remove_temporary_files')
         remove_temporary_files.inputs.working_dir = self.directories.working_dir
@@ -289,10 +288,10 @@ class PipelineTeam98BT(Pipeline):
             (gunzip_anat, segmentation, [('out_file', 'channel_files')]),
             (gunzip_func, slice_timing, [('out_file', 'in_files')]),
             (slice_timing, motion_correction, [('timecorrected_files', 'in_files')]),
-            (motion_correction, remove_temporary_files, [('realigned_unwarped_files', 'files')]),
-            (remove_temporary_files, coregistration, [('files', 'apply_to_files')]),
+            (motion_correction, remove_temporary_files, [('realigned_unwarped_files', '_')]),
+            (motion_correction, coregistration, [('realigned_unwarped_files', 'apply_to_files')]),
             (gunzip_anat, coregistration, [('out_file', 'target')]),
-            (remove_temporary_files, extract_first, [('files', 'in_file')]),
+            (motion_correction, extract_first, [('realigned_unwarped_files', 'in_file')]),
             (extract_first, coregistration, [('roi_file', 'source')]),
             (selectfiles_preproc, dartel_norm_func, [
                 ('dartel_flow_field', 'flowfield_files'),
@@ -322,6 +321,10 @@ class PipelineTeam98BT(Pipeline):
             self.get_dartel_template_sub_workflow(),
             self.get_preprocessing_sub_workflow()
         ]
+
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+
 
     def get_parameters_files(
         parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
@@ -372,8 +375,8 @@ class PipelineTeam98BT(Pipeline):
             data_frame = read_table(file, sep = '  ', header = None)
             data_frame['Mean_WM'] = mean_wm[file_id]
 
-            new_path = join(result_dir, working_dir, 'parameters_file',
-                f'parameters_file_sub-{subject_id}_run{"0" + str(file_id + 1)}.tsv')
+            new_path = join(working_dir, 'parameters_file',
+                f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
 
             makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
 
@@ -608,6 +611,33 @@ class PipelineTeam98BT(Pipeline):
 
         return l1_analysis
 
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
+        # Contrat maps
+        templates = [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # SPM.mat file
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+
+        # spmT maps
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
+
     def get_subset_contrasts(file_list, subject_list, participants_file):
         """
         Parameters :
@@ -781,51 +811,102 @@ class PipelineTeam98BT(Pipeline):
 
         return l2_analysis
 
-    def reorganize_results(result_dir, output_dir, n_sub, team_ID):
-        """
-        Reorganize the results to analyze them.
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
 
-        Parameters:
-            - result_dir: str, directory where results will be stored
-            - output_dir: str, name of the sub-directory for final results
-            - n_sub: int, number of subject used for analysis
-            - team_ID: str, name of the team ID for which we reorganize files
-        """
-        from os.path import join as opj
-        import os
-        import shutil
-        import gzip
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
 
-        h1 = opj(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_01')
-        h2 = opj(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_01')
-        h3 = opj(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_01')
-        h4 = opj(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_01')
-        h5 = opj(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_02')
-        h6 = opj(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_02')
-        h7 = opj(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_02')
-        h8 = opj(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_02')
-        h9 = opj(result_dir, output_dir, f"l2_analysis_groupComp_nsub_{n_sub}", '_contrast_id_02')
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
-        h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
 
-        repro_unthresh = [opj(filename, "spmT_0002.nii") if i in [4, 5] else opj(filename,
-                         "spmT_0001.nii") for i, filename in enumerate(h)]
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
-        repro_thresh = [opj(filename, "_threshold1",
-             "spmT_0002_thr.nii") if i in [4, 5] else opj(filename,
-              "_threshold0", "spmT_0001_thr.nii")  for i, filename in enumerate(h)]
+        return return_list
 
-        if not os.path.isdir(opj(result_dir, "NARPS-reproduction")):
-            os.mkdir(opj(result_dir, "NARPS-reproduction"))
-
-        for i, filename in enumerate(repro_unthresh):
-            f_in = filename
-            f_out = opj(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_unthresholded.nii")
-            shutil.copyfile(f_in, f_out)
-
-        for i, filename in enumerate(repro_thresh):
-            f_in = filename
-            f_out = opj(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii")
-            shutil.copyfile(f_in, f_out)
-
-        print(f"Results files of team {team_ID} reorganized.")
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 6
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 7
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold1', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 9
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
