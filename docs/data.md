@@ -94,3 +94,39 @@ python narps_open/utils/results -r -t 2T6S C88N L1A8
 The collections are also available [here](https://zenodo.org/record/3528329/) as one release on Zenodo that you can download.
 
 Each team results collection is kept in the `data/results/orig` directory, in a folder using the pattern `<neurovault_collection_id>_<team_id>` (e.g.: `4881_2T6S` for the 2T6S team).
+
+## Access NARPS data
+
+Inside `narps_open.data`, several modules allow to parse data from the NARPS file, so it's easier to use it inside the Narps Open Pipelines project. These are :
+
+### `narps_open.data.description`
+Get textual description of the pipelines, as written by the teams (see [docs/description.md](/docs/description.md)).
+
+### `narps_open.data.results`
+Get the result collections, as described earlier in this file.
+
+### `narps_open.data.participants`
+Get the participants data (parses the `data/original/ds001734/participants.tsv` file) as well as participants subsets to perform analyses on lower numbers of images.
+
+### `narps_open.data.task`
+Get information about the task (parses the `data/original/ds001734/task-MGT_bold.json` file). Here is an example how to use it :
+
+```python
+from narps_open.data.task import TaskInformation
+
+task_info = TaskInformation() # task_info is a dict
+
+# All available keys
+print(task_info.keys())
+# dict_keys(['TaskName', 'Manufacturer', 'ManufacturersModelName', 'MagneticFieldStrength', 'RepetitionTime', 'EchoTime', 'FlipAngle', 'MultibandAccelerationFactor', 'EffectiveEchoSpacing', 'SliceTiming', 'BandwidthPerPixelPhaseEncode', 'PhaseEncodingDirection', 'TaskDescription', 'CogAtlasID', 'NumberOfSlices', 'AcquisitionTime', 'TotalReadoutTime'])
+
+# Original data
+print(task_info['TaskName'])
+print(task_info['Manufacturer'])
+print(task_info['RepetitionTime']) # And so on ...
+
+# Derived data
+print(task_info['NumberOfSlices'])
+print(task_info['AcquisitionTime'])
+print(task_info['TotalReadoutTime'])
+```
