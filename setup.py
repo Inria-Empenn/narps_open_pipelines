@@ -19,7 +19,8 @@ requires = [
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
     'nilearn>=0.10.0,<0.11',
     'nipype',
-    'pandas'
+    'pandas',
+    'niflow-nipype1-workflows>=0.0.5,<0.1.0'
 ]
 extras_require = {
     'tests': [

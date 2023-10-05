@@ -325,7 +325,11 @@ class PipelineTeam98BT(Pipeline):
 
     def get_preprocessing_outputs(self):
         """ Return the names of the files the preprocessing is supposed to generate. """
+        return []
 
+    def get_run_level_analysis(self):
+        """ No run level analysis has been done by team 98BT """
+        return None
 
     def get_parameters_files(
         parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
@@ -351,9 +355,9 @@ class PipelineTeam98BT(Pipeline):
 
         from warnings import simplefilter
         # ignore all future warnings
-        simplefilter(action='ignore', category=FutureWarning)
-        simplefilter(action='ignore', category=UserWarning)
-        simplefilter(action='ignore', category=RuntimeWarning)
+        simplefilter(action = 'ignore', category = FutureWarning)
+        simplefilter(action = 'ignore', category = UserWarning)
+        simplefilter(action = 'ignore', category = RuntimeWarning)
 
         # Load wc2 file and create a mask out of it
         wc2 = load(wc2_file)
