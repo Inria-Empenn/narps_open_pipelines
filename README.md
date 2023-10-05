@@ -72,6 +72,6 @@ This project is developed in the Empenn team by Boris Clenet, Elodie Germani, Je
 
 In addition, this project was presented and received contributions during the following events:
  - OHBM Brainhack 2022 (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
- - e-ReproNim FENS NENS Cluster Brainhack: <ADD_NAMES_HERE>
- - OHBM Brainhack 2023 (July 2023): <ADD_NAMES_HERE>
+ - e-ReproNim FENS NENS Cluster Brainhack (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
+ - OHBM Brainhack 2023 (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
  - ORIGAMI lab hackathon (Sept 2023): 
