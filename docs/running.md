@@ -1,6 +1,33 @@
-# :running: How to run NARPS open pipelines ?
+# How to run NARPS open pipelines ? :running:
 
-## Using the `PipelineRunner`
+## Using the runner application
+
+The `narps_open.runner` module allows to run pipelines from the command line :
+
+```bash
+python narps_open/runner.py -h
+	usage: runner.py [-h] -t TEAM (-r RANDOM | -s SUBJECTS [SUBJECTS ...]) [-g | -f]
+
+	Run the pipelines from NARPS.
+
+	options:
+	  -h, --help            show this help message and exit
+	  -t TEAM, --team TEAM  the team ID
+	  -r RANDOM, --random RANDOM the number of subjects to be randomly selected
+	  -s SUBJECTS [SUBJECTS ...], --subjects SUBJECTS [SUBJECTS ...] a list of subjects
+	  -g, --group           run the group level only
+	  -f, --first           run the first levels only (preprocessing + subjects + runs)
+	  -c, --check           check pipeline outputs (runner is not launched)
+
+python narps_open/runner.py -t 2T6S -s 001 006 020 100
+python narps_open/runner.py -t 2T6S -r 4
+python narps_open/runner.py -t 2T6S -r 4 -f
+python narps_open/runner.py -t 2T6S -r 4 -f -c # Check the output files without launching the runner
+```
+
+In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
+
+## Using the `PipelineRunner` object
 
 The class `PipelineRunner` is available from the `narps_open.runner` module. You can use it from inside python code, as follows :
 
@@ -35,30 +62,3 @@ runner.start(True, True)
 runner.get_missing_first_level_outputs()
 runner.get_missing_group_level_outputs()
 ```
-
-## Using the runner application
-
-The `narps_open.runner` module also allows to run pipelines from the command line :
-
-```bash
-python narps_open/runner.py -h
-	usage: runner.py [-h] -t TEAM (-r RANDOM | -s SUBJECTS [SUBJECTS ...]) [-g | -f]
-
-	Run the pipelines from NARPS.
-
-	options:
-	  -h, --help            show this help message and exit
-	  -t TEAM, --team TEAM  the team ID
-	  -r RANDOM, --random RANDOM the number of subjects to be randomly selected
-	  -s SUBJECTS [SUBJECTS ...], --subjects SUBJECTS [SUBJECTS ...] a list of subjects
-	  -g, --group           run the group level only
-	  -f, --first           run the first levels only (preprocessing + subjects + runs)
-	  -c, --check           check pipeline outputs (runner is not launched)
-
-python narps_open/runner.py -t 2T6S -s 001 006 020 100
-python narps_open/runner.py -t 2T6S -r 4
-python narps_open/runner.py -t 2T6S -r 4 -f
-python narps_open/runner.py -t 2T6S -r 4 -f -c # Check the output files without launching the runner
-```
-
-In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](/docs/configuration.md).
