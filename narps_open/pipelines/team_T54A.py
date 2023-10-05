@@ -3,7 +3,6 @@
 
 """ Write the work of NARPS team T54A using Nipype """
 
-from os import system
 from os.path import join
 from itertools import product
 
@@ -594,9 +593,11 @@ class PipelineTeamT54A(Pipeline):
         # Templates to select files node
         templates = {
             'cope' : join(self.directories.output_dir,
-                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}', 'cope1.nii.gz'),
+                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
+                'cope1.nii.gz'),
             'varcope' : join(self.directories.output_dir,
-                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}', 'varcope1.nii.gz'),
+                'l2_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
+                'varcope1.nii.gz'),
             'participants' : join(self.directories.dataset_dir, 'participants.tsv'),
             'mask': join(self.directories.output_dir,
                 'l1_analysis', '_run_id_*_subject_id_{subject_id}',
@@ -645,7 +646,7 @@ class PipelineTeamT54A(Pipeline):
 
         randomise = Node(Randomise(
             num_perm = 10000, tfce = True, vox_p_values = True, c_thresh = 0.05, tfce_E = 0.01),
-            name = "randomise")
+            name = 'randomise')
 
         l3_analysis = Workflow(
             base_dir = self.directories.working_dir,
