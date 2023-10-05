@@ -21,7 +21,7 @@ from nipype.algorithms.modelgen import SpecifySPMModel
 from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
 from narps_open.pipelines import Pipeline
-from narps_open.data.task import Pipeline
+from narps_open.data.task import TaskInformation
 
 class PipelineTeam98BT(Pipeline):
     """ A class that defines the pipeline of team 98BT. """
@@ -183,9 +183,9 @@ class PipelineTeam98BT(Pipeline):
             'magnitude' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude*.nii.gz'),
             'phasediff' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz'),
             'info_fmap' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.json'),
-            'dartel_flow_field' : join(result_dir, output_dir, 'dartel_template',
+            'dartel_flow_field' : join(self.directories.output_dir, 'dartel_template',
                 'u_rc1subject_id_{subject_id}_struct_template.nii'),
-            'dartel_template' :join(result_dir, output_dir, 'dartel_template', 'template_6.nii')
+            'dartel_template' :join(self.directories.output_dir, 'dartel_template', 'template_6.nii')
         }
 
         # SelectFiles node - to select necessary files
@@ -207,7 +207,7 @@ class PipelineTeam98BT(Pipeline):
 
         fieldmap = Node(FieldMap(blip_direction = -1),
             name = 'fieldmap')
-        fieldmap.inputs.total_readout_time = self.total_readout_time
+        fieldmap.inputs.total_readout_time = TaskInformation()['TotalReadoutTime']
 
         # Segmentation - SPM Segment function via custom scripts (defaults left in place)
         tissue_list = [
@@ -226,9 +226,10 @@ class PipelineTeam98BT(Pipeline):
 
         # Slice timing - SPM slice time correction with default parameters
         slice_timing = Node(SliceTiming(
-            num_slices = self.number_of_slices, ref_slice = 2,
-            slice_order = self.slice_timing, time_acquisition = self.acquisition_time,
-            time_repetition = self.tr),
+            num_slices = TaskInformation()['NumberOfSlices'], ref_slice = 2,
+            slice_order = TaskInformation()['SliceTiming'],
+            time_acquisition = TaskInformation()['AcquisitionTime'],
+            time_repetition = TaskInformation()['RepetitionTime']),
             name = 'slice_timing')
 
         # Motion correction - SPM realign and unwarp
@@ -556,13 +557,13 @@ class PipelineTeam98BT(Pipeline):
         # SpecifyModel - Generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(
             concatenate_runs = False, input_units = 'secs', output_units = 'secs',
-            time_repetition = self.tr, high_pass_filter_cutoff = 128),
+            time_repetition = TaskInformation()['RepetitionTime'], high_pass_filter_cutoff = 128),
             name='specify_model')
 
         # Level1Design - Generates an SPM design matrix
         l1_design = Node(Level1Design(
             bases = {'hrf': {'derivs': [1, 1]}}, timing_units = 'secs',
-            interscan_interval = self.tr),
+            interscan_interval = TaskInformation()['RepetitionTime']),
             name='l1_design')
 
         # EstimateModel - estimate the parameters of the model
