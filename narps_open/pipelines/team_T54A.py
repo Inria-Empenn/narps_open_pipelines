@@ -27,7 +27,7 @@ class PipelineTeamT54A(Pipeline):
         super().__init__()
         self.fwhm = 4.0
         self.team_id = 'T54A'
-        self.contrast_list = ['01', '02']
+        self.contrast_list = ['1', '2']
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team T54A """
@@ -326,9 +326,9 @@ class PipelineTeamT54A(Pipeline):
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
+            'contrast_id' : self.contrast_list,
             'file' : [
-                join('results', 'cope1.nii.gz'),
-                join('results', 'cope2.nii.gz'),
+                join('results', 'cope{contrast_id}.nii.gz'),
                 join('results', 'dof'),
                 join('results', 'logfile'),
                 join('results', 'pe10.nii.gz'),
@@ -351,12 +351,9 @@ class PipelineTeamT54A(Pipeline):
                 join('results', 'res4d.nii.gz'),
                 join('results', 'sigmasquareds.nii.gz'),
                 join('results', 'threshac1.nii.gz'),
-                join('results', 'tstat1.nii.gz'),
-                join('results', 'tstat2.nii.gz'),
-                join('results', 'varcope1.nii.gz'),
-                join('results', 'varcope2.nii.gz'),
-                join('results', 'zstat1.nii.gz'),
-                join('results', 'zstat2.nii.gz'),
+                join('results', 'tstat{contrast_id}.nii.gz'),
+                join('results', 'varcope{contrast_id}.nii.gz'),
+                join('results', 'zstat{contrast_id}.nii.gz'),
                 'run0.mat',
                 'run0.png',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
