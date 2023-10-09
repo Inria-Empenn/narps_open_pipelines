@@ -256,7 +256,7 @@ class PipelineTeam08MQ(Pipeline):
 
     def get_subject_information(event_file: str):
         """
-        Extact subject information from the event file, to create a Bunch with required data only.
+        Extract subject information from the event file, to create a Bunch with required data only.
 
         Parameters :
         - event_file : event file corresponding to the run and the subject to analyze
