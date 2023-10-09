@@ -25,7 +25,8 @@ from nipype.interfaces.io import SelectFiles, DataSink
 
 # from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl import (
-    FAST, BET, Registration, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer
+    FAST, BET, Registration, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
+    Threshold, Info
     )
 
 
@@ -33,12 +34,11 @@ from nipype.interfaces.fsl import (
     Info, ImageMaths, IsotropicSmooth, Threshold,
     Level1Design, FEATModel, L2Model, Merge,
     FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign,
-    Cluster, BET, SmoothEstimate
+    Cluster, SmoothEstimate
     )
 """
 
 from nipype.interfaces.ants import Registration
-
 
 from narps_open.pipelines import Pipeline
 from narps_open.pipelines import TaskInformation
@@ -83,7 +83,6 @@ class PipelineTeam08MQ(Pipeline):
         bias_field_correction = Node(FAST(), name = 'bias_field_correction')
         bias_field_correction.inputs.img_type = 1 # T1 image
         bias_field_correction.inputs.output_biascorrected = True
-        #bias_field_correction.inputs.output_biasfield = True
 
         # BET Node - Brain extraction for anatomical images
         brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
@@ -92,16 +91,39 @@ class PipelineTeam08MQ(Pipeline):
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
         segmentation_anat.inputs.no_bias = True # Bias field was already removed
-        segmentation_anat.inputs.number_classes = 
+        segmentation_anat.inputs.number_classes = 1 # ?
         segmentation_anat.inputs.segments = True # One image per tissue class
 
         # ANTs Node - Registration to T1 MNI152 space
         registration_anat = Node(Registration(), name = 'registration_anat')
-        registration_anat.inputs.fixed_image = ''
-        registration_anat.inputs.moving_image = ''
-        registration_anat.inputs.initial_moving_transform = ''
+        """[
+            'MNI152_T1_2mm_eye_mask.nii.gz',
+            'MNI152_T1_2mm_edges.nii.gz',
+            'MNI152_T1_2mm_brain_mask_deweight_eyes.nii.gz',
+            'MNI152_T1_2mm_brain_mask_dil1.nii.gz',
+            'MNI152_T1_2mm_skull.nii.gz',
+            'MNI152_T1_2mm_LR-masked.nii.gz',
+            'MNI152_T1_2mm_brain.nii.gz',
+            'MNI152_T1_2mm_brain_mask.nii.gz',
+            'MNI152_T1_2mm_VentricleMask.nii.gz',
+            'MNI152_T1_2mm_strucseg_periph.nii.gz',
+            'MNI152_T1_2mm.nii.gz',
+            'MNI152_T1_2mm_b0.nii.gz',
+            'MNI152_T1_2mm_brain_mask_dil.nii.gz',
+            'MNI152_T1_2mm_strucseg.nii.gz'
+            ]
+        """
+        registration_anat.inputs.fixed_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         registration_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
         registration_anat.inputs.metric = ['MI', 'MI', 'CC']
+
+        # Threshold Node - create white-matter mask
+        threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
+        threshold_white_matter.inputs.thresh = 1
+
+        # Threshold Node - create CSF mask
+        threshold_csf = Node(Threshold(), name = 'threshold_csf')
+        threshold_white_matter.inputs.thresh = 1
 
         # ErodeImage Node - Erode white-matter mask
         erode_white_matter = Node(ErodeImage(), name = 'erode_white_matter')
@@ -139,6 +161,16 @@ class PipelineTeam08MQ(Pipeline):
         output_type (‘NIFTI’ or ‘NIFTI_PAIR’ or ‘NIFTI_GZ’ or ‘NIFTI_PAIR_GZ’) – FSL output type.
         slice_direction (1 or 2 or 3) – Direction of slice acquisition (x=1, y=2, z=3) - default is z. Maps to a command-line argument: --direction=%d.
         time_repetition (a float) – Specify TR of data - default is 3s. Maps to a command-line argument: --repeat=%f.
+
+        # ApplyWarp Node - Alignment of white matter
+        alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
+        alignment_white_matter.inputs.in_file = ''
+        alignment_white_matter.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+
+        # ApplyWarp Node - Alignment of CSF
+        alignment_csf = Node(ApplyWarp(), name = 'alignment_csf')
+        alignment_csf.inputs.in_file = ''
+        alignment_csf.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
 
         # [INFO] The following part has to be modified with nodes of the pipeline
         """
@@ -186,10 +218,13 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, bias_field_correction, [('anat', 'in_files')]),
             (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
             (brain_extraction_anat, segmentation_anat, [('out_file', 'in_file')]),
-            (segmentation_anat, registration_anat, [('?', 'in_file')]),
+            (segmentation_anat, registration_anat, [('?', 'moving_image')]),
 
-            (registration_anat, erode_white_matter, [('', '')]),
-            (registration_anat, erode_csf, [('', '')]),
+            (registration_anat, threshold_white_matter, [('', '')]),
+            (registration_anat, threshold_csf, [('', '')]),
+
+            (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
+            (threshold_csf, erode_csf, [('out_file', 'in_file')]),
 
             (erode_white_matter, , [('', '')]),
             (erode_csf, , [('', '')]),
@@ -200,12 +235,17 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
 
             # High contrast functional volume
+
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
             (, motion_correction, [('out_file', 'ref_file')]), # high contrast images
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
 
+            (, alignment_white_matter, [('', 'in_file')]),
+            (, alignment_white_matter, [('', 'field_file')]),
+            (, alignment_csf, [('', 'in_file')]),
+            (, alignment_csf, [('', 'field_file')])
         ])
 
         return preprocessing
@@ -214,12 +254,12 @@ class PipelineTeam08MQ(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
-    def get_session_infos(event_file: str):
+    def get_subject_information(event_file: str):
         """
-        Create Bunchs for specifyModel.
+        Extact subject information from the event file, to create a Bunch with required data only.
 
         Parameters :
-        - event_file : file corresponding to the run and the subject to analyze
+        - event_file : event file corresponding to the run and the subject to analyze
 
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
@@ -233,23 +273,74 @@ class PipelineTeam08MQ(Pipeline):
         Parametric modulation of events corresponding to gain magnitude. Mean centred.
         Parametric modulation of events corresponding to loss magnitude. Mean centred.
         Response regressor with 1 for accept and -1 for reject. Mean centred.
-        Six head motion parameters plus four aCompCor regressors.
+
+        Six head motion parameters plus four aCompCor regressors. > 
+
         Model and data had a 90s high-pass filter applied.
         """
 
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['trial', 'gain', 'loss']
+        condition_names = ['event', 'gain', 'loss', 'response']
 
-        onset = {}
-        duration = {}
-        amplitude = {}
+        onsets = {}
+        durations = {}
+        amplitudes = {}
 
         # Creates dictionary items with empty lists for each condition.
         for condition in condition_names:  
             onset.update({condition: []}) 
             duration.update({condition: []})
             amplitude.update({condition: []})
+
+        """
+        onset = {
+            event: [],
+            gain: [],
+            loss: [],
+            response: []
+        }
+        duration = {
+            event: [],
+            gain: [],
+            loss: [],
+            response: []
+        }
+        amplitude = {
+            event: [],
+            gain: [],
+            loss: [],
+            response: []
+        }
+
+
+
+        [Mandatory]
+        conditions : list of names
+        onsets : lists of onsets corresponding to each condition
+        durations : lists of durations corresponding to each condition. Should be
+            left to a single 0 if all events are being modelled as impulses.
+
+        [Optional]
+        regressor_names : list of str
+            list of names corresponding to each column. Should be None if
+            automatically assigned.
+        regressors : list of lists
+            values for each regressor - must correspond to the number of
+            volumes in the functional run
+        amplitudes : lists of amplitudes for each event. This will be ignored by
+            SPM's Level1Design.
+
+        The following two (tmod, pmod) will be ignored by any Level1Design class
+        other than SPM:
+
+        tmod : lists of conditions that should be temporally modulated. Should
+            default to None if not being used.
+        pmod : list of Bunch corresponding to conditions
+          - name : name of parametric modulator
+          - param : values of the modulator
+          - poly : degree of modulation
+        """
 
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
@@ -258,26 +349,30 @@ class PipelineTeam08MQ(Pipeline):
                 info = line.strip().split()
                 # Creates list with onsets, duration and loss/gain for amplitude (FSL)
                 for condition in condition_names:
+                    onset[condition].append(float(info[0]))
+                    duration[condition].append(float(info[1]))
+
                     if condition == 'gain':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
                         amplitude[condition].append(float(info[2]))
                     elif condition == 'loss':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
                         amplitude[condition].append(float(info[3]))
-                    elif condition == 'trial':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
-                        amplitude[condition].append(float(1))
+                    elif condition == 'event':
+                        amplitude[condition].append(1.0)
+                    elif condition == 'response':
+                        if 'reject' in info[5]:
+                            amplitude[condition].append(-1.0)
+                        elif 'accept' in info[5]:
+                            amplitude[condition].append(1.0)
+                        else:
+                            amplitude[condition].append(0.0) # TODO : zeros for NoResp ???
 
         subject_info = []
         subject_info.append(
             Bunch(
                 conditions = condition_names,
-                onsets = [onset[k] for k in condition_names],
-                durations = [duration[k] for k in condition_names],
-                amplitudes = [amplitude[k] for k in condition_names],
+                onsets = [onsets[c] for c in condition_names],
+                durations = [durations[c] for c in condition_names],
+                amplitudes = [amplitudes[c] for c in condition_names],
                 regressor_names = None,
                 regressors = None,
             )
@@ -295,49 +390,39 @@ class PipelineTeam08MQ(Pipeline):
 
         Returns:
             - contrasts: list of tuples, list of contrasts to analyze
+
+
+        First level
+        Positive parametric effect of gain; Positive parametric effect of loss; Negative parametric effect of loss.
+        Second level
+        Positive one-sample ttest over first level contrast estimates.
         """
         # List of condition names
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
+        conditions = ['event', 'gain', 'loss', 'response']
 
         # Create contrasts
-        trial = ('trial', 'T', conditions, [1, 0, 0])
-        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
+        positive_effect_gain = ('positive_effect_gain', 'T', conditions, [0, 1, 0])
+        positive_effect_loss = ('positive_effect_loss', 'T', conditions, [0, 0, 1])
+        negative_effect_loss = ('negative_effect_loss', 'T', conditions, [0, 0, -1])
 
         # Contrast list
-        return [trial, effect_gain, effect_loss]
+        return [positive_effect_gain, positive_effect_loss, negative_effect_loss]
 
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
-        # [INFO] The following part stays the same for all pipelines
-
         # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-                dataset_dir = self.directories.dataset_dir,
-                results_dir = self.directories.results_dir,
-                working_dir = self.directories.working_dir,
-                run_list = self.run_list
-            ),
-            name='info_source',
-        )
+        info_source = Node(IdentityInterface(), name = 'info_source')
+        info_source.inputs.fields = ['subject_id', 'run_id']
         info_source.iterables = [('subject_id', self.subject_list)]
 
         # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
         templates = {
-            'func': join(
-                self.directories.results_dir,
-                'preprocess',
+            'func': join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
                 'complete_filename_{subject_id}_complete_filename.nii',
             ),
-            'event': join(
-                self.directories.dataset_dir,
-                'sub-{subject_id}',
-                'func',
+            'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
             )
         }
@@ -350,20 +435,29 @@ class PipelineTeam08MQ(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
-        # [INFO] This is the node executing the get_subject_infos_spm function
-        # Subject Infos node - get subject specific condition information
-        subject_infos = Node(
+        # Subject information Node - get subject specific condition information
+        subject_information = Node(
             Function(
-                function = self.get_subject_infos,
+                function = self.get_subject_information,
                 input_names = ['event_files', 'runs'],
                 output_names = ['subject_info']                
             ),
-            name = 'subject_infos',
+            name = 'subject_information',
         )
         subject_infos.inputs.runs = self.run_list
 
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
+        # Parameters Node - create files with parameters from subject session data
+        parameters = Node(
+            Function(
+                function = self.get_parameters_file,
+                input_names = ['event_files', 'runs'],
+                output_names = ['parameters_files']                
+            ),
+            name = 'parameters',
+        )
+        parameters.inputs.runs = self.run_list
+
+        # Contrasts node - get contrasts to compute from the model
         contrasts = Node(
             Function(
                 function = self.get_contrasts,
@@ -373,60 +467,20 @@ class PipelineTeam08MQ(Pipeline):
             name = 'contrasts',
         )
 
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name = 'node_name'
-        )
-
-        # [TODO] Add other nodes with the different steps of the pipeline
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
         subject_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
             name = 'subject_level_analysis'
         )
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
         subject_level_analysis.connect([
-            (
-                info_source,
-                select_files,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                info_source,
-                contrasts,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                select_files,
-                subject_infos,
-                [('event', 'event_files')]
-            ),
-            (
-                select_files,
-                node_name,
-                [('func', 'node_input_name')]
-            ),
-            (
-                node_name, data_sink,
-                [('node_output_name', 'preprocess.@sym_link')]
-            ),
+            (info_source, select_files, [('subject_id', 'subject_id')]),
+            (info_source, contrasts, [('subject_id', 'subject_id')]),
+            (select_files, subject_infos, [('event', 'event_files')]),
+            (select_files, node_name, [('func', 'node_input_name')]),
+            (node_name, data_sink, [('node_output_name', 'preprocess.@sym_link')]),
         ])
 
-        # [INFO] Here we simply return the created workflow
         return subject_level_analysis
 
-    # [INFO] This function returns the list of ids and files of each group of participants
-    # to do analyses for both groups, and one between the two groups.
     def get_subgroups_contrasts(
         copes, varcopes, subject_list: list, participants_file: str
     ):
@@ -503,8 +557,6 @@ class PipelineTeam08MQ(Pipeline):
             equal_indifference_id, equal_range_id,
             copes_global, varcopes_global
 
-
-    # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
     def get_regressors(
         equal_range_id: list,
         equal_indifference_id: list,
@@ -593,12 +645,11 @@ class PipelineTeam08MQ(Pipeline):
         # [TODO] Change the name of the files depending on the filenames
         # of results of first level analysis
         template = {
-            'cope' : join(
-                self.directories.results_dir,
+            'cope' : join(self.directories.output_dir,
                 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'cope1.nii.gz'),
             'varcope' : join(
-                self.directories.results_dir,
+                self.directories.output_dir,
                 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
             'participants' : join(
@@ -608,7 +659,7 @@ class PipelineTeam08MQ(Pipeline):
         select_files = Node(
             SelectFiles(
                 templates,
-                base_directory = self.directories.results_dir,
+                base_directory = self.directories.output_dir,
                 force_list = True
             ),
             name = 'select_files',
@@ -620,39 +671,37 @@ class PipelineTeam08MQ(Pipeline):
             name = 'data_sink',
         )
 
-        contrasts = Node(
-            Function(
-                input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
-                output_names=[
-                    'copes_equalIndifference',
-                    'copes_equalRange',
-                    'varcopes_equalIndifference',
-                    'varcopes_equalRange',
-                    'equalIndifference_id',
-                    'equalRange_id',
-                    'copes_global',
-                    'varcopes_global'
-                ],
-                function = self.get_subgroups_contrasts,
+        contrasts = Node(Function(
+            function = self.get_subgroups_contrasts,
+            input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
+            output_names=[
+                'copes_equalIndifference',
+                'copes_equalRange',
+                'varcopes_equalIndifference',
+                'varcopes_equalRange',
+                'equalIndifference_id',
+                'equalRange_id',
+                'copes_global',
+                'varcopes_global'
+                ]
             ),
             name = 'subgroups_contrasts',
         )
 
-        regs = Node(
-            Function(
-                input_names = [
-                    'equalRange_id',
-                    'equalIndifference_id',
-                    'method',
-                    'subject_list',
+        regressors = Node(Function(
+            function = self.get_regressors,
+            input_names = [
+                'equalRange_id',
+                'equalIndifference_id',
+                'method',
+                'subject_list',
                 ],
-                output_names = ['regressors'],
-                function = self.get_regressors,
+            output_names = ['regressors']
             ),
-            name = 'regs',
+            name = 'regressors',
         )
-        regs.inputs.method = method
-        regs.inputs.subject_list = subject_list
+        regressors.inputs.method = method
+        regressors.inputs.subject_list = subject_list
 
         # [INFO] The following part has to be modified with nodes of the pipeline
 
