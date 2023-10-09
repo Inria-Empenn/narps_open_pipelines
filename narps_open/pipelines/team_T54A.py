@@ -326,9 +326,7 @@ class PipelineTeamT54A(Pipeline):
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
-            'contrast_id' : self.contrast_list,
             'file' : [
-                join('results', 'cope{contrast_id}.nii.gz'),
                 join('results', 'dof'),
                 join('results', 'logfile'),
                 join('results', 'pe10.nii.gz'),
@@ -351,9 +349,6 @@ class PipelineTeamT54A(Pipeline):
                 join('results', 'res4d.nii.gz'),
                 join('results', 'sigmasquareds.nii.gz'),
                 join('results', 'threshac1.nii.gz'),
-                join('results', 'tstat{contrast_id}.nii.gz'),
-                join('results', 'varcope{contrast_id}.nii.gz'),
-                join('results', 'zstat{contrast_id}.nii.gz'),
                 'run0.mat',
                 'run0.png',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
@@ -364,9 +359,30 @@ class PipelineTeamT54A(Pipeline):
             self.directories.output_dir,
             'l1_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
             )
-
-        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        parameters = {
+            'run_id' : self.run_list,
+            'subject_id' : self.subject_list,
+            'contrast_id' : self.contrast_list,
+            'file' : [
+                join('results', 'cope{contrast_id}.nii.gz'),
+                join('results', 'tstat{contrast_id}.nii.gz'),
+                join('results', 'varcope{contrast_id}.nii.gz'),
+                join('results', 'zstat{contrast_id}.nii.gz'),
+            ]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l1_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_subject_level_analysis(self):
         """
