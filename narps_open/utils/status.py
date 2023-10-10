@@ -76,9 +76,17 @@ class PipelineStatusReport():
 
             # Get software used in the pipeline, from the team description
             description = TeamDescription(team_id)
-            self.contents[team_id]['softwares'] = \
+            self.contents[team_id]['software'] = \
                 description.categorized_for_analysis['analysis_SW']
+            self.contents[team_id]['software_long'] = \
+                description.general['softwares']
             self.contents[team_id]['fmriprep'] = description.preprocessing['used_fmriprep_data']
+
+            # Get comments about the pipeline
+            self.contents[team_id]['excluded'] = \
+                description.comments['excluded_from_narps_analysis']
+            self.contents[team_id]['reproducibility'] = \
+                description.comments['reproducibility_comment']
 
             # Get issues and pull requests related to the team
             issues = {}
@@ -112,7 +120,7 @@ class PipelineStatusReport():
         # Sort contents with the following priorities : 1-"status", 2-"softwares" and 3-"fmriprep"
         self.contents = OrderedDict(sorted(
             self.contents.items(),
-            key=lambda k: (k[1]['status'], k[1]['softwares'], k[1]['fmriprep'])
+            key=lambda k: (k[1]['status'], k[1]['software'], k[1]['fmriprep'])
             ))
 
     def markdown(self):
@@ -124,14 +132,15 @@ class PipelineStatusReport():
         output_markdown += '<br>:red_circle: not started yet\n'
         output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br><br>The *softwares used* column gives a simplified version of '
+        output_markdown += '<br><br>The *software used* column gives a simplified version of '
         output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
 
         # Start table
-        output_markdown += '| team_id | status | softwares used | fmriprep used ? |'
-        output_markdown += ' related issues | related pull requests |\n'
-        output_markdown += '| --- |:---:| --- | --- | --- | --- |\n'
+        output_markdown += '| team_id | status | software used | fmriprep used ? |'
+        output_markdown += ' related issues | related pull requests |'
+        output_markdown += ' excluded from NARPS analysis | reproducibility comments | \n'
+        output_markdown += '| --- |:---:| --- | --- | --- | --- | --- | --- |\n'
 
         # Add table contents
         for team_key, team_values in self.contents.items():
@@ -146,7 +155,7 @@ class PipelineStatusReport():
                 status = ':red_circle:'
 
             output_markdown += f'| {status} '
-            output_markdown += f'| {team_values["softwares"]} '
+            output_markdown += f'| {team_values["software"]} '
             output_markdown += f'| {team_values["fmriprep"]} '
 
             issues = ''
@@ -159,8 +168,9 @@ class PipelineStatusReport():
             for issue_number, issue_url in team_values['pulls'].items():
                 pulls += f'[{issue_number}]({issue_url}), '
 
-            output_markdown += f'| {pulls} |\n'
-
+            output_markdown += f'| {pulls} '
+            output_markdown += f'| {team_values["excluded"]} '
+            output_markdown += f'| {team_values["reproducibility"]} |\n'
 
         return output_markdown
 
