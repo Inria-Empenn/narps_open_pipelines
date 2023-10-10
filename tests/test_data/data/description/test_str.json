@@ -54,7 +54,7 @@
     "derived.excluded_participants": "018, 030, 088, 100",
     "derived.func_fwhm": "5",
     "derived.con_fwhm": "",
-    "comments.excluded_from_narps_analysis": "no",
+    "comments.excluded_from_narps_analysis": "No",
     "comments.exclusion_comment": "N/A",
     "comments.reproducibility": "",
     "comments.reproducibility_comment": ""
