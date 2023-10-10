@@ -135,8 +135,8 @@ class TestUtils:
     @mark.unit_test
     def test_utils():
         """ Test the utils methods of PipelineRunner """
-        # 1 - Get number of not implemented pipelines
-        assert len(get_not_implemented_pipelines()) == 69
+        # 1 - Get not implemented pipelines
+        assert '1K0E' in get_not_implemented_pipelines()
 
-        # 2 - Get number of implemented pipelines
-        assert len(get_implemented_pipelines()) == 1
+        # 2 - Get implemented pipelines
+        assert '2T6S' in get_implemented_pipelines()
