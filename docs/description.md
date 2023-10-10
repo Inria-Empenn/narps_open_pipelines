@@ -6,20 +6,22 @@ It is a conversion into tsv format (tab-separated values) of the [original .xlsx
 
 The file `narps_open/data/description/analysis_pipelines_derived_descriptions.tsv` contains for each team a set of programmatically usable data based on the textual descriptions of the previous file. This data is available in the `derived` sub dictionary (see examples hereafter).
 
+The file `narps_open/data/description/analysis_pipelines_comments.tsv` contains for each team a set of comments made by the NARPS Open Pipelines team about reproducibility and exclusions of the pipeline. This data is available in the `comments` sub dictionary (see examples hereafter).
+
 The class `TeamDescription` of module `narps_open.data.description` acts as a parser for these two files.
 
-You can use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`. Options `--json` and `--md` allow to choose the export format you prefer between JSON and Markdown.
+You can use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, `categorized_for_analysis`, `derived`, and `comments`. Options `--json` and `--md` allow to choose the export format you prefer between JSON and Markdown.
 
 ```bash
 python narps_open/data/description -h
-# usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}]
+# usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived,comments}]
 #
 # Get description of a NARPS pipeline.
 #
 # options:
 #   -h, --help            show this help message and exit
 #   -t TEAM, --team TEAM  the team ID
-#   -d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}, --dictionary {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived}
+#   -d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived,comments}, --dictionary {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived,comments}
 #                         the sub dictionary of team description
 #  --json                output team description as JSON
 #  --md                  output team description as Markdown
@@ -91,6 +93,7 @@ description.preprocessing
 description.analysis
 description.categorized_for_analysis
 description.derived
+description.comments
 # Access values of sub dictionaries
 description.general['teamID']
 # Other keys in general are: ['teamID', 'NV_collection_link', 'results_comments', 'preregistered', 'link_preregistration_form', 'regions_definition', 'softwares', 'general_comments']
