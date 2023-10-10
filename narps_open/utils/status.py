@@ -78,8 +78,6 @@ class PipelineStatusReport():
             description = TeamDescription(team_id)
             self.contents[team_id]['software'] = \
                 description.categorized_for_analysis['analysis_SW']
-            self.contents[team_id]['software_long'] = \
-                description.general['softwares']
             self.contents[team_id]['fmriprep'] = description.preprocessing['used_fmriprep_data']
 
             # Get comments about the pipeline
@@ -132,14 +130,14 @@ class PipelineStatusReport():
         output_markdown += '<br>:red_circle: not started yet\n'
         output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br><br>The *software used* column gives a simplified version of '
+        output_markdown += '<br><br>The *main software* column gives a simplified version of '
         output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
 
         # Start table
-        output_markdown += '| team_id | status | software used | fmriprep used ? |'
+        output_markdown += '| team_id | status | main software | fmriprep used ? |'
         output_markdown += ' related issues | related pull requests |'
-        output_markdown += ' excluded from NARPS analysis | reproducibility comments | \n'
+        output_markdown += ' excluded from NARPS analysis | reproducibility comments |\n'
         output_markdown += '| --- |:---:| --- | --- | --- | --- | --- | --- |\n'
 
         # Add table contents
