@@ -1,0 +1,71 @@
+teamID	excluded_from_narps_analysis	exclusion_comment	reproducibility	reproducibility_comment
+50GV	no	N/A	?	Uses custom software (Denoiser)
+9Q6R	no	N/A		
+O21U	no	N/A		
+U26C	no	N/A		
+43FJ	no	N/A		
+C88N	no	N/A		
+4TQ6	yes	Resampled image offset and too large compared to template.		
+T54A	no	N/A		
+2T6S	no	N/A		
+L7J7	no	N/A		
+0JO0	no	N/A		
+X1Y5	no	N/A		
+51PW	no	N/A		
+6VV2	no	N/A		
+O6R6	no	N/A		
+C22U	no	N/A	?	Custom Matlab script for white matter PCA confounds
+3PQ2	no	N/A		
+UK24	no	N/A		
+4SZ2	yes	Resampled image offset from template brain.		
+9T8E	no	N/A		
+94GU	no	N/A	?	Multiple software dependencies : SPM + ART + TAPAS + Matlab.
+I52Y	no	N/A		
+5G9K	no	N/A	?	? 
+2T7P	yes	Missing thresholded images.	?	?
+UI76	no	N/A		
+B5I6	no	N/A		
+V55J	yes	Bad histogram : very small values.		
+X19V	no	N/A		
+0C7Q	yes	Appears to be a p-value distribution, with slight excursions below and above zero.		
+R5K7	no	N/A		
+0I4U	no	N/A		
+3C6G	no	N/A		
+R9K3	no	N/A		
+O03M	no	N/A		
+08MQ	no	N/A		
+80GC	no	N/A		
+J7F9	no	N/A		
+R7D1	no	N/A		
+Q58J	yes	Bad histogram : bimodal, zero-inflated with a second distribution centered around 5.		
+L3V8	yes	Rejected due to large amount of missing brain in center.		
+SM54	no	N/A		
+1KB2	no	N/A		
+0H5E	yes	Rejected due to large amount of missing brain in center.		
+P5F3	yes	Rejected due to large amounts of missing data across brain.		
+Q6O0	no	N/A		
+R42Q	no	N/A	?	Uses fMRIflows, a custom software based on NiPype.
+L9G5	no	N/A		
+DC61	no	N/A		
+E3B6	yes	Bad histogram : very long tail, with substantial inflation at a value just below zero.		
+16IN	no	N/A	?	Multiple software dependencies : matlab + SPM + FSL + R + TExPosition + neuroim
+46CD	no	N/A		
+6FH5	yes	Missing much of the central brain.		
+K9P0	no	N/A		
+9U7M	no	N/A		
+VG39	no	N/A		
+1K0E	yes	Used surface-based analysis, only provided data for cortical ribbon.	?	?
+X1Z4	yes	Used surface-based analysis, only provided data for cortical ribbon.	?	Multiple software dependencies : FSL + fmriprep + ciftify + HCP workbench + Freesurfer + ANTs
+I9D6	no	N/A		
+E6R3	no	N/A		
+27SS	no	N/A		
+B23O	no	N/A		
+AO86	no	N/A		
+L1A8	yes	Resampled image much smaller than template brain.	?	?
+IZ20	no	N/A		
+3TR7	no	N/A		
+98BT	yes	Rejected due to very bad normalization.		
+XU70	no	N/A	?	Uses custom software : FSL + 4drealign
+0ED6	no	N/A	?	? 
+I07H	yes	Bad histogram : bimodal, with second distribution centered around 2.5.		
+1P0Y	no	N/A		
