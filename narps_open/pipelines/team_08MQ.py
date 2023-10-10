@@ -26,7 +26,7 @@ from nipype.interfaces.io import SelectFiles, DataSink
 # from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl import (
     FAST, BET, Registration, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info
+    Threshold, Info, SUSAN
     )
 
 
@@ -87,6 +87,7 @@ class PipelineTeam08MQ(Pipeline):
         # BET Node - Brain extraction for anatomical images
         brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
         brain_extraction_anat.inputs.frac = 0.5
+        brain_extraction_anat.inputs.mask = True # ?
 
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
@@ -127,9 +128,13 @@ class PipelineTeam08MQ(Pipeline):
 
         # ErodeImage Node - Erode white-matter mask
         erode_white_matter = Node(ErodeImage(), name = 'erode_white_matter')
+        erode_white_matter.inputs.kernel_shape = 'sphere'
+        erode_white_matter.inputs.kernel_size = 2.0 #mm
 
         # ErodeImage Node - Erode CSF mask
         erode_csf = Node(ErodeImage(), name = 'erode_csf')
+        erode_csf.inputs.kernel_shape = 'sphere'
+        erode_csf.inputs.kernel_size = 1.5 #mm
 
         # BET Node - Brain extraction of magnitude images
         brain_extraction_magnitude = Node(BET(), name = 'brain_extraction_magnitude')
@@ -138,18 +143,27 @@ class PipelineTeam08MQ(Pipeline):
         # PrepareFieldmap Node - Convert phase and magnitude to fieldmap images
         convert_to_fieldmap = Node(PrepareFieldmap(), name = 'convert_to_fieldmap')
 
+        # FLIRT was used to align the high contrast functional image to anatomical.
+        # The calculated transforms were then applied to the 4d functional images
+        #    (which were aligned with the high contrast image in the motion correction step).
+        # A boundary-based registration cost function was used with trilinear interpolation.
+
         # BET Node - Brain extraction for functional images
         brain_extraction_func = Node(BET(), name = 'brain_extraction_func')
         brain_extraction_func.inputs.frac = 0.3
+        brain_extraction_func.inputs.mask = True # ?
+        brain_extraction_func.inputs.functional = True
 
         # MCFLIRT Node - Motion correction of functional images
         motion_correction = Node(MCFLIRT(), name = 'motion_correction')
         motion_correction.inputs.cost = 'normcorr'
         motion_correction.inputs.interpolation = 'trilinear'
+        # single volume, high contrast image was used as the reference scan
 
         # SliceTimer Node - Slice time correction
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
+        # Slicetimer was used and was applied after motion correction. The middle slice was used as the reference slice. Sinc interpolation was used.
 
         custom_order (a pathlike object or string representing an existing file) – Filename of single-column custom interleave order file (first slice is referred to as 1 not 0). Maps to a command-line argument: --ocustom=%s.
         custom_timings (a pathlike object or string representing an existing file) – Slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tcustom=%s.
@@ -161,6 +175,13 @@ class PipelineTeam08MQ(Pipeline):
         output_type (‘NIFTI’ or ‘NIFTI_PAIR’ or ‘NIFTI_GZ’ or ‘NIFTI_PAIR_GZ’) – FSL output type.
         slice_direction (1 or 2 or 3) – Direction of slice acquisition (x=1, y=2, z=3) - default is z. Maps to a command-line argument: --direction=%d.
         time_repetition (a float) – Specify TR of data - default is 3s. Maps to a command-line argument: --repeat=%f.
+
+
+        # SUSAN Node - smoothing of functional images
+        smoothing = Node(SUSAN(), name = 'smoothing')
+        smoothing.inputs.brightness_threshold = # ?
+        smoothing.inputs.fwhm = self.fwhm
+        smoothing.inputs.in_file
 
         # ApplyWarp Node - Alignment of white matter
         alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
