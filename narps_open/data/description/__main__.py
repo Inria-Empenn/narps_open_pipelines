@@ -19,7 +19,8 @@ parser.add_argument('-d', '--dictionary', type=str, required=False,
         'preprocessing',
         'analysis',
         'categorized_for_analysis',
-        'derived'
+        'derived',
+        'comments'
         ],
     help='the sub dictionary of team description')
 formats = parser.add_mutually_exclusive_group(required = False)
@@ -49,5 +50,7 @@ else:
         print(dumps(information.categorized_for_analysis, indent = 4))
     elif arguments.dictionary == 'derived':
         print(dumps(information.derived, indent = 4))
+    elif arguments.dictionary == 'comments':
+        print(dumps(information.comments, indent = 4))
     else:
         print(dumps(information, indent = 4))
