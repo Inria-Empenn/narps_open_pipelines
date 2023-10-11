@@ -249,8 +249,8 @@ class PipelineTeam08MQ(Pipeline):
 
             # High contrast functional volume
             (select_files, registration_sbref, [('sbref', 'in_file')]),
-            #(convert_to_fieldmap, registration_sbref, [('', 'fieldmap')]), # ?
-            #(registration_anat, registration_sbref, [('', 'reference')]),
+            (select_files, registration_sbref, [('anat', 'reference')]),
+            (convert_to_fieldmap, registration_sbref, [('out_fieldmap', 'fieldmap')]),
 
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
