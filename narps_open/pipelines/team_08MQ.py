@@ -9,14 +9,17 @@ from nipype import Node, Workflow # , JoinNode, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
-    FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
+    FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
     Threshold, Info, SUSAN, FLIRT, ApplyWarp
     )
 
 from nipype.interfaces.ants import Registration
 
 from narps_open.pipelines import Pipeline
-from narps_open.pipelines.task import TaskInformation
+from narps_open.data.task import TaskInformation
+
+# Setup FSL
+FSLCommand.set_default_output_type('NIFTI_GZ')
 
 class PipelineTeam08MQ(Pipeline):
     """ A class that defines the pipeline of team 08MQ """
@@ -31,8 +34,9 @@ class PipelineTeam08MQ(Pipeline):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
         # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(IdentityInterface(), name='info_source')
-        info_source.inputs.fields=['subject_id', 'run_id']
+        info_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name='info_source')
         info_source.iterables = [
             ('subject_id', self.subject_list),
             ('run_id', self.run_list),
@@ -51,7 +55,7 @@ class PipelineTeam08MQ(Pipeline):
             'phasediff': join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
         }
         select_files = Node(SelectFiles(file_templates), name = 'select_files')
-        select_files.input.base_directory = self.directories.dataset_dir
+        select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
@@ -65,12 +69,12 @@ class PipelineTeam08MQ(Pipeline):
         # BET Node - Brain extraction for anatomical images
         brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
         brain_extraction_anat.inputs.frac = 0.5
-        brain_extraction_anat.inputs.mask = True # ?
+        #brain_extraction_anat.inputs.mask = True # ?
 
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
         segmentation_anat.inputs.no_bias = True # Bias field was already removed
-        segmentation_anat.inputs.number_classes = 1 # ?
+        #segmentation_anat.inputs.number_classes = 1 # ?
         segmentation_anat.inputs.segments = True # One image per tissue class
 
         # ANTs Node - Registration to T1 MNI152 space
@@ -152,7 +156,7 @@ class PipelineTeam08MQ(Pipeline):
         # MCFLIRT Node - Motion correction of functional images
         motion_correction = Node(MCFLIRT(), name = 'motion_correction')
         motion_correction.inputs.cost = 'normcorr'
-        motion_correction.inputs.interpolation = 'trilinear'
+        motion_correction.inputs.interpolation = 'spline' # should be 'trilinear'
         # single volume, high contrast image was used as the reference scan
 
         # SliceTimer Node - Slice time correction
@@ -179,12 +183,10 @@ class PipelineTeam08MQ(Pipeline):
 
         # ApplyWarp Node - Alignment of white matter
         alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
-        alignment_white_matter.inputs.in_file = ''
         alignment_white_matter.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
 
         # ApplyWarp Node - Alignment of CSF
         alignment_csf = Node(ApplyWarp(), name = 'alignment_csf')
-        alignment_csf.inputs.in_file = ''
         alignment_csf.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
 
         # [INFO] The following part has to be modified with nodes of the pipeline
@@ -230,17 +232,15 @@ class PipelineTeam08MQ(Pipeline):
             # Anatomical images
             (select_files, bias_field_correction, [('anat', 'in_files')]),
             (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
-            (brain_extraction_anat, segmentation_anat, [('out_file', 'in_file')]),
-            (segmentation_anat, registration_anat, [('?', 'moving_image')]),
-
-            (registration_anat, threshold_white_matter, [('', '')]),
-            (registration_anat, threshold_csf, [('', '')]),
-
+            (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
+            (brain_extraction_anat, registration_anat, [('out_file', 'moving_image')]),
+            (brain_extraction_anat, threshold_white_matter, [('out_file', 'in_file')]),
+            (brain_extraction_anat, threshold_csf, [('out_file', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
 
-            #(erode_white_matter, , [('', '')]),
-            #(erode_csf, , [('', '')]),
+            #(erode_white_matter, alignment_white_matter, [('out_file', '')]),
+            #(erode_csf, alignment_csf, [('out_file', '')]),
 
             # Field maps
             (select_files, brain_extraction_magnitude, [('magnitude', 'in_file')]),
@@ -248,9 +248,9 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
 
             # High contrast functional volume
-            (select_files, registration_sbref, [('sbref', 'in_files')]),
-            (convert_to_fieldmap, registration_sbref, [('', 'fieldmap')]), # ?
-            (registration_anat, registration_sbref, [('', 'reference')]),
+            (select_files, registration_sbref, [('sbref', 'in_file')]),
+            #(convert_to_fieldmap, registration_sbref, [('', 'fieldmap')]), # ?
+            #(registration_anat, registration_sbref, [('', 'reference')]),
 
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
@@ -436,8 +436,10 @@ class PipelineTeam08MQ(Pipeline):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
         # Infosource Node - To iterate on subjects
-        info_source = Node(IdentityInterface(), name = 'info_source')
-        info_source.inputs.fields = ['subject_id', 'run_id']
+        info_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'info_source'
+            )
         info_source.iterables = [('subject_id', self.subject_list)]
 
         # Templates to select files node
@@ -468,10 +470,10 @@ class PipelineTeam08MQ(Pipeline):
             ),
             name = 'subject_information',
         )
-        subject_infos.inputs.runs = self.run_list
+        subject_information.inputs.runs = self.run_list
 
         # Parameters Node - create files with parameters from subject session data
-        parameters = Node(
+        """parameters = Node(
             Function(
                 function = self.get_parameters_file,
                 input_names = ['event_files', 'runs'],
@@ -480,6 +482,7 @@ class PipelineTeam08MQ(Pipeline):
             name = 'parameters',
         )
         parameters.inputs.runs = self.run_list
+        """
 
         # Contrasts node - get contrasts to compute from the model
         contrasts = Node(
