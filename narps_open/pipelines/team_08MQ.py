@@ -3,45 +3,20 @@
 
 """ Write the work of NARPS team 08MQ using Nipype """
 
-"""
-This template can be use to reproduce a pipeline using FSL as main software.
-
-- All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
-eventually.
-- Also remove lines starting with [TODO], once you did what they suggested.
-"""
-
-# [TODO] Only import modules you use further in te code, remove others from the import section
-
 from os.path import join
 
-# [INFO] The import of base objects from Nipype, to create Workflows
 from nipype import Node, Workflow # , JoinNode, MapNode
-
-# [INFO] a list of interfaces used to manpulate data
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-# from nipype.algorithms.misc import Gunzip
-
-# from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl import (
-    FAST, BET, Registration, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN
+    FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
+    Threshold, Info, SUSAN, FLIRT, ApplyWarp
     )
-
-
-"""
-    Info, ImageMaths, IsotropicSmooth, Threshold,
-    Level1Design, FEATModel, L2Model, Merge,
-    FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign,
-    Cluster, SmoothEstimate
-    )
-"""
 
 from nipype.interfaces.ants import Registration
 
 from narps_open.pipelines import Pipeline
-from narps_open.pipelines import TaskInformation
+from narps_open.pipelines.task import TaskInformation
 
 class PipelineTeam08MQ(Pipeline):
     """ A class that defines the pipeline of team 08MQ """
@@ -68,6 +43,9 @@ class PipelineTeam08MQ(Pipeline):
             'anat': join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
             'func': join(
                 'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz'
+                ),
+            'sbref': join(
+                'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_sbref.nii.gz'
                 ),
             'magnitude': join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz'),
             'phasediff': join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
@@ -143,6 +121,23 @@ class PipelineTeam08MQ(Pipeline):
         # PrepareFieldmap Node - Convert phase and magnitude to fieldmap images
         convert_to_fieldmap = Node(PrepareFieldmap(), name = 'convert_to_fieldmap')
 
+        # FLIRT Node - Align high contrast functional images to anatomical
+        #   (i.e.: single-band reference images a.k.a. sbref)
+        registration_sbref = Node(FLIRT(), name = 'registration_sbref')
+        registration_sbref.inputs.interp = 'trilinear'
+        registration_sbref.inputs.cost = 'bbr' # boundary-based registration
+        #out_file
+        #out_matrix_file
+        # fieldmap (a pathlike object or string representing a file) – Fieldmap image in rads/s - must be already registered to the reference image. Maps to a command-line argument: -fieldmap %s.
+        # wm_seg (a pathlike object or string representing a file) – White matter segmentation volume needed by BBR cost function. Maps to a command-line argument: -wmseg %s.
+        # wmcoords (a pathlike object or string representing a file) – White matter boundary coordinates for BBR cost function. Maps to a command-line argument: -wmcoords %s.
+        # wmnorms (a pathlike object or string representing a file) – White matter boundary normals for BBR cost function. Maps to a command-line argument: -wmnorms %s.
+
+        """
+        High contrast functional volume:
+            Alignment to anatomical image including distortion correction with field map
+            Calculation of inverse warp (anatomical to functional)
+        """
         # FLIRT was used to align the high contrast functional image to anatomical.
         # The calculated transforms were then applied to the 4d functional images
         #    (which were aligned with the high contrast image in the motion correction step).
@@ -164,7 +159,7 @@ class PipelineTeam08MQ(Pipeline):
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
         # Slicetimer was used and was applied after motion correction. The middle slice was used as the reference slice. Sinc interpolation was used.
-
+        """
         custom_order (a pathlike object or string representing an existing file) – Filename of single-column custom interleave order file (first slice is referred to as 1 not 0). Maps to a command-line argument: --ocustom=%s.
         custom_timings (a pathlike object or string representing an existing file) – Slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tcustom=%s.
         environ (a dictionary with keys which are a bytes or None or a value of class ‘str’ and with values which are a bytes or None or a value of class ‘str’) – Environment variables. (Nipype default value: {})
@@ -175,13 +170,12 @@ class PipelineTeam08MQ(Pipeline):
         output_type (‘NIFTI’ or ‘NIFTI_PAIR’ or ‘NIFTI_GZ’ or ‘NIFTI_PAIR_GZ’) – FSL output type.
         slice_direction (1 or 2 or 3) – Direction of slice acquisition (x=1, y=2, z=3) - default is z. Maps to a command-line argument: --direction=%d.
         time_repetition (a float) – Specify TR of data - default is 3s. Maps to a command-line argument: --repeat=%f.
-
-
+        """
         # SUSAN Node - smoothing of functional images
         smoothing = Node(SUSAN(), name = 'smoothing')
-        smoothing.inputs.brightness_threshold = # ?
+        #smoothing.inputs.brightness_threshold = # ?
         smoothing.inputs.fwhm = self.fwhm
-        smoothing.inputs.in_file
+        #smoothing.inputs.in_file
 
         # ApplyWarp Node - Alignment of white matter
         alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
@@ -232,8 +226,6 @@ class PipelineTeam08MQ(Pipeline):
         preprocessing.connect([
             # Inputs
             (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-            (select_files, node_name, [('func', 'node_input_name')]),
-            (node_name, data_sink, [('node_output_name', 'preprocessing.@sym_link')]),
 
             # Anatomical images
             (select_files, bias_field_correction, [('anat', 'in_files')]),
@@ -247,8 +239,8 @@ class PipelineTeam08MQ(Pipeline):
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
 
-            (erode_white_matter, , [('', '')]),
-            (erode_csf, , [('', '')]),
+            #(erode_white_matter, , [('', '')]),
+            #(erode_csf, , [('', '')]),
 
             # Field maps
             (select_files, brain_extraction_magnitude, [('magnitude', 'in_file')]),
@@ -256,17 +248,20 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
 
             # High contrast functional volume
+            (select_files, registration_sbref, [('sbref', 'in_files')]),
+            (convert_to_fieldmap, registration_sbref, [('', 'fieldmap')]), # ?
+            (registration_anat, registration_sbref, [('', 'reference')]),
 
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
-            (, motion_correction, [('out_file', 'ref_file')]), # high contrast images
-            (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
+            #(, motion_correction, [('out_file', 'ref_file')]), # high contrast images
+            #(motion_correction, slice_time_correction, [('out_file', 'in_file')]),
 
-            (, alignment_white_matter, [('', 'in_file')]),
-            (, alignment_white_matter, [('', 'field_file')]),
-            (, alignment_csf, [('', 'in_file')]),
-            (, alignment_csf, [('', 'field_file')])
+            #(, alignment_white_matter, [('', 'in_file')]),
+            #(, alignment_white_matter, [('', 'field_file')]),
+            #(, alignment_csf, [('', 'in_file')]),
+            #(, alignment_csf, [('', 'field_file')])
         ])
 
         return preprocessing
@@ -295,7 +290,7 @@ class PipelineTeam08MQ(Pipeline):
         Parametric modulation of events corresponding to loss magnitude. Mean centred.
         Response regressor with 1 for accept and -1 for reject. Mean centred.
 
-        Six head motion parameters plus four aCompCor regressors. > 
+        Six head motion parameters plus four aCompCor regressors. >
 
         Model and data had a 90s high-pass filter applied.
         """
@@ -309,8 +304,8 @@ class PipelineTeam08MQ(Pipeline):
         amplitudes = {}
 
         # Creates dictionary items with empty lists for each condition.
-        for condition in condition_names:  
-            onset.update({condition: []}) 
+        for condition in condition_names:
+            onset.update({condition: []})
             duration.update({condition: []})
             amplitude.update({condition: []})
 
@@ -461,7 +456,7 @@ class PipelineTeam08MQ(Pipeline):
             Function(
                 function = self.get_subject_information,
                 input_names = ['event_files', 'runs'],
-                output_names = ['subject_info']                
+                output_names = ['subject_info']
             ),
             name = 'subject_information',
         )
@@ -472,7 +467,7 @@ class PipelineTeam08MQ(Pipeline):
             Function(
                 function = self.get_parameters_file,
                 input_names = ['event_files', 'runs'],
-                output_names = ['parameters_files']                
+                output_names = ['parameters_files']
             ),
             name = 'parameters',
         )
@@ -483,7 +478,7 @@ class PipelineTeam08MQ(Pipeline):
             Function(
                 function = self.get_contrasts,
                 input_names = ['subject_id'],
-                output_names = ['contrasts']                
+                output_names = ['contrasts']
             ),
             name = 'contrasts',
         )
@@ -495,9 +490,7 @@ class PipelineTeam08MQ(Pipeline):
         subject_level_analysis.connect([
             (info_source, select_files, [('subject_id', 'subject_id')]),
             (info_source, contrasts, [('subject_id', 'subject_id')]),
-            (select_files, subject_infos, [('event', 'event_files')]),
-            (select_files, node_name, [('func', 'node_input_name')]),
-            (node_name, data_sink, [('node_output_name', 'preprocess.@sym_link')]),
+            (select_files, subject_information, [('event', 'event_files')]),
         ])
 
         return subject_level_analysis
@@ -573,10 +566,10 @@ class PipelineTeam08MQ(Pipeline):
             if sub_id[-2][-3:] in subject_list:
                 varcopes_global.append(varcope)
 
-        return copes_equal_indifference, copes_equal_range,
+        return (copes_equal_indifference, copes_equal_range,
             varcopes_equal_indifference, varcopes_equal_range,
             equal_indifference_id, equal_range_id,
-            copes_global, varcopes_global
+            copes_global, varcopes_global)
 
     def get_regressors(
         equal_range_id: list,
@@ -609,21 +602,21 @@ class PipelineTeam08MQ(Pipeline):
         # Each list contains n_sub values with 0 and 1 depending on the group of the participant
         # For equalRange_reg list --> participants with a 1 are in the equal range group
         elif method == 'groupComp':
-            equalRange_reg = [
+            equal_range_regressors = [
                 1 for i in range(len(equal_range_id) + len(equal_indifference_id))
             ]
-            equalIndifference_reg = [
+            equal_indifference_regressors = [
                 0 for i in range(len(equal_range_id) + len(equal_indifference_id))
             ]
 
             for index, subject_id in enumerate(subject_list):
                 if subject_id in equal_indifference_id:
-                    equalIndifference_reg[index] = 1
-                    equalRange_reg[index] = 0
+                    equal_indifference_regressors[index] = 1
+                    equal_range_regressors[index] = 0
 
             regressors = dict(
-                equalRange = equalRange_reg,
-                equalIndifference = equalIndifference_reg
+                equalRange = equal_range_regressors,
+                equalIndifference = equal_indifference_regressors
             )
 
         return regressors
@@ -665,7 +658,7 @@ class PipelineTeam08MQ(Pipeline):
         # Templates to select files node
         # [TODO] Change the name of the files depending on the filenames
         # of results of first level analysis
-        template = {
+        templates = {
             'cope' : join(self.directories.output_dir,
                 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'cope1.nii.gz'),
@@ -692,7 +685,7 @@ class PipelineTeam08MQ(Pipeline):
             name = 'data_sink',
         )
 
-        contrasts = Node(Function(
+        subgroups_contrasts = Node(Function(
             function = self.get_subgroups_contrasts,
             input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
             output_names=[
@@ -722,21 +715,7 @@ class PipelineTeam08MQ(Pipeline):
             name = 'regressors',
         )
         regressors.inputs.method = method
-        regressors.inputs.subject_list = subject_list
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name = 'node_name'
-        )
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
+        regressors.inputs.subject_list = self.subject_list
 
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
@@ -746,38 +725,15 @@ class PipelineTeam08MQ(Pipeline):
             base_dir = self.directories.working_dir,
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}'
         )
-        group_level_analysis.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('contrast_id', 'contrast_id')],
-                ),
-                (
-                    info_source,
-                    subgroups_contrasts,
-                    [('subject_list', 'subject_ids')],
-                ),
-                (
-                    select_files,
-                    subgroups_contrasts,
-                    [
-                        ('cope', 'copes'),
-                        ('varcope', 'varcopes'),
-                        ('participants', 'participants_file'),
-                    ],
-                ),
-                (
-                    select_files,
-                    node_name[('func', 'node_input_name')],
-                ),
-                (
-                    node_variable,
-                    datasink_groupanalysis,
-                    [('node_output_name', 'preprocess.@sym_link')],
-                ),
-            ]
-        ) # Complete with other links between nodes
+        group_level_analysis.connect([
+            (info_source, select_files, [('contrast_id', 'contrast_id')]),
+            (info_source, subgroups_contrasts, [('subject_list', 'subject_ids')]),
+            (select_files, subgroups_contrasts, [
+                ('cope', 'copes'),
+                ('varcope', 'varcopes'),
+                ('participants', 'participants_file'),
+            ])
+        ])
 
         # [INFO] Here we define the contrasts used for the group level analysis, depending on the
         # method used.
