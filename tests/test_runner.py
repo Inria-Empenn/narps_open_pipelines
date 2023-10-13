@@ -204,7 +204,7 @@ class TestPipelineRunner:
 
         # 5 - Modify team id for an existing runner (with a not implemented team id)
         with raises(NotImplementedError):
-            runner.team_id = '08MQ'
+            runner.team_id = '1K0E'
 
     @staticmethod
     @mark.unit_test
