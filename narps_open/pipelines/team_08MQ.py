@@ -685,15 +685,10 @@ class PipelineTeam08MQ(Pipeline):
                 self.directories.dataset_dir,
                 'participants.tsv')
         }
-        select_files = Node(
-            SelectFiles(
-                templates,
-                base_directory = self.directories.output_dir,
-                force_list = True
-            ),
-            name = 'select_files',
-        )
-
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+        select_files.inputs.force_list = True
+        
         # Datasink node - to save important files
         data_sink = Node(
             DataSink(base_directory = self.directories.output_dir),
