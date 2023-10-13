@@ -2,7 +2,7 @@ teamID	excluded_from_narps_analysis	exclusion_comment	reproducibility	reproducib
 50GV	No	N/A	?	Uses custom software (Denoiser)
 9Q6R	No	N/A		
 O21U	No	N/A		
-U26C	No	N/A		
+U26C	No	N/A		Link to shared analysis code : https://github.com/gladomat/narps
 43FJ	No	N/A		
 C88N	No	N/A		
 4TQ6	Yes	Resampled image offset and too large compared to template.		
@@ -21,8 +21,8 @@ UK24	No	N/A
 9T8E	No	N/A		
 94GU	No	N/A	?	Multiple software dependencies : SPM + ART + TAPAS + Matlab.
 I52Y	No	N/A		
-5G9K	No	N/A	?	? 
-2T7P	Yes	Missing thresholded images.	?	?
+5G9K	Yes	Values in the unthresholded images are not z / t stats	?	? 
+2T7P	Yes	Missing thresholded images.	?	Link to shared analysis code : https://osf.io/3b57r
 UI76	No	N/A		
 B5I6	No	N/A		
 V55J	Yes	Bad histogram : very small values.		
@@ -37,7 +37,7 @@ O03M	No	N/A
 80GC	No	N/A		
 J7F9	No	N/A		
 R7D1	No	N/A		
-Q58J	Yes	Bad histogram : bimodal, zero-inflated with a second distribution centered around 5.		
+Q58J	Yes	Bad histogram : bimodal, zero-inflated with a second distribution centered around 5.		Link to shared analysis code : https://github.com/amrka/NARPS_Q58J
 L3V8	Yes	Rejected due to large amount of missing brain in center.		
 SM54	No	N/A		
 1KB2	No	N/A		
@@ -47,13 +47,13 @@ Q6O0	No	N/A
 R42Q	No	N/A	?	Uses fMRIflows, a custom software based on NiPype.
 L9G5	No	N/A		
 DC61	No	N/A		
-E3B6	Yes	Bad histogram : very long tail, with substantial inflation at a value just below zero.		
-16IN	No	N/A	?	Multiple software dependencies : matlab + SPM + FSL + R + TExPosition + neuroim
+E3B6	Yes	Bad histogram : very long tail, with substantial inflation at a value just below zero.		Link to shared analysis code : doi.org/10.5281/zenodo.3518407
+16IN	Yes	Values in the unthresholded images are not z / t stats	?	Multiple software dependencies : matlab + SPM + FSL + R + TExPosition + neuroim. Link to shared analysis code : https://github.com/jennyrieck/NARPS
 46CD	No	N/A		
 6FH5	Yes	Missing much of the central brain.		
 K9P0	No	N/A		
 9U7M	No	N/A		
-VG39	No	N/A		
+VG39	Yes	Performed small volume corrected instead of whole-brain analysis		
 1K0E	Yes	Used surface-based analysis, only provided data for cortical ribbon.	?	?
 X1Z4	Yes	Used surface-based analysis, only provided data for cortical ribbon.	?	Multiple software dependencies : FSL + fmriprep + ciftify + HCP workbench + Freesurfer + ANTs
 I9D6	No	N/A		
@@ -61,7 +61,7 @@ E6R3	No	N/A
 27SS	No	N/A		
 B23O	No	N/A		
 AO86	No	N/A		
-L1A8	Yes	Resampled image much smaller than template brain.	?	?
+L1A8	Yes	Not in MNI standard space.	?	?
 IZ20	No	N/A		
 3TR7	No	N/A		
 98BT	Yes	Rejected due to very bad normalization.		
