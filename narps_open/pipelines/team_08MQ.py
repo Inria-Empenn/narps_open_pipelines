@@ -10,7 +10,7 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN, FLIRT, ApplyWarp
+    Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg
     )
 
 from nipype.interfaces.ants import Registration
@@ -255,8 +255,8 @@ class PipelineTeam08MQ(Pipeline):
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
-            #(, motion_correction, [('out_file', 'ref_file')]), # high contrast images
-            #(motion_correction, slice_time_correction, [('out_file', 'in_file')]),
+            (select_files, motion_correction, [('func', 'ref_file')]),
+            (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
 
             #(, alignment_white_matter, [('', 'in_file')]),
             #(, alignment_white_matter, [('', 'field_file')]),
