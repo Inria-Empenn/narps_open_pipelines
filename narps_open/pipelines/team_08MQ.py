@@ -77,28 +77,11 @@ class PipelineTeam08MQ(Pipeline):
         #segmentation_anat.inputs.number_classes = 1 # ?
         segmentation_anat.inputs.segments = True # One image per tissue class
 
-        # ANTs Node - Registration to T1 MNI152 space
-        registration_anat = Node(Registration(), name = 'registration_anat')
-        """[
-            'MNI152_T1_2mm_eye_mask.nii.gz',
-            'MNI152_T1_2mm_edges.nii.gz',
-            'MNI152_T1_2mm_brain_mask_deweight_eyes.nii.gz',
-            'MNI152_T1_2mm_brain_mask_dil1.nii.gz',
-            'MNI152_T1_2mm_skull.nii.gz',
-            'MNI152_T1_2mm_LR-masked.nii.gz',
-            'MNI152_T1_2mm_brain.nii.gz',
-            'MNI152_T1_2mm_brain_mask.nii.gz',
-            'MNI152_T1_2mm_VentricleMask.nii.gz',
-            'MNI152_T1_2mm_strucseg_periph.nii.gz',
-            'MNI152_T1_2mm.nii.gz',
-            'MNI152_T1_2mm_b0.nii.gz',
-            'MNI152_T1_2mm_brain_mask_dil.nii.gz',
-            'MNI152_T1_2mm_strucseg.nii.gz'
-            ]
-        """
-        registration_anat.inputs.fixed_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        registration_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
-        registration_anat.inputs.metric = ['MI', 'MI', 'CC']
+        # ANTs Node - Normalization of anatomical images to T1 MNI152 space
+        normalization_anat = Node(Registration(), name = 'normalization_anat')
+        normalization_anat.inputs.fixed_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        normalization_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
+        normalization_anat.inputs.metric = ['MI', 'MI', 'CC']
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
@@ -127,15 +110,18 @@ class PipelineTeam08MQ(Pipeline):
 
         # FLIRT Node - Align high contrast functional images to anatomical
         #   (i.e.: single-band reference images a.k.a. sbref)
-        registration_sbref = Node(FLIRT(), name = 'registration_sbref')
-        registration_sbref.inputs.interp = 'trilinear'
-        registration_sbref.inputs.cost = 'bbr' # boundary-based registration
+        coregistration_sbref = Node(FLIRT(), name = 'coregistration_sbref')
+        coregistration_sbref.inputs.interp = 'trilinear'
+        coregistration_sbref.inputs.cost = 'bbr' # boundary-based registration
         #out_file
         #out_matrix_file
         # fieldmap (a pathlike object or string representing a file) – Fieldmap image in rads/s - must be already registered to the reference image. Maps to a command-line argument: -fieldmap %s.
         # wm_seg (a pathlike object or string representing a file) – White matter segmentation volume needed by BBR cost function. Maps to a command-line argument: -wmseg %s.
         # wmcoords (a pathlike object or string representing a file) – White matter boundary coordinates for BBR cost function. Maps to a command-line argument: -wmcoords %s.
         # wmnorms (a pathlike object or string representing a file) – White matter boundary normals for BBR cost function. Maps to a command-line argument: -wmnorms %s.
+
+        # FLIRT Node - Inverse coregistration wrap, to get anatomical to functional warp
+
 
         """
         High contrast functional volume:
@@ -181,13 +167,16 @@ class PipelineTeam08MQ(Pipeline):
         smoothing.inputs.fwhm = self.fwhm
         #smoothing.inputs.in_file
 
-        # ApplyWarp Node - Alignment of white matter
+        # ApplyWarp Node - Alignment of white matter to functional space
         alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
-        alignment_white_matter.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
+        #field_file
 
-        # ApplyWarp Node - Alignment of CSF
+        # ApplyWarp Node - Alignment of CSF to functional space
         alignment_csf = Node(ApplyWarp(), name = 'alignment_csf')
         alignment_csf.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
+        #field_file
 
         # [INFO] The following part has to be modified with nodes of the pipeline
         """
@@ -233,7 +222,7 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, bias_field_correction, [('anat', 'in_files')]),
             (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
             (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
-            (brain_extraction_anat, registration_anat, [('out_file', 'moving_image')]),
+            (brain_extraction_anat, normalization_anat, [('out_file', 'moving_image')]),
             (brain_extraction_anat, threshold_white_matter, [('out_file', 'in_file')]),
             (brain_extraction_anat, threshold_csf, [('out_file', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
@@ -248,20 +237,27 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
 
             # High contrast functional volume
-            (select_files, registration_sbref, [('sbref', 'in_file')]),
-            (select_files, registration_sbref, [('anat', 'reference')]),
-            (convert_to_fieldmap, registration_sbref, [('out_fieldmap', 'fieldmap')]),
+            (select_files, coregistration_sbref, [('sbref', 'in_file')]),
+            (select_files, coregistration_sbref, [('anat', 'reference')]),
+            (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
+
+            #(coregistration_sbref, , [('out_matrix_file', '')]),
 
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
-            (select_files, motion_correction, [('func', 'ref_file')]),
+            (select_files, motion_correction, [('sbref', 'ref_file')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
 
             #(, alignment_white_matter, [('', 'in_file')]),
             #(, alignment_white_matter, [('', 'field_file')]),
+            #(, alignment_white_matter, [('', 'ref_file')]),
             #(, alignment_csf, [('', 'in_file')]),
-            #(, alignment_csf, [('', 'field_file')])
+            #(, alignment_csf, [('', 'field_file')]),
+            #(, alignment_csf, [('', 'ref_file')]),
+
+            # Outputs of preprocessing
+            (motion_correction, datasink, [('par_file', 'preprocessing.@par_file')])
         ])
 
         return preprocessing
