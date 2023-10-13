@@ -257,7 +257,7 @@ class PipelineTeam08MQ(Pipeline):
             #(, alignment_csf, [('', 'ref_file')]),
 
             # Outputs of preprocessing
-            (motion_correction, datasink, [('par_file', 'preprocessing.@par_file')])
+            (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')])
         ])
 
         return preprocessing

@@ -195,7 +195,7 @@ class TestPipelineRunner:
 
         # 3 - Instantiate a runner with a not implemented team id
         with raises(NotImplementedError):
-            PipelineRunner('08MQ')
+            PipelineRunner('1K0E')
 
         # 4 - Instantiate a runner with an implemented team id
         runner = PipelineRunner('2T6S')
