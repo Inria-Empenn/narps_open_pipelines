@@ -178,26 +178,18 @@ class PipelineTeam08MQ(Pipeline):
         #alignment_white_matter.inputs.ref_file = high contrast sbref ?
         #field_file
 
+        # ApplyWarp Node - Alignment of functional data to anatomical space
+        alignment_func_to_anat = Node(ApplyWarp(), name = 'alignment_func_to_anat')
+        #alignment_func_to_anat.inputs.ref_file = ?
+        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
+        #field_file
+
+        # ApplyWarp Node - Alignment of functional data to MNI space
+        alignment_func_to_mni = Node(ApplyWarp(), name = 'alignment_func_to_mni')
+        alignment_func_to_mni.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+
         # [INFO] The following part has to be modified with nodes of the pipeline
         """
-        Anatomical:
-            V Bias correction -> Bias field correction was applied to the anatomical images using FAST.
-            V Brain extraction -> BET was used for brain extraction for the anatomical, field map, and functional images. A fractional intensity threshold of 0.5 was used for the anatomical and field map images. One of 0.3 was used for the functional data.
-            V Segmentation -> Structural images were segmented with FAST. Bias correction was done first.
-            Alignment to MNI template ->
-                Data were converted to T1 MNI152 space with a 2mm resolution.
-                Alignment between T1 anatomical images and the T1 MNI template was calculated with ANTs.
-                T1 images had bias field correction applied prior to alignment.
-                Rigid (mutual information cost function), affine (mutual information cost function),
-                    and SyN (cross correlation cost function) steps were applied, in that order.
-                The combined functional-to-anatomical plus distortion correction warps were applied to functional data and then
-                    the anatomical-to-MNI warps applied to that data.
-            Creation of white matter and CSF masks from segmentation with threshold=1. Erode masks
-
-        Field maps:
-            V Brain extraction of magnitude image -> BET was used for brain extraction for the anatomical, field map, and functional images. A fractional intensity threshold of 0.5 was used for the anatomical and field map images. One of 0.3 was used for the functional data.
-            V Conversion of phase and magnitude images to field maps
-
         High contrast functional volume:
             Alignment to anatomical image including distortion correction with field map
             Calculation of inverse warp (anatomical to functional)
@@ -228,9 +220,6 @@ class PipelineTeam08MQ(Pipeline):
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
 
-            #(erode_white_matter, alignment_white_matter, [('out_file', '')]),
-            #(erode_csf, alignment_csf, [('out_file', '')]),
-
             # Field maps
             (select_files, brain_extraction_magnitude, [('magnitude', 'in_file')]),
             (brain_extraction_magnitude, convert_to_fieldmap, [('out_file', 'in_magnitude')]),
@@ -241,20 +230,22 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, coregistration_sbref, [('anat', 'reference')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
 
-            #(coregistration_sbref, , [('out_matrix_file', '')]),
-
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
             (select_files, motion_correction, [('sbref', 'ref_file')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
-
-            #(, alignment_white_matter, [('', 'in_file')]),
-            #(, alignment_white_matter, [('', 'field_file')]),
-            #(, alignment_white_matter, [('', 'ref_file')]),
-            #(, alignment_csf, [('', 'in_file')]),
-            #(, alignment_csf, [('', 'field_file')]),
-            #(, alignment_csf, [('', 'ref_file')]),
+            (slice_time_correction, alignment_func_to_anat, [('slice_time_corrected_file', 'in_file')]),
+            (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'premat')]),
+            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'ref_file')]),            
+            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
+            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]), # TODO : will not work ?
+            (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
+            #(inverse_warp, alignment_white_matter, [('out_file', 'field_file')]),
+            (select_files, alignment_white_matter, [('sbref', 'ref_file')]),
+            (erode_csf, alignment_csf, [('out_file', 'in_file')]),
+            #(inverse_warp, alignment_csf, [('out_file', 'field_file')]),
+            (select_files, alignment_csf, [('sbref', 'ref_file')]),
 
             # Outputs of preprocessing
             (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')])
