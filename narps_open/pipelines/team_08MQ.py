@@ -89,7 +89,11 @@ class PipelineTeam08MQ(Pipeline):
             [0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0]
             ]
-        normalization_anat.inputs.number_of_iterations = [10000, 10000, 10000]
+        normalization_anat.inputs.number_of_iterations = [
+            [10000, 10000, 10000],
+            [10000, 10000, 10000],
+            [10000, 10000, 10000]
+            ]
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
