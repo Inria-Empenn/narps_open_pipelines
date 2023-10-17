@@ -734,15 +734,15 @@ class PipelineTeam08MQ(Pipeline):
             base_dir = self.directories.working_dir,
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}'
         )
-        """group_level_analysis.connect([
-            (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (info_source, subgroups_contrasts, [('subject_list', 'subject_ids')]),
+        group_level_analysis.connect([
+            (info_source, select_files, [('contrast_id', 'contrast_id')])
+            """(info_source, subgroups_contrasts, [('subject_list', 'subject_ids')]),
             (select_files, subgroups_contrasts, [
                 ('cope', 'copes'),
                 ('varcope', 'varcopes'),
                 ('participants', 'participants_file'),
-            ])
-        ])"""
+            ])"""
+        ])
 
         # [INFO] Here we define the contrasts used for the group level analysis, depending on the
         # method used.
