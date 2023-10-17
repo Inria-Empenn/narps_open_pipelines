@@ -83,8 +83,12 @@ class PipelineTeam08MQ(Pipeline):
         normalization_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
         normalization_anat.inputs.metric = ['MI', 'MI', 'CC']
         normalization_anat.inputs.metric_weight = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]
-        normalization_anat.inputs.shrink_factors = [1, 1, 1]
-        normalization_anat.inputs.smoothing_sigmas = [0.0, 0.0, 0.0]
+        normalization_anat.inputs.shrink_factors = [[1,1,1], [1,1,1], [1,1,1]]
+        normalization_anat.inputs.smoothing_sigmas = [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0]
+            ]
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
