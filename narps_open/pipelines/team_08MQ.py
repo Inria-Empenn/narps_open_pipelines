@@ -6,13 +6,13 @@
 from os.path import join
 
 from nipype import Node, Workflow # , JoinNode, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
     Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg
     )
-
+from nipype.algorithms.confounds import CompCor
 from nipype.interfaces.ants import Registration
 
 from narps_open.pipelines import Pipeline
@@ -150,16 +150,13 @@ class PipelineTeam08MQ(Pipeline):
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
         # Slicetimer was used and was applied after motion correction. The middle slice was used as the reference slice. Sinc interpolation was used.
         """
-        custom_order (a pathlike object or string representing an existing file) – Filename of single-column custom interleave order file (first slice is referred to as 1 not 0). Maps to a command-line argument: --ocustom=%s.
-        custom_timings (a pathlike object or string representing an existing file) – Slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tcustom=%s.
-        environ (a dictionary with keys which are a bytes or None or a value of class ‘str’ and with values which are a bytes or None or a value of class ‘str’) – Environment variables. (Nipype default value: {})
+        custom_order (file) - Filename of single-column custom interleave order file (first slice is referred to as 1 not 0). Maps to a command-line argument: --ocustom=%s.
+        custom_timings (file) – Slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tcustom=%s.
         global_shift (a float) – Shift in fraction of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tglobal.
         index_dir (a boolean) – Slice indexing from top to bottom. Maps to a command-line argument: --down.
         interleaved (a boolean) – Use interleaved acquisition. Maps to a command-line argument: --odd.
         out_file (a pathlike object or string representing a file) – Filename of output timeseries. Maps to a command-line argument: --out=%s.
-        output_type (‘NIFTI’ or ‘NIFTI_PAIR’ or ‘NIFTI_GZ’ or ‘NIFTI_PAIR_GZ’) – FSL output type.
         slice_direction (1 or 2 or 3) – Direction of slice acquisition (x=1, y=2, z=3) - default is z. Maps to a command-line argument: --direction=%d.
-        time_repetition (a float) – Specify TR of data - default is 3s. Maps to a command-line argument: --repeat=%f.
         """
         # SUSAN Node - smoothing of functional images
         smoothing = Node(SUSAN(), name = 'smoothing')
@@ -187,6 +184,16 @@ class PipelineTeam08MQ(Pipeline):
         # ApplyWarp Node - Alignment of functional data to MNI space
         alignment_func_to_mni = Node(ApplyWarp(), name = 'alignment_func_to_mni')
         alignment_func_to_mni.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+
+        # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
+        merge_masks = Node(Merge(2), name = 'merge_masks')
+
+        # CompCor Node - Compute anatomical confounds (regressors of no interest in the model)
+        #   from the WM and CSF masks
+        compute_confounds = Node(CompCor(), name = 'compute_confounds')
+        compute_confounds.inputs.num_components = 1 # ?
+        compute_confounds.inputs.pre_filter = 'polynomial' # ?
+        compute_confounds.inputs.regress_poly_degree = 2 # ?
 
         # [INFO] The following part has to be modified with nodes of the pipeline
         """
@@ -219,6 +226,14 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_anat, threshold_csf, [('out_file', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
+            (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
+            #(inverse_warp, alignment_white_matter, [('out_file', 'field_file')]),
+            (select_files, alignment_white_matter, [('sbref', 'ref_file')]),
+            (erode_csf, alignment_csf, [('out_file', 'in_file')]),
+            #(inverse_warp, alignment_csf, [('out_file', 'field_file')]),
+            (select_files, alignment_csf, [('sbref', 'ref_file')]),
+            (alignment_csf, merge_masks, [('out_file', 'in1')]),
+            (alignment_white_matter, merge_masks, [('out_file', 'in2')]),
 
             # Field maps
             (select_files, brain_extraction_magnitude, [('magnitude', 'in_file')]),
@@ -240,15 +255,12 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'ref_file')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
             (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]), # TODO : will not work ?
-            (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
-            #(inverse_warp, alignment_white_matter, [('out_file', 'field_file')]),
-            (select_files, alignment_white_matter, [('sbref', 'ref_file')]),
-            (erode_csf, alignment_csf, [('out_file', 'in_file')]),
-            #(inverse_warp, alignment_csf, [('out_file', 'field_file')]),
-            (select_files, alignment_csf, [('sbref', 'ref_file')]),
+            (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
+            (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
             # Outputs of preprocessing
-            (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')])
+            (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
+            (compute_confounds, data_sink, [('components_file', 'preprocessing.@components_file')])
         ])
 
         return preprocessing
@@ -743,7 +755,8 @@ class PipelineTeam08MQ(Pipeline):
             ]
 
         # [INFO] Here we simply return the created workflow
-        return group_level_analysis
+        # return group_level_analysis
+        return None
 
     def get_group_level_outputs(self):
         """ Return a list of the files generated by the group level analysis """
