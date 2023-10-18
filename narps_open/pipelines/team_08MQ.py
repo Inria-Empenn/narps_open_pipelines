@@ -78,26 +78,34 @@ class PipelineTeam08MQ(Pipeline):
         segmentation_anat.inputs.segments = True # One image per tissue class
 
         # ANTs Node - Normalization of anatomical images to T1 MNI152 space
+        #   https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
         normalization_anat = Node(Registration(), name = 'normalization_anat')
         normalization_anat.inputs.fixed_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        normalization_anat.inputs.collapse_output_transforms = True
+        normalization_anat.inputs.convergence_threshold = [1e-06]
+        normalization_anat.inputs.convergence_window_size = [10]
+        normalization_anat.inputs.dimension = 3
+        normalization_anat.inputs.initial_moving_transform_com = True
+        normalization_anat.inputs.radius_or_number_of_bins = [32, 32, 4]
+        normalization_anat.inputs.sampling_percentage = [0.25, 0.25, 1]
+        normalization_anat.inputs.sampling_strategy = ['Regular', 'Regular', 'None']
+
         normalization_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
         normalization_anat.inputs.metric = ['MI', 'MI', 'CC']
-        normalization_anat.inputs.metric_weight = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]
-        normalization_anat.inputs.shrink_factors = [
-            [1],
-            [2,1],
-            [3,2,1]
-            ]
-        normalization_anat.inputs.smoothing_sigmas = [
-            [0],
-            [1, 0],
-            [2, 1, 0]
-            ]
+        normalization_anat.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3.0, 0.0)]
+        normalization_anat.inputs.metric_weight = [1.0]*3
+        normalization_anat.inputs.shrink_factors = [[8, 4, 2, 1]]*3
+        normalization_anat.inputs.smoothing_sigmas = [[3, 2, 1, 0]]*3
+        normalization_anat.inputs.sigma_units = ['vox']*3
         normalization_anat.inputs.number_of_iterations = [
-            [1500],
-            [1500, 200],
-            [100, 50, 30]
+            [1000, 500, 250, 100],
+            [1000, 500, 250, 100],
+            [100, 70, 50, 20]
             ]
+        normalization_anat.inputs.use_histogram_matching = True
+        normalization_anat.inputs.winsorize_lower_quantile = 0.005
+        normalization_anat.inputs.winsorize_upper_quantile = 0.995
+        normalization_anat.inputs.write_composite_transform = True
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
