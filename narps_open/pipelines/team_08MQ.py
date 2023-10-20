@@ -195,9 +195,9 @@ class PipelineTeam08MQ(Pipeline):
         # CompCor Node - Compute anatomical confounds (regressors of no interest in the model)
         #   from the WM and CSF masks
         compute_confounds = Node(CompCor(), name = 'compute_confounds')
-        compute_confounds.inputs.num_components = 1 # ?
-        compute_confounds.inputs.pre_filter = 'polynomial' # ?
-        compute_confounds.inputs.regress_poly_degree = 2 # ?
+        compute_confounds.inputs.num_components = 4
+        compute_confounds.inputs.merge_method = 'union'
+        compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
 
         # [INFO] The following part has to be modified with nodes of the pipeline
         """
@@ -259,7 +259,7 @@ class PipelineTeam08MQ(Pipeline):
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
-            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]), # TODO : will not work ?
+            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
