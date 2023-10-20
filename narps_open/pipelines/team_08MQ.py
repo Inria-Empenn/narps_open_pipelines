@@ -257,7 +257,7 @@ class PipelineTeam08MQ(Pipeline):
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
             (slice_time_correction, alignment_func_to_anat, [('slice_time_corrected_file', 'in_file')]),
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
-            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'ref_file')]),            
+            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
             (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]), # TODO : will not work ?
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
