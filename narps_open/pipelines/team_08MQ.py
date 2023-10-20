@@ -89,7 +89,6 @@ class PipelineTeam08MQ(Pipeline):
         normalization_anat.inputs.radius_or_number_of_bins = [32, 32, 4]
         normalization_anat.inputs.sampling_percentage = [0.25, 0.25, 1]
         normalization_anat.inputs.sampling_strategy = ['Regular', 'Regular', 'None']
-
         normalization_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
         normalization_anat.inputs.metric = ['MI', 'MI', 'CC']
         normalization_anat.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3.0, 0.0)]
@@ -259,7 +258,7 @@ class PipelineTeam08MQ(Pipeline):
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
-            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]),
+            (normalization_anat, alignment_func_to_mni, [('composite_transform', 'field_file')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
