@@ -10,7 +10,7 @@ from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg
+    Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg, ApplyXFM, ConvertXFM
     )
 from nipype.algorithms.confounds import CompCor
 from nipype.interfaces.ants import Registration
@@ -137,25 +137,10 @@ class PipelineTeam08MQ(Pipeline):
         coregistration_sbref = Node(FLIRT(), name = 'coregistration_sbref')
         coregistration_sbref.inputs.interp = 'trilinear'
         coregistration_sbref.inputs.cost = 'bbr' # boundary-based registration
-        #out_file
-        #out_matrix_file
-        # fieldmap (a pathlike object or string representing a file) – Fieldmap image in rads/s - must be already registered to the reference image. Maps to a command-line argument: -fieldmap %s.
-        # wm_seg (a pathlike object or string representing a file) – White matter segmentation volume needed by BBR cost function. Maps to a command-line argument: -wmseg %s.
-        # wmcoords (a pathlike object or string representing a file) – White matter boundary coordinates for BBR cost function. Maps to a command-line argument: -wmcoords %s.
-        # wmnorms (a pathlike object or string representing a file) – White matter boundary normals for BBR cost function. Maps to a command-line argument: -wmnorms %s.
 
-        # FLIRT Node - Inverse coregistration wrap, to get anatomical to functional warp
-
-
-        """
-        High contrast functional volume:
-            Alignment to anatomical image including distortion correction with field map
-            Calculation of inverse warp (anatomical to functional)
-        """
-        # FLIRT was used to align the high contrast functional image to anatomical.
-        # The calculated transforms were then applied to the 4d functional images
-        #    (which were aligned with the high contrast image in the motion correction step).
-        # A boundary-based registration cost function was used with trilinear interpolation.
+        # ConvertXFM Node - Inverse coregistration transform, to get anat to func transform
+        inverse_func_to_anat = Node(ConvertXFM(), name = 'inverse_func_to_anat')
+        inverse_func_to_anat.inputs.invert_xfm = True
 
         # BET Node - Brain extraction for functional images
         brain_extraction_func = Node(BET(), name = 'brain_extraction_func')
@@ -188,22 +173,17 @@ class PipelineTeam08MQ(Pipeline):
         smoothing.inputs.fwhm = self.fwhm
         #smoothing.inputs.in_file
 
-        # ApplyWarp Node - Alignment of white matter to functional space
-        alignment_white_matter = Node(ApplyWarp(), name = 'alignment_white_matter')
-        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
-        #field_file
+        # ApplyXFM Node - Alignment of white matter to functional space
+        alignment_white_matter = Node(ApplyXFM(), name = 'alignment_white_matter')
+        alignment_white_matter.inputs.apply_xfm = True
 
-        # ApplyWarp Node - Alignment of CSF to functional space
-        alignment_csf = Node(ApplyWarp(), name = 'alignment_csf')
-        alignment_csf.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
-        #field_file
+        # ApplyXFM Node - Alignment of CSF to functional space
+        alignment_csf = Node(ApplyXFM(), name = 'alignment_csf')
+        alignment_csf.inputs.apply_xfm = True
 
         # ApplyWarp Node - Alignment of functional data to anatomical space
-        alignment_func_to_anat = Node(ApplyWarp(), name = 'alignment_func_to_anat')
-        #alignment_func_to_anat.inputs.ref_file = ?
-        #alignment_white_matter.inputs.ref_file = high contrast sbref ?
-        #field_file
+        alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
+        alignment_func_to_anat.inputs.apply_xfm = True
 
         # ApplyWarp Node - Alignment of functional data to MNI space
         alignment_func_to_mni = Node(ApplyWarp(), name = 'alignment_func_to_mni')
@@ -251,11 +231,11 @@ class PipelineTeam08MQ(Pipeline):
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
             (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
-            #(inverse_warp, alignment_white_matter, [('out_file', 'field_file')]),
-            (select_files, alignment_white_matter, [('sbref', 'ref_file')]),
+            (inverse_func_to_anat, alignment_white_matter, [('out_file', 'in_matrix_file')]),
+            (select_files, alignment_white_matter, [('sbref', 'reference')]),
             (erode_csf, alignment_csf, [('out_file', 'in_file')]),
-            #(inverse_warp, alignment_csf, [('out_file', 'field_file')]),
-            (select_files, alignment_csf, [('sbref', 'ref_file')]),
+            (inverse_func_to_anat, alignment_csf, [('out_file', 'in_matrix_file')]),
+            (select_files, alignment_csf, [('sbref', 'reference')]),
             (alignment_csf, merge_masks, [('out_file', 'in1')]),
             (alignment_white_matter, merge_masks, [('out_file', 'in2')]),
 
@@ -268,6 +248,7 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, coregistration_sbref, [('sbref', 'in_file')]),
             (select_files, coregistration_sbref, [('anat', 'reference')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
+            (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
 
             # Functional images
             (select_files, brain_extraction_func, [('func', 'in_file')]),
@@ -275,7 +256,7 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, motion_correction, [('sbref', 'ref_file')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
             (slice_time_correction, alignment_func_to_anat, [('slice_time_corrected_file', 'in_file')]),
-            (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'premat')]),
+            (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'ref_file')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
             (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'field_file')]), # TODO : will not work ?
