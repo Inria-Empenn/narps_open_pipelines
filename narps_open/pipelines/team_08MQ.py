@@ -9,8 +9,14 @@ from nipype import Node, Workflow # , JoinNode, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
-    FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg, ApplyXFM, ConvertXFM
+    FSLCommand,
+
+    FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
+    Threshold, Info, SUSAN, FLIRT, EpiReg, ApplyXFM, ConvertXFM,
+
+    Level1Design, FEATModel, L2Model
+
+    # , Merge, FLAMEO,    FILMGLS, Randomise, MultipleRegressDesign
     )
 from nipype.algorithms.confounds import CompCor
 from nipype.interfaces.ants import Registration, ApplyTransforms
@@ -57,7 +63,7 @@ class PipelineTeam08MQ(Pipeline):
         select_files = Node(SelectFiles(file_templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
 
-        # DataSink Node - store the wanted results in the wanted repository
+        # DataSink Node - store the wanted results in the wanted directory
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
@@ -256,13 +262,17 @@ class PipelineTeam08MQ(Pipeline):
         parameters = {
             'subject_id': self.subject_list,
             'run_id': self.run_list,
-            'file': ['components_file.txt']
+            'file': [
+                'components_file.txt',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_trans.nii.gz'
+            ]
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
             'preprocessing',
-            '_subject_id_{subject_id}_run_id_{run_id}',
+            '_run_id_{run_id}_subject_id_{subject_id}',
             '{file}'
             )
 
@@ -286,15 +296,15 @@ class PipelineTeam08MQ(Pipeline):
         from nipype.interfaces.base import Bunch
 
         condition_names = ['event', 'gain', 'loss', 'response']
-        onset = {}
-        duration = {}
-        amplitude = {}
+        onsets = {}
+        durations = {}
+        amplitudes = {}
 
         # Create dictionary items with empty lists
         for condition in condition_names:
-            onset.update({condition : []})
-            duration.update({condition : []})
-            amplitude.update({condition : []})
+            onsets.update({condition : []})
+            durations.update({condition : []})
+            amplitudes.update({condition : []})
 
         # Parse information in the event_file
         with open(event_file, 'rt') as file:
@@ -305,90 +315,181 @@ class PipelineTeam08MQ(Pipeline):
 
                 for condition in condition_names:
                     if condition == 'gain':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
-                        amplitude[condition].append(float(info[2]))
+                        onsets[condition].append(float(info[0]))
+                        durations[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                        amplitudes[condition].append(float(info[2]))
                     elif condition == 'loss':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
-                        amplitude[condition].append(float(info[3]))
+                        onsets[condition].append(float(info[0]))
+                        durations[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                        amplitudes[condition].append(float(info[3]))
                     elif condition == 'event':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[1]))
-                        amplitude[condition].append(1.0)
+                        onsets[condition].append(float(info[0]))
+                        durations[condition].append(float(info[1]))
+                        amplitudes[condition].append(1.0)
                     elif condition == 'response':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[1])) # TODO : change to info[4] (= RT) ?
+                        onsets[condition].append(float(info[0]))
+                        durations[condition].append(float(info[1])) # TODO : change to info[4] (= RT) ?
                         if 'accept' in info[5]:
-                            amplitude[condition].append(1.0)
+                            amplitudes[condition].append(1.0)
                         elif 'reject' in info[5]:
-                            amplitude[condition].append(-1.0)
+                            amplitudes[condition].append(-1.0)
                         else:
-                            amplitude[condition].append(0.0)
+                            amplitudes[condition].append(0.0)
 
         return [
             Bunch(
                 conditions = condition_names,
-                onsets = [onset[k] for k in condition_names],
-                durations = [duration[k] for k in condition_names],
-                amplitudes = [amplitude[k] for k in condition_names],
+                onsets = [onsets[k] for k in condition_names],
+                durations = [durations[k] for k in condition_names],
+                amplitudes = [amplitudes[k] for k in condition_names],
                 regressor_names = None,
                 regressors = None)
             ]
 
-    def get_parameters_file(filepath, subject_id, run_id, working_dir):
+    def get_run_level_contrasts():
         """
-        Create a tsv file with only desired parameters per subject per run.
+        Create a list of tuples that represent contrasts.
+        Each contrast is in the form :
+        (Name,Stat,[list of condition names],[weights on those conditions])
 
-        Parameters :
-        - filepath : path to subject parameters file (i.e. one per run)
-        - subject_id : subject for whom the 1st level analysis is made
-        - run_id: run for which the 1st level analysis is made
-        - working_dir: str, name of the directory for intermediate results
-
-        Return :
-        - parameters_file : paths to new files containing only desired parameters.
+        Returns:
+            - contrasts: list of tuples, list of contrasts to analyze
         """
-        from os import makedirs
-        from os.path import join, isdir
+        # List of condition names
+        conditions = ['gain', 'loss']
 
-        from pandas import read_csv, DataFrame
-        from numpy import array, transpose
-
-        data_frame = read_csv(filepath, sep = '\t', header=0)
-        if 'NonSteadyStateOutlier00' in data_frame.columns:
-            temp_list = array([
-                data_frame['X'], data_frame['Y'], data_frame['Z'],
-                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
-                data_frame['NonSteadyStateOutlier00']])
-        else:
-            temp_list = array([
-                data_frame['X'], data_frame['Y'], data_frame['Z'],
-                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
-        retained_parameters = DataFrame(transpose(temp_list))
-
-        parameters_file = join(working_dir, 'parameters_file',
-            f'parameters_file_sub-{subject_id}_run{run_id}.tsv')
-
-        makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
-
-        with open(parameters_file, 'w') as writer:
-            writer.write(retained_parameters.to_csv(
-                sep = '\t', index = False, header = False, na_rep = '0.0'))
-
-        return parameters_file
-
-
-
-
+        # Return contrast list
+        return [
+            # Positive parametric effect of gain
+            ('gain', 'T', conditions, [1, 0]),
+            # Positive parametric effect of loss
+            ('loss', 'T', conditions, [0, 1]),
+            # Negative parametric effect of loss.
+            ('loss', 'T', conditions, [0, -1])
+        ]
 
     def get_run_level_analysis(self):
-        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
-        return None
+        """ Return a Nipype workflow describing the run level analysis part of the pipeline
+
+        Returns:
+            - run_level_analysis : nipype.WorkFlow
+        """
+
+        # IdentityInterface node - allows to iterate over subjects and runs
+        info_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'info_source')
+        info_source.iterables = [
+            ('run_id', self.run_list),
+            ('subject_id', self.subject_list),
+        ]
+
+        # SelectFiles node - to select necessary files
+        templates = {
+            # Functional MRI
+            'func' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_{run_id}_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_trans.nii.gz'
+                ),
+            # Event file
+            'event' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'
+                ),
+            # Motion parameters
+            'motion' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_{run_id}_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
+                )
+        }
+        select_files = Node(SelectFiles(templates), name = 'selectfiles')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+
+        # DataSink Node - store the wanted results in the wanted directory
+        data_sink = Node(DataSink(), name='datasink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+
+        # Function Node get_session_information - Get subject information from event files
+        session_information = Node(Function(), name = 'session_information')
+        session_information.inputs.function = self.get_session_information
+        session_information.inputs.input_names = ['event_file']
+        session_information.inputs.output_names = ['session_information']
+
+        # SpecifyModel - Generates a model
+        specify_model = Node(SpecifyModel(), name = 'specify_model')
+        specify_model.inputs.high_pass_filter_cutoff = 90
+        specify_model.inputs.input_units = 'secs'
+        specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
+        specify_model.inputs.parameter_source = 'FSL' # Source of motion parameters.
+
+        # Function Node get_contrasts - Get the list of contrasts
+        contrasts = Node(Function(), name = 'contrasts')
+        contrasts.inputs.function = self.get_contrasts
+        contrasts.inputs.input_names = []
+        contrasts.inputs.output_names = ['contrasts']
+
+        # Level1Design Node - Generate files for first level computation
+        l1_design = Node(Level1Design(), 'l1_design')
+        l1_design.inputs.bases = {
+            'dgamma':{'derivs' : True} # Canonical double gamma HRF plus temporal derivative
+            }
+        l1_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        l1_design.inputs.model_serial_correlations = True
+
+        # FEATModel Node - Generate first level model
+        model_generation = Node(FEATModel(), name = 'model_generation')
+
+        # FILMGLS Node - Estimate first level model
+        model_estimate = Node(FILMGLS(), name = 'model_estimate')
+
+        # Create l1 analysis workflow and connect its nodes
+        run_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'run_level_analysis'
+            )
+        run_level_analysis.connect([
+            (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (select_files, session_information, [('event', 'event_file')]),
+            (session_information, specify_model, [('subject_info', 'subject_info')]),
+            (select_files, specify_model, [('motion', 'realignment_parameters')]),
+            (select_files, specify_model, [('func', 'functional_runs')]),
+            (contrasts, l1_design, [('contrasts', 'contrasts')]),
+            (specify_model, l1_design, [('session_info', 'session_info')]),
+            (l1_design, model_generation, [
+                ('ev_files', 'ev_files'),
+                ('fsf_files', 'fsf_file')]),
+            (select_files, model_estimate, [('func', 'in_file')]),
+            (model_generation, model_estimate, [
+                ('con_file', 'tcon_file'),
+                ('design_file', 'design_file')]),
+            (model_estimate, data_sink, [('results_dir', 'l1_analysis.@results')]),
+            (model_generation, data_sink, [
+                ('design_file', 'l1_analysis.@design_file'),
+                ('design_image', 'l1_analysis.@design_img')]),
+            ])
+
+        return l1_analysis
 
     def get_run_level_outputs(self):
         """ Return a list of the files generated by the run level analysis """
         return ['fake_file']
+
+    """
+    Group level
+    Ordinary least squares. Pooled variance.
+
+    Second level
+    Positive one-sample ttest over first level contrast estimates.
+
+    Group level
+    Group effect for each first level contrast for each of the two groups.
+    Contrast of positive parametric effect of loss, testing for equal range group responses being greater than equal indifference group.
+
+    TFCE
+
+    pval_computation : Permutation testing implemented in randomise (10,000 permutations).
+    multiple_testing_correction : FWE permutation (10,000 permutations).
+    comments_analysis : NA
+    """
 
     def get_subject_information(event_file: str):
         """
