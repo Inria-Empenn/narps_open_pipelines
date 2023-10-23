@@ -36,7 +36,7 @@ class PipelineTeam08MQ(Pipeline):
         # IdentityInterface node - allows to iterate over subjects and runs
         info_source = Node(IdentityInterface(
             fields = ['subject_id', 'run_id']),
-            name='info_source')
+            name = 'info_source')
         info_source.iterables = [
             ('run_id', self.run_list),
             ('subject_id', self.subject_list),
@@ -104,7 +104,6 @@ class PipelineTeam08MQ(Pipeline):
         normalization_anat.inputs.use_histogram_matching = True
         normalization_anat.inputs.winsorize_lower_quantile = 0.005
         normalization_anat.inputs.winsorize_upper_quantile = 0.995
-        #normalization_anat.inputs.write_composite_transform = True
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
@@ -156,21 +155,11 @@ class PipelineTeam08MQ(Pipeline):
         # SliceTimer Node - Slice time correction
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
-        # Slicetimer was used and was applied after motion correction. The middle slice was used as the reference slice. Sinc interpolation was used.
-        """
-        custom_order (file) - Filename of single-column custom interleave order file (first slice is referred to as 1 not 0). Maps to a command-line argument: --ocustom=%s.
-        custom_timings (file) – Slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tcustom=%s.
-        global_shift (a float) – Shift in fraction of TR, range 0:1 (default is 0.5 = no shift). Maps to a command-line argument: --tglobal.
-        index_dir (a boolean) – Slice indexing from top to bottom. Maps to a command-line argument: --down.
-        interleaved (a boolean) – Use interleaved acquisition. Maps to a command-line argument: --odd.
-        out_file (a pathlike object or string representing a file) – Filename of output timeseries. Maps to a command-line argument: --out=%s.
-        slice_direction (1 or 2 or 3) – Direction of slice acquisition (x=1, y=2, z=3) - default is z. Maps to a command-line argument: --direction=%d.
-        """
+
         # SUSAN Node - smoothing of functional images
         smoothing = Node(SUSAN(), name = 'smoothing')
-        #smoothing.inputs.brightness_threshold = # ?
+        smoothing.inputs.brightness_threshold = 2000.0 # ?
         smoothing.inputs.fwhm = self.fwhm
-        #smoothing.inputs.in_file
 
         # ApplyXFM Node - Alignment of white matter to functional space
         alignment_white_matter = Node(ApplyXFM(), name = 'alignment_white_matter')
@@ -198,23 +187,6 @@ class PipelineTeam08MQ(Pipeline):
         compute_confounds.inputs.num_components = 4
         compute_confounds.inputs.merge_method = 'union'
         compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-        """
-        High contrast functional volume:
-            Alignment to anatomical image including distortion correction with field map
-            Calculation of inverse warp (anatomical to functional)
-
-        Functional:
-            V Brain extraction -> BET was used for brain extraction for the anatomical, field map, and functional images. A fractional intensity threshold of 0.5 was used for the anatomical and field map images. One of 0.3 was used for the functional data.
-            V Motion correction with high contrast image as reference -> MCFLIRT was used for motion correction.
-                The single volume, high contrast image was used as the reference scan.
-                Normalised correlation was used as the image similarity metric with trilinear interpolation.
-            Slice time correction -> Slicetimer was used and was applied after motion correction.
-                The middle slice was used as the reference slice. Sinc interpolation was used.
-            Alignment of white matter and CSF masks to functional space with previously calculated warps
-            Calculate aCompCor components
-        """
 
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.connect([
@@ -255,7 +227,8 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
             (select_files, motion_correction, [('sbref', 'ref_file')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
-            (slice_time_correction, alignment_func_to_anat, [('slice_time_corrected_file', 'in_file')]),
+            (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
+            (smoothing, alignment_func_to_anat, [('smoothed_file', 'in_file')]),
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),            
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
