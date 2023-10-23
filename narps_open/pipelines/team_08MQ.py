@@ -533,75 +533,10 @@ class PipelineTeam08MQ(Pipeline):
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
-        # Infosource Node - To iterate on subjects
-        info_source = Node(IdentityInterface(
-            fields = ['subject_id', 'run_id']),
-            name = 'info_source'
-            )
-        info_source.iterables = [('subject_id', self.subject_list)]
-
-        # Templates to select files node
-        templates = {
-            'func': join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'complete_filename_{subject_id}_complete_filename.nii',
-            ),
-            'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv',
-            )
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.dataset_dir
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
-
-        # Subject information Node - get subject specific condition information
-        subject_information = Node(
-            Function(
-                function = self.get_run_level_contrasts,
-                input_names = ['event_files', 'runs'],
-                output_names = ['subject_info']
-            ),
-            name = 'subject_information',
-        )
-        subject_information.inputs.runs = self.run_list
-
-        # Parameters Node - create files with parameters from subject session data
-        """parameters = Node(
-            Function(
-                function = self.get_parameters_file,
-                input_names = ['event_files', 'runs'],
-                output_names = ['parameters_files']
-            ),
-            name = 'parameters',
-        )
-        parameters.inputs.runs = self.run_list
-        """
-
-        # Contrasts node - get contrasts to compute from the model
-        contrasts = Node(
-            Function(
-                function = self.get_contrasts,
-                input_names = ['subject_id'],
-                output_names = ['contrasts']
-            ),
-            name = 'contrasts',
-        )
-
         subject_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
             name = 'subject_level_analysis'
         )
-        subject_level_analysis.connect([
-            (info_source, select_files, [('subject_id', 'subject_id')]),
-            (info_source, contrasts, [('subject_id', 'subject_id')]),
-            (select_files, subject_information, [('event', 'event_files')]),
-        ])
-
         return subject_level_analysis
 
     def get_subject_level_outputs(self):
