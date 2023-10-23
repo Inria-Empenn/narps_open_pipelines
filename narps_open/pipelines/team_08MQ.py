@@ -409,10 +409,11 @@ class PipelineTeam08MQ(Pipeline):
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Function Node get_session_information - Get subject information from event files
-        session_information = Node(Function(), name = 'session_information')
+        session_information = Node(Function(
+            input_names = ['event_file'],
+            output_names = ['session_information']
+            ), name = 'session_information')
         session_information.inputs.function = self.get_session_information
-        session_information.inputs.input_names = ['event_file']
-        session_information.inputs.output_names = ['session_information']
 
         # SpecifyModel - Generates a model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -422,10 +423,11 @@ class PipelineTeam08MQ(Pipeline):
         specify_model.inputs.parameter_source = 'FSL' # Source of motion parameters.
 
         # Function Node get_contrasts - Get the list of contrasts
-        contrasts = Node(Function(), name = 'contrasts')
+        contrasts = Node(Function(
+            input_names = [],
+            output_names = ['contrasts']
+            ), name = 'contrasts')
         contrasts.inputs.function = self.get_contrasts
-        contrasts.inputs.input_names = []
-        contrasts.inputs.output_names = ['contrasts']
 
         # Level1Design Node - Generate files for first level computation
         l1_design = Node(Level1Design(), 'l1_design')
