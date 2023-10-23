@@ -13,7 +13,7 @@ from nipype.interfaces.fsl import (
     Threshold, Info, SUSAN, FLIRT, ApplyWarp, EpiReg, ApplyXFM, ConvertXFM
     )
 from nipype.algorithms.confounds import CompCor
-from nipype.interfaces.ants import Registration
+from nipype.interfaces.ants import Registration, ApplyTransforms
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -104,7 +104,7 @@ class PipelineTeam08MQ(Pipeline):
         normalization_anat.inputs.use_histogram_matching = True
         normalization_anat.inputs.winsorize_lower_quantile = 0.005
         normalization_anat.inputs.winsorize_upper_quantile = 0.995
-        normalization_anat.inputs.write_composite_transform = True
+        #normalization_anat.inputs.write_composite_transform = True
 
         # Threshold Node - create white-matter mask
         threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
@@ -185,8 +185,9 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_anat.inputs.apply_xfm = True
 
         # ApplyWarp Node - Alignment of functional data to MNI space
-        alignment_func_to_mni = Node(ApplyWarp(), name = 'alignment_func_to_mni')
-        alignment_func_to_mni.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        alignment_func_to_mni = Node(ApplyTransforms(), name = 'alignment_func_to_mni')
+        alignment_func_to_mni.inputs.reference_image = \
+            Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
 
         # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
         merge_masks = Node(Merge(2), name = 'merge_masks')
@@ -257,8 +258,8 @@ class PipelineTeam08MQ(Pipeline):
             (slice_time_correction, alignment_func_to_anat, [('slice_time_corrected_file', 'in_file')]),
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),            
-            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'in_file')]),
-            (normalization_anat, alignment_func_to_mni, [('composite_transform', 'field_file')]),
+            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
+            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'transforms')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
