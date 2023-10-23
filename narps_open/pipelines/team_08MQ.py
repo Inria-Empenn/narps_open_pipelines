@@ -189,6 +189,8 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_mni = Node(ApplyTransforms(), name = 'alignment_func_to_mni')
         alignment_func_to_mni.inputs.reference_image = \
             Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+        alignment_func_to_mni.inputs.dimension = 4
+        alignment_func_to_mni.inputs.input_image_type = 3 # time series
 
         # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
         merge_masks = Node(Merge(2), name = 'merge_masks')
