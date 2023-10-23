@@ -413,7 +413,7 @@ class PipelineTeam08MQ(Pipeline):
         subject_information = Node(Function(
             function = self.get_subject_information,
             input_names = ['event_file'],
-            output_names = ['subject_information']
+            output_names = ['subject_info']
             ), name = 'subject_information')
 
         # SpecifyModel - Generates a model
