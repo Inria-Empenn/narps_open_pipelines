@@ -74,7 +74,8 @@ class PipelineTeam08MQ(Pipeline):
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
         segmentation_anat.inputs.no_bias = True # Bias field was already removed
-        segmentation_anat.inputs.segments = True # One image per tissue class
+        segmentation_anat.inputs.segments = False # Only output partial volume estimation
+        segmentation_anat.inputs.probability_maps = False # Only output partial volume estimation
 
         # Split Node - Split probability maps as they output from the segmentation node
         split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
@@ -201,7 +202,7 @@ class PipelineTeam08MQ(Pipeline):
             (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
             (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
             (brain_extraction_anat, normalization_anat, [('out_file', 'moving_image')]),
-            (segmentation_anat, split_segmentation_maps, [('probability_maps', 'inlist')]),
+            (segmentation_anat, split_segmentation_maps, [('partial_volume_files', 'inlist')]),
             (split_segmentation_maps, threshold_white_matter, [('out2', 'in_file')]),
             (split_segmentation_maps, threshold_csf, [('out1', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
