@@ -387,16 +387,16 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles node - to select necessary files
         templates = {
-            # Functional MRI
+            # Functional MRI - computed by preprocessing
             'func' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_{run_id}_subject_id_{subject_id}',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_trans.nii.gz'
                 ),
-            # Event file
+            # Event file - from the original dataset
             'event' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'
                 ),
-            # Motion parameters
+            # Motion parameters - computed by preprocessing's motion_correction Node
             'motion' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_{run_id}_subject_id_{subject_id}',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
