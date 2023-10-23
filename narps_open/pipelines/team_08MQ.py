@@ -150,7 +150,7 @@ class PipelineTeam08MQ(Pipeline):
         motion_correction = Node(MCFLIRT(), name = 'motion_correction')
         motion_correction.inputs.cost = 'normcorr'
         motion_correction.inputs.interpolation = 'spline' # should be 'trilinear'
-        motion_correction.inputs.save_rms = True # Save rms displacement parameters
+        motion_correction.inputs.save_plots = True # Save transformation parameters
 
         # SliceTimer Node - Slice time correction
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
@@ -237,7 +237,7 @@ class PipelineTeam08MQ(Pipeline):
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
             # Outputs of preprocessing
-            (motion_correction, data_sink, [('rms_files', 'preprocessing.@rms_files')]),
+            (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
             (compute_confounds, data_sink, [('components_file', 'preprocessing.@components_file')]),
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')])
         ])
