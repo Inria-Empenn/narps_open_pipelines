@@ -80,6 +80,7 @@ class PipelineTeam08MQ(Pipeline):
         # Split Node - Split probability maps as they output from the segmentation node
         split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
         split_segmentation_maps.inputs.splits = [1, 1, 1]
+        split_segmentation_maps.inputs.squeeze = True # Unfold one-element splits removing the list
 
         # ANTs Node - Normalization of anatomical images to T1 MNI152 space
         #   https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
