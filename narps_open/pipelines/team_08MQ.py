@@ -280,7 +280,7 @@ class PipelineTeam08MQ(Pipeline):
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
-    def get_session_information(event_file):
+    def get_subject_information(event_file):
         """
         Extract information from an event file, to setup the model. 4 regressors are extracted :
         - event: a regressor with 4 second ON duration
@@ -409,12 +409,12 @@ class PipelineTeam08MQ(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
-        # Function Node get_session_information - Get subject information from event files
-        session_information = Node(Function(
-            function = self.get_session_information,
+        # Function Node get_subject_information - Get subject information from event files
+        subject_information = Node(Function(
+            function = self.get_subject_information,
             input_names = ['event_file'],
-            output_names = ['session_information']
-            ), name = 'session_information')
+            output_names = ['subject_information']
+            ), name = 'subject_information')
 
         # SpecifyModel - Generates a model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -451,8 +451,8 @@ class PipelineTeam08MQ(Pipeline):
             )
         run_level_analysis.connect([
             (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-            (select_files, session_information, [('event', 'event_file')]),
-            (session_information, specify_model, [('subject_info', 'subject_info')]),
+            (select_files, subject_information, [('event', 'event_file')]),
+            (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (select_files, specify_model, [('motion', 'realignment_parameters')]),
             (select_files, specify_model, [('func', 'functional_runs')]),
             (contrasts, l1_design, [('contrasts', 'contrasts')]),
