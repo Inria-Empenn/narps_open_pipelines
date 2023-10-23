@@ -264,7 +264,7 @@ class PipelineTeam08MQ(Pipeline):
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
             # Outputs of preprocessing
-            (motion_correction, data_sink, [('rms_file', 'preprocessing.@rms_file')]),
+            (motion_correction, data_sink, [('rms_files', 'preprocessing.@rms_files')]),
             (compute_confounds, data_sink, [('components_file', 'preprocessing.@components_file')]),
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')])
         ])
