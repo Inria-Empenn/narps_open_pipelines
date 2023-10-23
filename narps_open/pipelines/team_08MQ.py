@@ -6,7 +6,7 @@
 from os.path import join
 
 from nipype import Node, Workflow # , JoinNode, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Merge
+from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     FSLCommand, FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
@@ -69,13 +69,16 @@ class PipelineTeam08MQ(Pipeline):
         # BET Node - Brain extraction for anatomical images
         brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
         brain_extraction_anat.inputs.frac = 0.5
-        #brain_extraction_anat.inputs.mask = True # ?
+        #brain_extraction_anat.inputs.mask = True # TODO ?
 
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
         segmentation_anat.inputs.no_bias = True # Bias field was already removed
-        #segmentation_anat.inputs.number_classes = 1 # ?
         segmentation_anat.inputs.segments = True # One image per tissue class
+
+        # Split Node - Split probability maps as they output from the segmentation node
+        split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
+        split_segmentation_maps.inputs.splits = [1, 1, 1]
 
         # ANTs Node - Normalization of anatomical images to T1 MNI152 space
         #   https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
@@ -143,7 +146,7 @@ class PipelineTeam08MQ(Pipeline):
         # BET Node - Brain extraction for functional images
         brain_extraction_func = Node(BET(), name = 'brain_extraction_func')
         brain_extraction_func.inputs.frac = 0.3
-        brain_extraction_func.inputs.mask = True # ?
+        brain_extraction_func.inputs.mask = True
         brain_extraction_func.inputs.functional = True
 
         # MCFLIRT Node - Motion correction of functional images
@@ -158,7 +161,7 @@ class PipelineTeam08MQ(Pipeline):
 
         # SUSAN Node - smoothing of functional images
         smoothing = Node(SUSAN(), name = 'smoothing')
-        smoothing.inputs.brightness_threshold = 2000.0 # ?
+        smoothing.inputs.brightness_threshold = 2000.0 # TODO : which value ?
         smoothing.inputs.fwhm = self.fwhm
 
         # ApplyXFM Node - Alignment of white matter to functional space
@@ -198,8 +201,9 @@ class PipelineTeam08MQ(Pipeline):
             (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
             (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
             (brain_extraction_anat, normalization_anat, [('out_file', 'moving_image')]),
-            (brain_extraction_anat, threshold_white_matter, [('out_file', 'in_file')]),
-            (brain_extraction_anat, threshold_csf, [('out_file', 'in_file')]),
+            (segmentation_anat, split_segmentation_maps, [('probability_maps', 'inlist')]),
+            (split_segmentation_maps, threshold_white_matter, [('out2', 'in_file')]),
+            (split_segmentation_maps, threshold_csf, [('out1', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
             (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
@@ -262,6 +266,119 @@ class PipelineTeam08MQ(Pipeline):
 
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+    def get_session_information(event_file):
+        """
+        Extract information from an event file, to setup the model. 4 regressors are extracted :
+        - event: a regressor with 4 second ON duration
+        - gain : a parametric modulation of events corresponding to gain magnitude. Mean centred.
+        - loss : a parametric modulation of events corresponding to loss magnitude. Mean centred.
+        - response : a regressor with 1 for accept and -1 for reject. Mean centred.
+
+        Parameters :
+        - event_file : str, event file corresponding to the run and the subject to analyze
+
+        Returns :
+        - subject_info : list of Bunch containing event information
+        """
+        from nipype.interfaces.base import Bunch
+
+        condition_names = ['event', 'gain', 'loss', 'response']
+        onset = {}
+        duration = {}
+        amplitude = {}
+
+        # Create dictionary items with empty lists
+        for condition in condition_names:
+            onset.update({condition : []})
+            duration.update({condition : []})
+            amplitude.update({condition : []})
+
+        # Parse information in the event_file
+        with open(event_file, 'rt') as file:
+            next(file)  # skip the header
+
+            for line in file:
+                info = line.strip().split()
+
+                for condition in condition_names:
+                    if condition == 'gain':
+                        onset[condition].append(float(info[0]))
+                        duration[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                        amplitude[condition].append(float(info[2]))
+                    elif condition == 'loss':
+                        onset[condition].append(float(info[0]))
+                        duration[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                        amplitude[condition].append(float(info[3]))
+                    elif condition == 'event':
+                        onset[condition].append(float(info[0]))
+                        duration[condition].append(float(info[1]))
+                        amplitude[condition].append(1.0)
+                    elif condition == 'response':
+                        onset[condition].append(float(info[0]))
+                        duration[condition].append(float(info[1])) # TODO : change to info[4] (= RT) ?
+                        if 'accept' in info[5]:
+                            amplitude[condition].append(1.0)
+                        elif 'reject' in info[5]:
+                            amplitude[condition].append(-1.0)
+                        else:
+                            amplitude[condition].append(0.0)
+
+        return [
+            Bunch(
+                conditions = condition_names,
+                onsets = [onset[k] for k in condition_names],
+                durations = [duration[k] for k in condition_names],
+                amplitudes = [amplitude[k] for k in condition_names],
+                regressor_names = None,
+                regressors = None)
+            ]
+
+    def get_parameters_file(filepath, subject_id, run_id, working_dir):
+        """
+        Create a tsv file with only desired parameters per subject per run.
+
+        Parameters :
+        - filepath : path to subject parameters file (i.e. one per run)
+        - subject_id : subject for whom the 1st level analysis is made
+        - run_id: run for which the 1st level analysis is made
+        - working_dir: str, name of the directory for intermediate results
+
+        Return :
+        - parameters_file : paths to new files containing only desired parameters.
+        """
+        from os import makedirs
+        from os.path import join, isdir
+
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
+
+        data_frame = read_csv(filepath, sep = '\t', header=0)
+        if 'NonSteadyStateOutlier00' in data_frame.columns:
+            temp_list = array([
+                data_frame['X'], data_frame['Y'], data_frame['Z'],
+                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
+                data_frame['NonSteadyStateOutlier00']])
+        else:
+            temp_list = array([
+                data_frame['X'], data_frame['Y'], data_frame['Z'],
+                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
+        retained_parameters = DataFrame(transpose(temp_list))
+
+        parameters_file = join(working_dir, 'parameters_file',
+            f'parameters_file_sub-{subject_id}_run{run_id}.tsv')
+
+        makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
+
+        with open(parameters_file, 'w') as writer:
+            writer.write(retained_parameters.to_csv(
+                sep = '\t', index = False, header = False, na_rep = '0.0'))
+
+        return parameters_file
+
+
+
+
 
     def get_run_level_analysis(self):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
