@@ -402,19 +402,19 @@ class PipelineTeam08MQ(Pipeline):
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
                 )
         }
-        select_files = Node(SelectFiles(templates), name = 'selectfiles')
+        select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted directory
-        data_sink = Node(DataSink(), name='datasink')
+        data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Function Node get_session_information - Get subject information from event files
         session_information = Node(Function(
+            function = self.get_session_information,
             input_names = ['event_file'],
             output_names = ['session_information']
             ), name = 'session_information')
-        session_information.inputs.function = self.get_session_information
 
         # SpecifyModel - Generates a model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -425,10 +425,10 @@ class PipelineTeam08MQ(Pipeline):
 
         # Function Node get_contrasts - Get the list of contrasts
         contrasts = Node(Function(
+            function = self.get_run_level_contrasts,
             input_names = [],
             output_names = ['contrasts']
             ), name = 'contrasts')
-        contrasts.inputs.function = self.get_run_level_contrasts
 
         # Level1Design Node - Generate files for first level computation
         l1_design = Node(Level1Design(), 'l1_design')
