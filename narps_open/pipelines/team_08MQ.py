@@ -16,8 +16,9 @@ from nipype.interfaces.fsl import (
     Threshold, Info, SUSAN, FLIRT, EpiReg, ApplyXFM, ConvertXFM,
 
     Level1Design, FEATModel, L2Model, FILMGLS,
-    Merge, FLAMEO, Randomise, MultipleRegressDesign, Cluster
+    FLAMEO, Randomise, MultipleRegressDesign, Cluster
     )
+from nipype.interfaces.fsl.utils import Merge as MergeImages
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform
@@ -551,11 +552,11 @@ class PipelineTeam08MQ(Pipeline):
         generate_model.inputs.num_copes = len(self.run_list)
 
         # Merge Node - Merge copes files for each subject
-        merge_copes = Node(Merge(), name = 'merge_copes')
+        merge_copes = Node(MergeImages(), name = 'merge_copes')
         merge_copes.inputs.dimension = 't'
 
         # Merge Node - Merge varcopes files for each subject
-        merge_varcopes = Node(Merge(), name = 'merge_varcopes')
+        merge_varcopes = Node(MergeImages(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
         # FLAMEO Node - Estimate model
@@ -826,11 +827,11 @@ class PipelineTeam08MQ(Pipeline):
         regressors.inputs.subject_list = self.subject_list
 
         # Merge Node - Merge cope files
-        merge_copes = Node(Merge(), name = 'merge_copes')
+        merge_copes = Node(MergeImages(), name = 'merge_copes')
         merge_copes.inputs.dimension = 't'
 
         # Merge Node - Merge cope files
-        merge_varcopes = Node(Merge(), name = 'merge_varcopes')
+        merge_varcopes = Node(MergeImages(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
         # MultipleRegressDesign Node - Specify model
