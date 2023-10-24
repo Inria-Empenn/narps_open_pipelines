@@ -396,7 +396,7 @@ class PipelineTeam08MQ(Pipeline):
             # Functional MRI - computed by preprocessing
             'func' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_{run_id}_subject_id_{subject_id}',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_trans.nii.gz'
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
                 ),
             # Event file - from the original dataset
             'event' : join('sub-{subject_id}', 'func',
