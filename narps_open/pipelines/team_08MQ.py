@@ -272,7 +272,7 @@ class PipelineTeam08MQ(Pipeline):
             'file': [
                 'components_file.txt',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_trans.nii.gz'
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
             ]
         }
         parameter_sets = product(*parameters.values())
