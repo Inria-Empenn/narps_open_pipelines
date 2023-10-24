@@ -6,7 +6,7 @@
 from os.path import join
 from itertools import product
 
-from nipype import Node, Workflow
+from nipype import Node, Workflow, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split, Select
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
@@ -15,9 +15,8 @@ from nipype.interfaces.fsl import (
     FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
     Threshold, Info, SUSAN, FLIRT, EpiReg, ApplyXFM, ConvertXFM,
 
-    Level1Design, FEATModel, L2Model, FILMGLS
-
-    # , Merge, FLAMEO,    Randomise, MultipleRegressDesign
+    Level1Design, FEATModel, L2Model, FILMGLS,
+    Merge, FLAMEO, Randomise, MultipleRegressDesign, Cluster
     )
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
@@ -568,7 +567,7 @@ class PipelineTeam08MQ(Pipeline):
             base_dir = self.directories.working_dir,
             name = 'subject_level_analysis')
         subject_level_analysis.connect([
-            (infosource_sub_level, select_files, [
+            (info_source, select_files, [
                 ('subject_id', 'subject_id'),
                 ('contrast_id', 'contrast_id')]),
             (select_files, merge_copes, [('cope', 'in_files')]),
@@ -626,13 +625,13 @@ class PipelineTeam08MQ(Pipeline):
     def get_subgroups_contrasts(copes, varcopes, subject_list: list, participants_file: str):
         """
         Return the file list containing only the files belonging to subject in the wanted group.
-        
+
         Parameters :
         - copes: original file list selected by select_files node
         - varcopes: original file list selected by select_files node
         - subject_ids: list of subject IDs that are analyzed
         - participants_file: file containing participants characteristics
-        
+
         Returns :
         - copes_equal_indifference : a subset of copes corresponding to subjects
         in the equalIndifference group
@@ -753,10 +752,10 @@ class PipelineTeam08MQ(Pipeline):
     def get_group_level_analysis_sub_workflow(self, method):
         """
         Return a workflow for the group level analysis.
-        
+
         Parameters:
             - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
-        
+
         Returns:
             - group_level_analysis: nipype.WorkFlow
         """
@@ -771,7 +770,7 @@ class PipelineTeam08MQ(Pipeline):
         info_source.iterables = [('contrast_id', self.contrast_list)]
 
         # SelectFiles Node - select necessary files
-        template = {
+        templates = {
             'cope' : join(
                 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'cope1.nii.gz'),
@@ -806,7 +805,7 @@ class PipelineTeam08MQ(Pipeline):
                     'varcopes_global'
                 ]
             ),
-            name = 'subgroups_contrasts',
+            name = 'contrasts',
         )
 
         # Function Node get_regressors - Get regressors
@@ -839,16 +838,16 @@ class PipelineTeam08MQ(Pipeline):
 
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
-        estimate_model.inputs.run_mode = 'ols', # Ordinary least squares
+        estimate_model.inputs.run_mode = 'ols' # Ordinary least squares
         estimate_model.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
-        # Cluster Node - 
+        # Cluster Node -
         cluster = MapNode(Cluster(
-                threshold = 3.1, 
+                threshold = 3.1,
                 out_threshold_file = True
-            ), 
-            name = 'cluster', 
-            iterfield = ['in_file', 'cope_file'], 
+            ),
+            name = 'cluster',
+            iterfield = ['in_file', 'cope_file'],
             synchronize = True
         )
 
@@ -869,12 +868,12 @@ class PipelineTeam08MQ(Pipeline):
                 ),
                 (
                     info_source,
-                    subgroups_contrasts,
+                    contrasts,
                     [('subject_list', 'subject_ids')],
                 ),
                 (
                     select_files,
-                    subgroups_contrasts,
+                    contrasts,
                     [
                         ('cope', 'copes'),
                         ('varcope', 'varcopes'),
@@ -882,16 +881,16 @@ class PipelineTeam08MQ(Pipeline):
                     ],
                 ),
                 (
-                    subgroups_contrasts, 
-                    regs, 
+                    contrasts,
+                    regressors,
                     [
                         ('equalRange_id', 'equalRange_id'),
                         ('equalIndifference_id', 'equalIndifference_id')
                     ]
                 ),
                 (
-                    regs, 
-                    specify_model, 
+                    regressors,
+                    specify_model,
                     [('regressors', 'regressors')]
                 )
             ]
@@ -904,13 +903,13 @@ class PipelineTeam08MQ(Pipeline):
             if method == 'equalIndifference':
                 group_level_analysis.connect([
                     (
-                        subgroups_contrasts, 
-                        merge_copes, 
+                        contrasts,
+                        merge_copes,
                         [('copes_equalIndifference', 'in_files')]
-                    ), 
+                    ),
                     (
-                        subgroups_contrasts, 
-                        merge_varcopes, 
+                        contrasts,
+                        merge_varcopes,
                         [('varcopes_equalIndifference', 'in_files')]
                     )
                 ])
@@ -918,13 +917,13 @@ class PipelineTeam08MQ(Pipeline):
             elif method == 'equalRange':
                 group_level_analysis.connect([
                     (
-                        subgroups_contrasts, 
-                        merge_copes_3rdlevel, 
+                        contrasts,
+                        merge_copes,
                         [('copes_equalRange', 'in_files')]
                     ),
                     (
-                        subgroups_contrasts, 
-                        merge_varcopes_3rdlevel, 
+                        contrasts,
+                        merge_varcopes,
                         [('varcopes_equalRange', 'in_files')]
                     )
                 ])
@@ -937,56 +936,56 @@ class PipelineTeam08MQ(Pipeline):
 
             group_level_analysis.connect([
                 (
-                    select_files, 
-                    merge_copes, 
+                    select_files,
+                    merge_copes,
                     [('cope', 'in_files')]
                 ),
                 (
-                    select_files, 
-                    merge_varcopes, 
+                    select_files,
+                    merge_varcopes,
                     [('varcope', 'in_files')]
                 )
             ])
 
         group_level_analysis.connect([
             (
-                merge_copes, 
-                flame, 
+                merge_copes,
+                estimate_model,
                 [('merged_file', 'cope_file')]
             ),
             (
-                merge_varcopes, 
-                flame, 
+                merge_varcopes,
+                estimate_model,
                 [('merged_file', 'var_cope_file')]
             ),
             (
-                specify_model, 
-                flame, 
+                specify_model,
+                estimate_model,
                 [
                     ('design_mat', 'design_file'),
-                    ('design_con', 't_con_file'), 
+                    ('design_con', 't_con_file'),
                     ('design_grp', 'cov_split_file')
                 ]
             ),
             (
-                flame, 
-                cluster, 
+                estimate_model,
+                cluster,
                 [
-                    ('zstats', 'in_file'), 
+                    ('zstats', 'in_file'),
                     ('copes', 'cope_file')
                 ]
             ),
             (
-                flame,
-                data_sink, 
+                estimate_model,
+                data_sink,
                 [
-                    ('zstats', f"group_level_analysis_{method}_nsub_{nb_subjects}.@zstats"), 
+                    ('zstats', f"group_level_analysis_{method}_nsub_{nb_subjects}.@zstats"),
                     ('tstats', f"group_level_analysis_{method}_nsub_{nb_subjects}.@tstats")
                 ]
-            ), 
+            ),
             (
-                cluster, 
-                data_sink, 
+                cluster,
+                data_sink,
                 [('threshold_file', f"group_level_analysis_{method}_nsub_{nb_subjects}.@thresh")]
             )
         ])
