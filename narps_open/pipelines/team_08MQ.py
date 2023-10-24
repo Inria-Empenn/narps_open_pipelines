@@ -320,7 +320,7 @@ class PipelineTeam08MQ(Pipeline):
             (smoothing, remove_func_2, [('smoothed_file', 'files')]),
             (alignment_func_to_anat, remove_func_2, [('out_file', '_')]),
             (alignment_func_to_anat, remove_func_3, [('out_file', 'files')]),
-            (alignment_func_to_mni, remove_func_3, [('out', '_')])
+            (alignment_func_to_mni, remove_func_3, [('output_image', '_')])
         ])
 
         return preprocessing
@@ -851,7 +851,7 @@ class PipelineTeam08MQ(Pipeline):
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Function Node get_subgroups_contrasts - Get the contrast files for each subgroup
-        contrasts = Node(
+        get_contrasts = Node(
             Function(
                 function = self.get_subgroups_contrasts,
                 input_names = ['copes', 'varcopes', 'subject_ids', 'participants_file'],
@@ -866,7 +866,7 @@ class PipelineTeam08MQ(Pipeline):
                     'varcopes_global'
                 ]
             ),
-            name = 'contrasts',
+            name = 'get_contrasts',
         )
 
         # Function Node get_regressors - Get regressors
@@ -921,13 +921,13 @@ class PipelineTeam08MQ(Pipeline):
         )
         group_level_analysis.connect([
             (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (info_source, contrasts, [('subject_list', 'subject_ids')]),
-            (select_files, contrasts, [
+            (info_source, get_contrasts, [('subject_list', 'subject_ids')]),
+            (select_files, get_contrasts, [
                 ('cope', 'copes'),
                 ('varcope', 'varcopes'),
                 ('participants', 'participants_file'),
                 ]),
-            (contrasts, regressors, [
+            (get_contrasts, regressors, [
                 ('equalRange_id', 'equalRange_id'),
                 ('equalIndifference_id', 'equalIndifference_id')
                 ]),
@@ -939,14 +939,14 @@ class PipelineTeam08MQ(Pipeline):
 
             if method == 'equalIndifference':
                 group_level_analysis.connect([
-                    (contrasts, merge_copes, [('copes_equalIndifference', 'in_files')]),
-                    (contrasts, merge_varcopes, [('varcopes_equalIndifference', 'in_files')])
+                    (get_contrasts, merge_copes, [('copes_equalIndifference', 'in_files')]),
+                    (get_contrasts, merge_varcopes, [('varcopes_equalIndifference', 'in_files')])
                 ])
 
             elif method == 'equalRange':
                 group_level_analysis.connect([
-                    (contrasts, merge_copes, [('copes_equalRange', 'in_files')]),
-                    (contrasts, merge_varcopes, [('varcopes_equalRange', 'in_files')])
+                    (get_contrasts, merge_copes, [('copes_equalRange', 'in_files')]),
+                    (get_contrasts, merge_varcopes, [('varcopes_equalRange', 'in_files')])
                 ])
 
         elif method == 'groupComp':
