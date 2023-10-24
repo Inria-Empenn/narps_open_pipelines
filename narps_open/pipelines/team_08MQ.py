@@ -7,7 +7,7 @@ from os.path import join
 from itertools import product
 
 from nipype import Node, Workflow
-from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split
+from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split, Select
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     FSLCommand,
@@ -185,11 +185,15 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
         alignment_func_to_anat.inputs.apply_xfm = True
 
+        # Select Node - Change the order of transforms comming from ANTs Registration
+        reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
+        reverse_transform_order.inputs.index = [1, 0]
+
         # ApplyWarp Node - Alignment of functional data to MNI space
         alignment_func_to_mni = Node(ApplyTransforms(), name = 'alignment_func_to_mni')
         alignment_func_to_mni.inputs.reference_image = \
             Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        alignment_func_to_mni.inputs.dimension = 3
+        alignment_func_to_mni.inputs.dimension = 4
 
         # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
         merge_masks = Node(Merge(2), name = 'merge_masks')
@@ -246,7 +250,8 @@ class PipelineTeam08MQ(Pipeline):
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
-            (normalization_anat, alignment_func_to_mni, [('forward_transforms', 'transforms')]),
+            (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
+            (reverse_transform_order, alignment_func_to_mni, [('out', 'transforms')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
