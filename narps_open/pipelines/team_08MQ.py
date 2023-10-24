@@ -536,9 +536,7 @@ class PipelineTeam08MQ(Pipeline):
             'cope' : join('run_level_analysis', '_run_id_*_subject_id_{subject_id}',
                 'results', 'cope{contrast_id}.nii.gz'),
             'varcope' : join('run_level_analysis', '_run_id_*_subject_id_{subject_id}',
-                'results', 'varcope{contrast_id}.nii.gz'),
-            'mask': join('preprocessing', '_run_id_*_subject_id_{subject_id}',
-                '')
+                'results', 'varcope{contrast_id}.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.output_dir
@@ -562,6 +560,7 @@ class PipelineTeam08MQ(Pipeline):
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'fe' # Fixed effect
+        estimate_model.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
         subject_level_analysis = Workflow(
@@ -573,7 +572,6 @@ class PipelineTeam08MQ(Pipeline):
                 ('contrast_id', 'contrast_id')]),
             (select_files, merge_copes, [('cope', 'in_files')]),
             (select_files, merge_varcopes, [('varcope', 'in_files')]),
-            (select_files, estimate_model, [('mask', 'mask_file')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
             (generate_model, estimate_model, [
