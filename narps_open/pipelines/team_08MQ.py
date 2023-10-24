@@ -21,7 +21,7 @@ from nipype.interfaces.fsl import (
     )
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.ants import Registration, ApplyTransforms
+from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 
@@ -190,10 +190,10 @@ class PipelineTeam08MQ(Pipeline):
         reverse_transform_order.inputs.index = [1, 0]
 
         # ApplyWarp Node - Alignment of functional data to MNI space
-        alignment_func_to_mni = Node(ApplyTransforms(), name = 'alignment_func_to_mni')
+        alignment_func_to_mni = Node(WarpTimeSeriesImageMultiTransform(),
+            name = 'alignment_func_to_mni')
         alignment_func_to_mni.inputs.reference_image = \
             Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        alignment_func_to_mni.inputs.dimension = 4
 
         # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
         merge_masks = Node(Merge(2), name = 'merge_masks')
@@ -251,7 +251,7 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
             (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
-            (reverse_transform_order, alignment_func_to_mni, [('out', 'transforms')]),
+            (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [('slice_time_corrected_file', 'realigned_file')]),
 
