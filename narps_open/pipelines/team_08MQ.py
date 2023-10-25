@@ -255,6 +255,12 @@ class PipelineTeam08MQ(Pipeline):
             output_names = []
             ), name = 'remove_func_3')
 
+        remove_func_4 = Node(Function(
+            function = self.remove_files,
+            input_names = ['_', 'files'],
+            output_names = []
+            ), name = 'remove_func_4')
+
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.connect([
             # Inputs
@@ -321,6 +327,8 @@ class PipelineTeam08MQ(Pipeline):
             (alignment_func_to_anat, remove_func_2, [('out_file', '_')]),
             (alignment_func_to_anat, remove_func_3, [('out_file', 'files')]),
             (alignment_func_to_mni, remove_func_3, [('output_image', '_')])
+            (alignment_func_to_mni, remove_func_4, [('output_image', 'files')]),
+            (data_sink, remove_func_4, [('out_file', '_')])
         ])
 
         return preprocessing
