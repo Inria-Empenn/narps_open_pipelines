@@ -233,7 +233,8 @@ class PipelineTeam08MQ(Pipeline):
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution'] = {
             'remove_node_directories': 'True',
-            'stop_on_first_crash': 'True'
+            'stop_on_first_crash': 'True',
+            'remove_unnecessary_outputs': 'False'
             }
         preprocessing.connect([
             # Inputs
