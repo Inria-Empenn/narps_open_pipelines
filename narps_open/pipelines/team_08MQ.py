@@ -230,8 +230,6 @@ class PipelineTeam08MQ(Pipeline):
         compute_confounds.inputs.merge_method = 'union'
         compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
 
-<<<<<<< HEAD
-=======
         # Function Nodes remove_files - Remove sizeable files once they aren't needed
         remove_func_0 = Node(Function(
             function = self.remove_files,
