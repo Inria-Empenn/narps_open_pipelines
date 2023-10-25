@@ -210,7 +210,7 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
         alignment_func_to_anat.inputs.apply_xfm = True
 
-        # Select Node - Change the order of transforms comming from ANTs Registration
+        # Select Node - Change the order of transforms coming from ANTs Registration
         reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
         reverse_transform_order.inputs.index = [1, 0]
 
@@ -595,13 +595,13 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles Node - select necessary files
         templates = {
-            'cope' : join('run_level_analysis', '_run_id_*_subject_id_{subject_id}',
-                'results', 'cope{contrast_id}.nii.gz'),
-            'varcope' : join('run_level_analysis', '_run_id_*_subject_id_{subject_id}',
-                'results', 'varcope{contrast_id}.nii.gz')
+            'cope' : join(self.directories.output_dir, 'run_level_analysis',
+                '_run_id_*_subject_id_{subject_id}', 'results', 'cope{contrast_id}.nii.gz'),
+            'varcope' : join(self.directories.output_dir, 'run_level_analysis',
+                '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.output_dir
+        select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted directory
         data_sink = Node(DataSink(), name = 'data_sink')
@@ -832,18 +832,14 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles Node - select necessary files
         templates = {
-            'cope' : join(
-                'subject_level_analysis',
+            'cope' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'cope1.nii.gz'),
-            'varcope' : join(
-                'subject_level_analysis',
+            'varcope' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
-            'participants' : join(
-                self.directories.dataset_dir,
-                'participants.tsv')
+            'participants' : 'participants.tsv'
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.output_dir
+        select_files.inputs.base_directory = self.directories.dataset_dir
         select_files.inputs.force_list = True
 
         # Datasink Node - save important files
