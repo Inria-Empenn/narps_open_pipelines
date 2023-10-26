@@ -261,6 +261,10 @@ class PipelineTeam08MQ(Pipeline):
             output_names = []
             ), name = 'remove_func_4')
 
+        # Merge Node - Merge the output triggers for remove_func_1 Node
+        #   i.e: slice_time_corrected_file is needed by two Nodes before being removed
+        merge_removal_triggers = Node(Merge(2), name = 'merge_removal_triggers')
+
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
@@ -323,7 +327,9 @@ class PipelineTeam08MQ(Pipeline):
             (motion_correction, remove_func_0, [('out_file', 'files')]),
             (slice_time_correction, remove_func_0, [('slice_time_corrected_file', '_')]),
             (slice_time_correction, remove_func_1, [('slice_time_corrected_file', 'files')]),
-            (smoothing, remove_func_1, [('smoothed_file', '_')]),
+            (smoothing, merge_removal_triggers, [('smoothed_file', 'in1')]),
+            (compute_confounds, merge_removal_triggers, [('components_file', 'in2')]),
+            (merge_removal_triggers, remove_func_1, [('out', '_')]),
             (smoothing, remove_func_2, [('smoothed_file', 'files')]),
             (alignment_func_to_anat, remove_func_2, [('out_file', '_')]),
             (alignment_func_to_anat, remove_func_3, [('out_file', 'files')]),
