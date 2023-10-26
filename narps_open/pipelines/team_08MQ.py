@@ -262,6 +262,7 @@ class PipelineTeam08MQ(Pipeline):
             ), name = 'remove_func_4')
 
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
+        preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
             # Inputs
             (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
