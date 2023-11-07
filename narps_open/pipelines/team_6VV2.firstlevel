@@ -57,6 +57,10 @@ afni_proc.py \
   -execute
 
 
+# extract beta values
+3dbucket -prefix GAIN ${expdir}/${subject}.results.block/stats.sub-001+tlrc.BRIK[3]
+3dbucket -prefix LOSS ${expdir}/${subject}.results.block/stats.sub-001+tlrc.BRIK[8]
 
-
- 
+# convert BRIK to nii
+3dAFNItoNIFTI -prefix GAIN ${subject}_GAIN+tlrc
+3dAFNItoNIFTI -prefix LOSS ${subject}_LOSS+tlrc
