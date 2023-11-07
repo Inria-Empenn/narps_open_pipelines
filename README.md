@@ -19,7 +19,6 @@
 
 - [Project presentation](#project-presentation)
 - [Getting Started](#getting-started)
-	- [Contents overview](#contents-overview)
 	- [Installation](#installation)
 	- [Contributing](#contributing)
 - [References](#references)
@@ -35,19 +34,18 @@ We base our reproductions on the [original descriptions provided by the teams](h
 
 *Botvinik-Nezer, Rotem, et al. "Variability in the analysis of a single neuroimaging dataset by many teams." Nature 582.7810 (2020): 84-88.*
 
-## Getting Started
+## Contributing
 
 NARPS open pipelines uses nipype as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analysis. 
 
-There are many ways you can contribute 🤗
+There are many ways you can contribute 🤗 :wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
 ### Installation
 
 To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
 
-### Contributing 
-
-:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
+## Getting started
+If you are interested in using the codebase to run the pipelines, see the [user documentation].
 
 ## References
 
