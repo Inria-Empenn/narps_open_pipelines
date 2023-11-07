@@ -1,6 +1,8 @@
 # How to contribute to NARPS Open Pipelines ? 
 
-General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
+For the reproductions, we are especially looking for contributors with the following profiles:
+ - 👩‍🎤 SPM, FSL, AFNI or nistats has no secrets for you? You know this fMRI analysis sofware by heart 💓. Please help us by reproducing the corresponding NARPS pipelines. 👣 follow the [fMRI expert] trail.
+ - 🧑‍🎤 You are a nipype guru? 👣 follow the [nipype expert] trail.
 
 ## Reproduce a pipeline :keyboard:
 :thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
@@ -64,3 +66,7 @@ Once your PR is ready, you may add a reviewer to your PR, as described [here](ht
 Please turn your Draft Pull Request into a "regular" Pull Request, by clicking **Ready for review** in the Pull Request page.
 
 **:wave: Thank you in advance for contributing to the project!**
+
+## Additional resources
+
+ - git and Gitub: general guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
