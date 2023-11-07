@@ -62,7 +62,7 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 
 ## Funding
 
-This project is supported by Région Bretagne (Boost MIND). 
+This project is supported by Région Bretagne (Boost MIND) and by Inria (Exploratory action GRASP). 
 
 ## Credits
 
