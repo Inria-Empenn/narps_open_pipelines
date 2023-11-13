@@ -34,7 +34,7 @@ There are many ways you can contribute 🤗 :wave: Any help is welcome ! Follow 
 To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
 
 ## Getting started
-If you are interested in using the codebase to run the pipelines, see the [user documentation].
+If you are interested in using the codebase to run the pipelines, see the [user documentation (work-in-progress)].
 
 ## References
 
