@@ -23,8 +23,6 @@ We base our reproductions on the [original descriptions provided by the teams](h
 
 :vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance.
 
-*Botvinik-Nezer, Rotem, et al. "Variability in the analysis of a single neuroimaging dataset by many teams." Nature 582.7810 (2020): 84-88.*
-
 ## Contributing
 
 NARPS open pipelines uses nipype as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analysis. 
