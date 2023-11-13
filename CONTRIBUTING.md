@@ -1,8 +1,8 @@
 # How to contribute to NARPS Open Pipelines ? 
 
 For the reproductions, we are especially looking for contributors with the following profiles:
- - 👩‍🎤 SPM, FSL, AFNI or nistats has no secrets for you? You know this fMRI analysis software by heart 💓. Please help us by reproducing the corresponding NARPS pipelines. 👣 follow the [fMRI expert] trail.
- - 🧑‍🎤 You are a nipype guru? 👣 follow the [nipype expert trail](#-nipype-trail).
+ - 👩‍🎤 SPM, FSL, AFNI or nistats has no secrets for you? You know this fMRI analysis software by heart 💓. Please help us by reproducing the corresponding NARPS pipelines. 👣 after step 1, follow the fMRI expert trail.
+ - 🧑‍🎤 You are a nipype guru? 👣 after step 1, follow the nipype expert trail.
 
 # Step 1: Choose a pipeline to reproduce :keyboard:
 :thinking: Not sure which pipeline to start with ? 🚦The [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) provides the progress status for each pipeline. You can pick any pipeline that is in red (not started).
