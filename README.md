@@ -25,7 +25,7 @@ We base our reproductions on the [original descriptions provided by the teams](h
 
 ## Contributing
 
-NARPS open pipelines uses nipype as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analysis. 
+NARPS open pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analysis. 
 
 There are many ways you can contribute 🤗 :wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
