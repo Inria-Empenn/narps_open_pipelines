@@ -15,15 +15,6 @@
         <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
 </p>
 
-## Table of contents
-
-- [Project presentation](#project-presentation)
-- [Getting Started](#getting-started)
-	- [Installation](#installation)
-	- [Contributing](#contributing)
-- [References](#references)
-- [Funding](#funding)
-
 ## Project presentation
 
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
