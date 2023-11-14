@@ -3,7 +3,8 @@
         "software": "SPM",
         "fmriprep": "Yes",
         "excluded": "No",
-        "reproducibility": "",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
         "issues": {},
         "pulls": {},
         "status": "0-done"
@@ -12,7 +13,8 @@
         "software": "SPM",
         "fmriprep": "No",
         "excluded": "No",
-        "reproducibility": "",
+        "reproducibility": 2,
+        "reproducibility_comment": "",
         "issues": {
             "2": "url_issue_2"
         },
@@ -23,7 +25,8 @@
         "software": "SPM",
         "fmriprep": "Yes",
         "excluded": "No",
-        "reproducibility": "",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
         "issues": {
             "5": "url_issue_5"
         },
@@ -36,7 +39,8 @@
         "software": "FSL",
         "fmriprep": "No",
         "excluded": "No",
-        "reproducibility": "",
+        "reproducibility": 2,
+        "reproducibility_comment": "",
         "issues": {},
         "pulls": {},
         "status": "2-idle"
@@ -45,7 +49,8 @@
         "software": "SPM",
         "fmriprep": "Yes",
         "excluded": "No",
-        "reproducibility": "",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
         "issues": {},
         "pulls": {},
         "status": "2-idle"

@@ -235,7 +235,7 @@ class TestUtilsStatus:
         assert test_pipeline['software'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'Yes'
         assert test_pipeline['excluded'] == 'No'
-        assert test_pipeline['reproducibility'] == ''
+        assert test_pipeline['reproducibility'] == 3
         assert test_pipeline['issues'] == {5: 'url_issue_5'}
         assert test_pipeline['pulls'] == {3: 'url_pull_3'}
         assert test_pipeline['status'] == '1-progress'
@@ -243,7 +243,7 @@ class TestUtilsStatus:
         assert test_pipeline['software'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'No'
         assert test_pipeline['excluded'] == 'No'
-        assert test_pipeline['reproducibility'] == ''
+        assert test_pipeline['reproducibility'] == 2
         assert test_pipeline['issues'] == {2: 'url_issue_2'}
         assert test_pipeline['pulls'] == {}
         assert test_pipeline['status'] == '1-progress'
@@ -251,7 +251,7 @@ class TestUtilsStatus:
         assert test_pipeline['software'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'Yes'
         assert test_pipeline['excluded'] == 'No'
-        assert test_pipeline['reproducibility'] == ''
+        assert test_pipeline['reproducibility'] == 3
         assert test_pipeline['issues'] == {}
         assert test_pipeline['pulls'] == {}
         assert test_pipeline['status'] == '0-done'
@@ -259,7 +259,7 @@ class TestUtilsStatus:
         assert test_pipeline['software'] == 'FSL'
         assert test_pipeline['fmriprep'] == 'No'
         assert test_pipeline['excluded'] == 'No'
-        assert test_pipeline['reproducibility'] == ''
+        assert test_pipeline['reproducibility'] == 2
         assert test_pipeline['issues'] == {}
         assert test_pipeline['pulls'] == {}
         assert test_pipeline['status'] == '2-idle'
@@ -267,7 +267,7 @@ class TestUtilsStatus:
         assert test_pipeline['software'] == 'SPM'
         assert test_pipeline['fmriprep'] == 'Yes'
         assert test_pipeline['excluded'] == 'No'
-        assert test_pipeline['reproducibility'] == ''
+        assert test_pipeline['reproducibility'] == 3
         assert test_pipeline['issues'] == {}
         assert test_pipeline['pulls'] == {}
         assert test_pipeline['status'] == '2-idle'
