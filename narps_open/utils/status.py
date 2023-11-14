@@ -84,6 +84,8 @@ class PipelineStatusReport():
             self.contents[team_id]['excluded'] = \
                 description.comments['excluded_from_narps_analysis']
             self.contents[team_id]['reproducibility'] = \
+                int(description.comments['reproducibility'])
+            self.contents[team_id]['reproducibility_comment'] = \
                 description.comments['reproducibility_comment']
 
             # Get issues and pull requests related to the team
@@ -115,7 +117,8 @@ class PipelineStatusReport():
             else:
                 self.contents[team_id]['status'] = '1-progress'
 
-        # Sort contents with the following priorities : 1-"status", 2-"softwares" and 3-"fmriprep"
+        # Sort contents with the following priorities :
+        #    1-"status", 2-"softwares", 3-"fmriprep"
         self.contents = OrderedDict(sorted(
             self.contents.items(),
             key=lambda k: (k[1]['status'], k[1]['software'], k[1]['fmriprep'])
@@ -133,11 +136,19 @@ class PipelineStatusReport():
         output_markdown += '<br><br>The *main software* column gives a simplified version of '
         output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
+        output_markdown += '<br><br>The *reproducibility* column rates the pipeline as follows:\n'
+        output_markdown += ' * default score is :star::star::star::star:;\n'
+        output_markdown += ' * -1 if the team did not use fmriprep data;\n'
+        output_markdown += ' * -1 if the team used several pieces of software '
+        output_markdown += '(e.g.: FSL and AFNI);\n'
+        output_markdown += ' * -1 if the team used custom or marginal software '
+        output_markdown += '(i.e.: something else than SPM, FSL, AFNI or nistats);\n'
+        output_markdown += ' * -1 if the team did not provided his source code.\n'
 
         # Start table
-        output_markdown += '| team_id | status | main software | fmriprep used ? |'
+        output_markdown += '\n| team_id | status | main software | fmriprep used ? |'
         output_markdown += ' related issues | related pull requests |'
-        output_markdown += ' excluded from NARPS analysis | reproducibility comments |\n'
+        output_markdown += ' excluded from NARPS analysis | reproducibility |\n'
         output_markdown += '| --- |:---:| --- | --- | --- | --- | --- | --- |\n'
 
         # Add table contents
@@ -168,7 +179,14 @@ class PipelineStatusReport():
 
             output_markdown += f'| {pulls} '
             output_markdown += f'| {team_values["excluded"]} '
-            output_markdown += f'| {team_values["reproducibility"]} |\n'
+
+            output_markdown += '| '
+            reproducibility_ranking = ''
+            for _ in range(team_values['reproducibility']):
+                reproducibility_ranking += ':star:'
+            for _ in range(4-team_values['reproducibility']):
+                reproducibility_ranking += ':black_small_square:'
+            output_markdown += f' {reproducibility_ranking}<br />{team_values["reproducibility_comment"]} |\n'
 
         return output_markdown
 
