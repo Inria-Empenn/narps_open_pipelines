@@ -56,6 +56,6 @@
     "derived.con_fwhm": "",
     "comments.excluded_from_narps_analysis": "No",
     "comments.exclusion_comment": "N/A",
-    "comments.reproducibility": "",
+    "comments.reproducibility": "2",
     "comments.reproducibility_comment": ""
 }

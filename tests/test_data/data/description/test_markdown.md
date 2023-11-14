@@ -99,5 +99,5 @@ Model EVs (2): eq_indiff, eq_range
 ## Comments
 * `excluded_from_narps_analysis` : No
 * `exclusion_comment` : N/A
-* `reproducibility` : 
+* `reproducibility` : 2
 * `reproducibility_comment` : 
