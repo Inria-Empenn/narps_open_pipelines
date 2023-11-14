@@ -180,13 +180,12 @@ class PipelineStatusReport():
             output_markdown += f'| {pulls} '
             output_markdown += f'| {team_values["excluded"]} '
 
-            output_markdown += '| '
             reproducibility_ranking = ''
             for _ in range(team_values['reproducibility']):
                 reproducibility_ranking += ':star:'
             for _ in range(4-team_values['reproducibility']):
                 reproducibility_ranking += ':black_small_square:'
-            output_markdown += f' {reproducibility_ranking}<br />{team_values["reproducibility_comment"]} |\n'
+            output_markdown += f'| {reproducibility_ranking}<br />{team_values["reproducibility_comment"]} |\n'
 
         return output_markdown
 
