@@ -806,8 +806,8 @@ class PipelineTeam08MQ(Pipeline):
 
         # Create regressors output : a dict with the two list
         regressors = dict(
-            equalRange = equal_range_reg,
-            equalIndifference = equal_indifference_reg
+            equalRange = equal_range_regressors,
+            equalIndifference = equal_indifference_regressors
         )
 
         # Create groups outputs : a list with 1 for equalRange subjects and 2 for equalIndifference
