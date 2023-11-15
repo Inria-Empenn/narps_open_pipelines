@@ -926,7 +926,7 @@ class PipelineTeam08MQ(Pipeline):
         )
         group_level_analysis.connect([
             (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (info_source, get_contrasts, [('subject_list', 'subject_ids')]),
+            (info_source, get_contrasts, [('subjects', 'subject_ids')]),
             (select_files, get_contrasts, [
                 ('cope', 'copes'),
                 ('varcope', 'varcopes'),
