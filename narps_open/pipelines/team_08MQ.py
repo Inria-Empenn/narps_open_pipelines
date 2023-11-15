@@ -699,7 +699,7 @@ class PipelineTeam08MQ(Pipeline):
         Parameters :
         - copes: original file list selected by select_files node
         - varcopes: original file list selected by select_files node
-        - subject_ids: list of subject IDs that are analyzed
+        - subject_list: list of subject IDs that are analyzed
         - participants_file: file containing participants characteristics
 
         Returns :
@@ -859,7 +859,7 @@ class PipelineTeam08MQ(Pipeline):
         get_contrasts = Node(
             Function(
                 function = self.get_subgroups_contrasts,
-                input_names = ['copes', 'varcopes', 'subject_ids', 'participants_file'],
+                input_names = ['copes', 'varcopes', 'subject_list', 'participants_file'],
                 output_names = [
                     'copes_equalIndifference',
                     'copes_equalRange',
@@ -926,7 +926,7 @@ class PipelineTeam08MQ(Pipeline):
         )
         group_level_analysis.connect([
             (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (info_source, get_contrasts, [('subjects', 'subject_ids')]),
+            (info_source, get_contrasts, [('subjects', 'subject_list')]),
             (select_files, get_contrasts, [
                 ('cope', 'copes'),
                 ('varcope', 'varcopes'),
