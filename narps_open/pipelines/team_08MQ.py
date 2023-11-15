@@ -760,7 +760,10 @@ class PipelineTeam08MQ(Pipeline):
             if sub_id[-2][-3:] in subject_list:
                 varcopes_global.append(varcope)
 
-        return copes_equal_indifference, copes_equal_range, varcopes_equal_indifference, varcopes_equal_range,equal_indifference_id, equal_range_id,copes_global, varcopes_global
+        return copes_equal_indifference, copes_equal_range,\
+               varcopes_equal_indifference, varcopes_equal_range,\
+               equal_indifference_id, equal_range_id,\
+               copes_global, varcopes_global
 
     def get_regressors(
         equal_range_id: list,
@@ -792,23 +795,23 @@ class PipelineTeam08MQ(Pipeline):
         #  - one for equal range group,
         #  - one for equal indifference group
         # Each list contains n_sub values with 0 and 1 depending on the group of the participant
-        # For equalRange_reg list --> participants with a 1 are in the equal range group
+        # For equal_range_reg list --> participants with a 1 are in the equal range group
         elif method == 'groupComp':
-            equalRange_reg = [
+            equal_range_reg = [
                 1 for i in range(len(equal_range_id) + len(equal_indifference_id))
             ]
-            equalIndifference_reg = [
+            equal_indifference_reg = [
                 0 for i in range(len(equal_range_id) + len(equal_indifference_id))
             ]
 
             for index, subject_id in enumerate(subject_list):
                 if subject_id in equal_indifference_id:
-                    equalIndifference_reg[index] = 1
-                    equalRange_reg[index] = 0
+                    equal_indifference_reg[index] = 1
+                    equal_range_reg[index] = 0
 
             regressors = dict(
-                equalRange = equalRange_reg,
-                equalIndifference = equalIndifference_reg
+                equalRange = equal_range_reg,
+                equalIndifference = equal_indifference_reg
             )
 
         return regressors
@@ -861,12 +864,12 @@ class PipelineTeam08MQ(Pipeline):
                 function = self.get_subgroups_contrasts,
                 input_names = ['copes', 'varcopes', 'subject_list', 'participants_file'],
                 output_names = [
-                    'copes_equalIndifference',
-                    'copes_equalRange',
-                    'varcopes_equalIndifference',
-                    'varcopes_equalRange',
-                    'equalIndifference_id',
-                    'equalRange_id',
+                    'copes_equal_indifference',
+                    'copes_equal_range',
+                    'varcopes_equal_indifference',
+                    'varcopes_equal_range',
+                    'equal_indifference_id',
+                    'equal_range_id',
                     'copes_global',
                     'varcopes_global'
                 ]
@@ -879,8 +882,8 @@ class PipelineTeam08MQ(Pipeline):
             Function(
                 function = self.get_regressors,
                 input_names = [
-                    'equalRange_id',
-                    'equalIndifference_id',
+                    'equal_range_id',
+                    'equal_indifference_id',
                     'method',
                     'subject_list',
                 ],
@@ -933,8 +936,8 @@ class PipelineTeam08MQ(Pipeline):
                 ('participants', 'participants_file'),
                 ]),
             (get_contrasts, regressors, [
-                ('equalRange_id', 'equalRange_id'),
-                ('equalIndifference_id', 'equalIndifference_id')
+                ('equal_range_id', 'equal_range_id'),
+                ('equal_indifference_id', 'equal_indifference_id')
                 ]),
             (regressors, specify_model, [('regressors', 'regressors')])
         ])
@@ -944,14 +947,14 @@ class PipelineTeam08MQ(Pipeline):
 
             if method == 'equalIndifference':
                 group_level_analysis.connect([
-                    (get_contrasts, merge_copes, [('copes_equalIndifference', 'in_files')]),
-                    (get_contrasts, merge_varcopes, [('varcopes_equalIndifference', 'in_files')])
+                    (get_contrasts, merge_copes, [('copes_equal_indifference', 'in_files')]),
+                    (get_contrasts, merge_varcopes, [('varcopes_equal_indifference', 'in_files')])
                 ])
 
             elif method == 'equalRange':
                 group_level_analysis.connect([
-                    (get_contrasts, merge_copes, [('copes_equalRange', 'in_files')]),
-                    (get_contrasts, merge_varcopes, [('varcopes_equalRange', 'in_files')])
+                    (get_contrasts, merge_copes, [('copes_equal_range', 'in_files')]),
+                    (get_contrasts, merge_varcopes, [('varcopes_equal_range', 'in_files')])
                 ])
 
         elif method == 'groupComp':
