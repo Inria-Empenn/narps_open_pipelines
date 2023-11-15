@@ -13,6 +13,7 @@ Usage:
 
 from pytest import helpers, mark
 from nipype import Workflow
+from nipype.interfaces.base import Bunch
 
 from narps_open.pipelines.team_08MQ import PipelineTeam08MQ
 
@@ -63,26 +64,51 @@ class TestPipelinesTeam08MQ:
 
     @staticmethod
     @mark.unit_test
-    def test_subject_information():
+    def test_subject_information(mocker):
         """ Test the get_subject_information method """
+
+        helpers.mock_event_data(mocker)
+
+        information = PipelineTeam08MQ.get_subject_information('fake_event_file_path')[0]
+
+        assert isinstance(information, Bunch)
+        assert information.amplitudes == [[1.0, 1.0], [14.0, 34.0], [6.0, 14.0], [1.0, 1.0]]
+        assert information.durations == [[4.0, 4.0], [2.388, 2.289], [2.388, 2.289], [4.0, 4.0]]
+        assert information.conditions == ['event', 'gain', 'loss', 'response']
+        assert information.onsets == [
+        [4.071, 11.834], [4.071, 11.834], [4.071, 11.834], [4.071, 11.834]
+        ]
 
     @staticmethod
     @mark.unit_test
     def test_run_level_contrasts():
         """ Test the get_run_level_contrasts method """
-        contrasts = PipelineTeam08MQ.get_run_level_contrasts()
 
+        contrasts = PipelineTeam08MQ.get_run_level_contrasts()
         assert contrasts[0] == ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0])
-        assert contrasts[0] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1])
-        assert contrasts[0] == ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
+        assert contrasts[1] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1])
+        assert contrasts[2] == ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
 
     @staticmethod
     @mark.unit_test
-    def test_subgroups_contrasts():
+    def test_subgroups_contrasts(mocker):
         """ Test the get_subgroups_contrasts method """
 
-        #contrasts = PipelineTeam08MQ().get_subgroups_contrasts()
-        #copes, varcopes, subject_list: list, participants_file: str
+        helpers.mock_participants_data(mocker)
+
+        cei, cer, vei, ver, eii, eri = PipelineTeam08MQ.get_subgroups_contrasts(
+            ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz'], # copes
+            ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz'], # varcopes
+            ['001', '002', '003', '004'], # subject_list
+            ['fake_participants_file_path'] # participants file
+            )
+
+        assert cei == ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz']
+        assert cer == ['sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz']
+        assert vei == ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz']
+        assert ver == ['sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz']
+        assert eii == ['001', '003']
+        assert eri == ['002', '004']
 
     @staticmethod
     @mark.unit_test
@@ -90,7 +116,7 @@ class TestPipelinesTeam08MQ:
         """ Test the get_one_sample_t_test_regressors method """
 
         regressors = PipelineTeam08MQ.get_one_sample_t_test_regressors(['001', '002'])
-        assert regressors == [1, 1]
+        assert regressors == {'group_mean': [1, 1]}
 
     @staticmethod
     @mark.unit_test

@@ -390,29 +390,23 @@ class PipelineTeam08MQ(Pipeline):
 
             for line in file:
                 info = line.strip().split()
-
-                for condition in condition_names:
-                    if condition == 'gain':
-                        onsets[condition].append(float(info[0]))
-                        durations[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
-                        amplitudes[condition].append(float(info[2]))
-                    elif condition == 'loss':
-                        onsets[condition].append(float(info[0]))
-                        durations[condition].append(float(info[4])) # TODO : change to info[1] (= 4) ?
-                        amplitudes[condition].append(float(info[3]))
-                    elif condition == 'event':
-                        onsets[condition].append(float(info[0]))
-                        durations[condition].append(float(info[1]))
-                        amplitudes[condition].append(1.0)
-                    elif condition == 'response':
-                        onsets[condition].append(float(info[0]))
-                        durations[condition].append(float(info[1])) # TODO : change to info[4] (= RT) ?
-                        if 'accept' in info[5]:
-                            amplitudes[condition].append(1.0)
-                        elif 'reject' in info[5]:
-                            amplitudes[condition].append(-1.0)
-                        else:
-                            amplitudes[condition].append(0.0)
+                onsets['event'].append(float(info[0]))
+                durations['event'].append(float(info[1]))
+                amplitudes['event'].append(1.0)
+                onsets['gain'].append(float(info[0]))
+                durations['gain'].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                amplitudes['gain'].append(float(info[2]))
+                onsets['loss'].append(float(info[0]))
+                durations['loss'].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                amplitudes['loss'].append(float(info[3]))
+                onsets['response'].append(float(info[0]))
+                durations['response'].append(float(info[1])) # TODO : change to info[4] (= RT) ?
+                if 'accept' in info[5]:
+                    amplitudes['response'].append(1.0)
+                elif 'reject' in info[5]:
+                    amplitudes['response'].append(-1.0)
+                else:
+                    amplitudes['response'].append(0.0)
 
         return [
             Bunch(
@@ -433,17 +427,12 @@ class PipelineTeam08MQ(Pipeline):
         Returns:
             - contrasts: list of tuples, list of contrasts to analyze
         """
-        # List of condition names
         conditions = ['gain', 'loss']
 
-        # Return contrast list
         return [
-            # Positive parametric effect of gain
-            ('positive_effect_gain', 'T', conditions, [1, 0]),
-            # Positive parametric effect of loss
-            ('positive_effect_loss', 'T', conditions, [0, 1]),
-            # Negative parametric effect of loss.
-            ('negative_effect_loss', 'T', conditions, [0, -1])
+            ('positive_effect_gain', 'T', conditions, [1, 0]), # Positive parametric effect of gain
+            ('positive_effect_loss', 'T', conditions, [0, 1]), # Positive parametric effect of loss
+            ('negative_effect_loss', 'T', conditions, [0, -1]) # Negative parametric effect of loss
         ]
 
     def get_run_level_analysis(self):
@@ -689,18 +678,19 @@ class PipelineTeam08MQ(Pipeline):
           in the equalIndifference group
         - copes_equal_range : a subset of copes corresponding to subjects
           in the equalRange group
-        - copes_global : a list of all copes
         - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
           in the equalIndifference group
         - varcopes_equal_range : a subset of varcopes corresponding to subjects
           in the equalRange group
         - equal_indifference_ids : a list of subject ids in the equalIndifference group
         - equal_range_ids : a list of subject ids in the equalRange group
-        - varcopes_global : a list of all varcopes
         """
 
-        equal_range_ids = []
-        equal_indifference_ids = []
+        subject_list_sub_ids = [] # ids as written in the participants file
+        equal_range_ids = [] # ids as 3-digit string
+        equal_indifference_ids = [] # ids as 3-digit string
+        equal_range_sub_ids = [] # ids as written in the participants file
+        equal_indifference_sub_ids = [] # ids as written in the participants file
 
         # Reading file containing participants IDs and groups
         with open(participants_file, 'rt') as file:
@@ -708,44 +698,26 @@ class PipelineTeam08MQ(Pipeline):
 
             for line in file:
                 info = line.strip().split()
+                subject_id = info[0][-3:]
+                subject_group = info[1]
 
-                # Checking for each participant if its ID was selected
-                # and separate people depending on their group
-                if info[0][-3:] in subject_list and info[1] == 'equalIndifference':
-                    equal_indifference_ids.append(info[0][-3:])
-                elif info[0][-3:] in subject_list and info[1] == 'equalRange':
-                    equal_range_ids.append(info[0][-3:])
+                # Check if the participant ID was selected and sort depending on group
+                if subject_id in subject_list:
+                    subject_list_sub_ids.append(info[0])
+                    if subject_group == 'equalIndifference':
+                        equal_indifference_ids.append(subject_id)
+                        equal_indifference_sub_ids.append(info[0])
+                    elif subject_group == 'equalRange':
+                        equal_range_ids.append(subject_id)
+                        equal_range_sub_ids.append(info[0])
 
-        copes_equal_indifference = []
-        copes_equal_range = []
-        copes_global = []
-        varcopes_equal_indifference = []
-        varcopes_equal_range = []
-        varcopes_global = []
-
-        # Checking for each selected file if the corresponding participant was selected
-        # and add the file to the list corresponding to its group
-        for cope, varcope in zip(copes, varcopes):
-            sub_id = cope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_ids:
-                copes_equal_indifference.append(cope)
-            elif sub_id[-2][-3:] in equal_range_ids:
-                copes_equal_range.append(cope)
-            if sub_id[-2][-3:] in subject_list:
-                copes_global.append(cope)
-
-            sub_id = varcope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_ids:
-                varcopes_equal_indifference.append(varcope)
-            elif sub_id[-2][-3:] in equal_range_ids:
-                varcopes_equal_range.append(varcope)
-            if sub_id[-2][-3:] in subject_list:
-                varcopes_global.append(varcope)
-
-        return copes_equal_indifference, copes_equal_range,\
-               varcopes_equal_indifference, varcopes_equal_range,\
-               equal_indifference_ids, equal_range_ids,\
-               copes_global, varcopes_global
+        # Reurn sorted selected copes and varcopes by group, and corresponding ids
+        return \
+            [c for c in copes if any(i in c for i in equal_indifference_sub_ids)],\
+            [c for c in copes if any(i in c for i in equal_range_sub_ids)],\
+            [v for v in varcopes if any(i in v for i in equal_indifference_sub_ids)],\
+            [v for v in varcopes if any(i in v for i in equal_range_sub_ids)],\
+            equal_indifference_ids, equal_range_ids
 
     def get_one_sample_t_test_regressors(subject_ids: list) -> dict:
         """
@@ -850,9 +822,7 @@ class PipelineTeam08MQ(Pipeline):
                     'varcopes_equal_indifference',
                     'varcopes_equal_range',
                     'equal_indifference_ids',
-                    'equal_range_ids',
-                    'copes_global',
-                    'varcopes_global'
+                    'equal_range_ids'
                 ]
             ),
             name = 'get_contrasts',
