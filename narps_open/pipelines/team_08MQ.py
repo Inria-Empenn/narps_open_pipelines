@@ -674,24 +674,6 @@ class PipelineTeam08MQ(Pipeline):
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
-    """
-    Group level
-    Ordinary least squares. Pooled variance.
-
-    Second level
-    Positive one-sample ttest over first level contrast estimates.
-
-    Group level
-    Group effect for each first level contrast for each of the two groups.
-    Contrast of positive parametric effect of loss,
-    testing for equal range group responses being greater than equal indifference group.
-
-    TFCE
-
-    pval_computation : Permutation testing implemented in randomise (10,000 permutations).
-    multiple_testing_correction : FWE permutation (10,000 permutations).
-    """
-
     def get_subgroups_contrasts(copes, varcopes, subject_list: list, participants_file: str):
         """
         Return the file list containing only the files belonging to subject in the wanted group.
@@ -704,14 +686,14 @@ class PipelineTeam08MQ(Pipeline):
 
         Returns :
         - copes_equal_indifference : a subset of copes corresponding to subjects
-        in the equalIndifference group
+          in the equalIndifference group
         - copes_equal_range : a subset of copes corresponding to subjects
-        in the equalRange group
+          in the equalRange group
         - copes_global : a list of all copes
         - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
-        in the equalIndifference group
+          in the equalIndifference group
         - varcopes_equal_range : a subset of varcopes corresponding to subjects
-        in the equalRange group
+          in the equalRange group
         - equal_indifference_ids : a list of subject ids in the equalIndifference group
         - equal_range_ids : a list of subject ids in the equalRange group
         - varcopes_global : a list of all varcopes
@@ -782,7 +764,7 @@ class PipelineTeam08MQ(Pipeline):
         equal_range_ids: list,
         equal_indifference_ids: list,
         subject_list: list,
-    ) -> dict:
+        ) -> dict:
         """
         Create dictionary of regressors for two sample t-test group analysis.
 
