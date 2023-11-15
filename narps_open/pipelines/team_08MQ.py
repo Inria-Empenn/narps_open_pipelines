@@ -712,13 +712,13 @@ class PipelineTeam08MQ(Pipeline):
         in the equalIndifference group
         - varcopes_equal_range : a subset of varcopes corresponding to subjects
         in the equalRange group
-        - equal_indifference_id : a list of subject ids in the equalIndifference group
-        - equal_range_id : a list of subject ids in the equalRange group
+        - equal_indifference_ids : a list of subject ids in the equalIndifference group
+        - equal_range_ids : a list of subject ids in the equalRange group
         - varcopes_global : a list of all varcopes
         """
 
-        equal_range_id = []
-        equal_indifference_id = []
+        equal_range_ids = []
+        equal_indifference_ids = []
 
         # Reading file containing participants IDs and groups
         with open(participants_file, 'rt') as file:
@@ -730,9 +730,9 @@ class PipelineTeam08MQ(Pipeline):
                 # Checking for each participant if its ID was selected
                 # and separate people depending on their group
                 if info[0][-3:] in subject_list and info[1] == 'equalIndifference':
-                    equal_indifference_id.append(info[0][-3:])
+                    equal_indifference_ids.append(info[0][-3:])
                 elif info[0][-3:] in subject_list and info[1] == 'equalRange':
-                    equal_range_id.append(info[0][-3:])
+                    equal_range_ids.append(info[0][-3:])
 
         copes_equal_indifference = []
         copes_equal_range = []
@@ -745,76 +745,62 @@ class PipelineTeam08MQ(Pipeline):
         # and add the file to the list corresponding to its group
         for cope, varcope in zip(copes, varcopes):
             sub_id = cope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_id:
+            if sub_id[-2][-3:] in equal_indifference_ids:
                 copes_equal_indifference.append(cope)
-            elif sub_id[-2][-3:] in equal_range_id:
+            elif sub_id[-2][-3:] in equal_range_ids:
                 copes_equal_range.append(cope)
             if sub_id[-2][-3:] in subject_list:
                 copes_global.append(cope)
 
             sub_id = varcope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_id:
+            if sub_id[-2][-3:] in equal_indifference_ids:
                 varcopes_equal_indifference.append(varcope)
-            elif sub_id[-2][-3:] in equal_range_id:
+            elif sub_id[-2][-3:] in equal_range_ids:
                 varcopes_equal_range.append(varcope)
             if sub_id[-2][-3:] in subject_list:
                 varcopes_global.append(varcope)
 
         return copes_equal_indifference, copes_equal_range,\
                varcopes_equal_indifference, varcopes_equal_range,\
-               equal_indifference_id, equal_range_id,\
+               equal_indifference_ids, equal_range_ids,\
                copes_global, varcopes_global
 
-    def get_regressors(
-        equal_range_id: list,
-        equal_indifference_id: list,
-        method: str,
+    def get_two_sample_t_test_regressors(
+        equal_range_ids: list,
+        equal_indifference_ids: list,
         subject_list: list,
     ) -> dict:
         """
-        Create dictionary of regressors for group analysis.
+        Create dictionary of regressors for two sample t-test group analysis.
 
         Parameters:
-            - equal_range_id: ids of subjects in equal range group
-            - equal_indifference_id: ids of subjects in equal indifference group
-            - method: one of "equalRange", "equalIndifference" or "groupComp"
+            - equal_range_ids: ids of subjects in equal range group
+            - equal_indifference_ids: ids of subjects in equal indifference group
             - subject_list: ids of subject for which to do the analysis
 
         Returns:
-            - regressors: regressors used to distinguish groups in FSL group analysis
+            - regressors, dict: containing named lists of regressors.
+            - groups, list: group identifiers to distinguish groups in FSL analysis.
         """
 
-        # For one sample t-test, creates a dictionary
-        # with a list of the size of the number of participants
-        if method == 'equalRange':
-            regressors = dict(group_mean = [1 for i in range(len(equal_range_id))])
-        elif method == 'equalIndifference':
-            regressors = dict(group_mean = [1 for i in range(len(equal_indifference_id))])
-
-        # For two sample t-test, creates 2 lists:
-        #  - one for equal range group,
-        #  - one for equal indifference group
-        # Each list contains n_sub values with 0 and 1 depending on the group of the participant
-        # For equal_range_reg list --> participants with a 1 are in the equal range group
-        elif method == 'groupComp':
-            equal_range_reg = [
-                1 for i in range(len(equal_range_id) + len(equal_indifference_id))
-            ]
-            equal_indifference_reg = [
-                0 for i in range(len(equal_range_id) + len(equal_indifference_id))
+        # Create 2 lists containing n_sub values which are
+        #  * 1 if the participant is on the group
+        #  * 0 otherwise
+        equal_range_regressors = [1 if i in equal_range_ids else 0 for i in subject_list]
+        equal_indifference_regressors = [
+            1 if i in equal_indifference_ids else 0 for i in subject_list
             ]
 
-            for index, subject_id in enumerate(subject_list):
-                if subject_id in equal_indifference_id:
-                    equal_indifference_reg[index] = 1
-                    equal_range_reg[index] = 0
+        # Create regressors output : a dict with the two list
+        regressors = dict(
+            equalRange = equal_range_reg,
+            equalIndifference = equal_indifference_reg
+        )
 
-            regressors = dict(
-                equalRange = equal_range_reg,
-                equalIndifference = equal_indifference_reg
-            )
+        # Create groups outputs : a list with 1 for equalRange subjects and 2 for equalIndifference
+        groups = [1 if i == 1 else 2 for i in equal_range_regressors]
 
-        return regressors
+        return regressors, groups
 
     def get_group_level_analysis(self):
         """ Return all workflows for the group level analysis. """
@@ -868,8 +854,8 @@ class PipelineTeam08MQ(Pipeline):
                     'copes_equal_range',
                     'varcopes_equal_indifference',
                     'varcopes_equal_range',
-                    'equal_indifference_id',
-                    'equal_range_id',
+                    'equal_indifference_ids',
+                    'equal_range_ids',
                     'copes_global',
                     'varcopes_global'
                 ]
@@ -877,22 +863,21 @@ class PipelineTeam08MQ(Pipeline):
             name = 'get_contrasts',
         )
 
-        # Function Node get_regressors - Get regressors
-        regressors = Node(
+        # Function Node get_two_sample_t_test_regressors
+        #   Get regressors in the groupComp method case
+        regressors_two_sample = Node(
             Function(
-                function = self.get_regressors,
+                function = self.get_two_sample_t_test_regressors,
                 input_names = [
-                    'equal_range_id',
-                    'equal_indifference_id',
-                    'method',
+                    'equal_range_ids',
+                    'equal_indifference_ids',
                     'subject_list',
                 ],
-                output_names = ['regressors']
+                output_names = ['regressors', 'groups']
             ),
-            name = 'regressors',
+            name = 'regressors_two_sample',
         )
-        regressors.inputs.method = method
-        regressors.inputs.subject_list = self.subject_list
+        regressors_two_sample.inputs.subject_list = self.subject_list
 
         # Merge Node - Merge cope files
         merge_copes = Node(MergeImages(), name = 'merge_copes')
@@ -934,16 +919,18 @@ class PipelineTeam08MQ(Pipeline):
                 ('cope', 'copes'),
                 ('varcope', 'varcopes'),
                 ('participants', 'participants_file'),
-                ]),
-            (get_contrasts, regressors, [
-                ('equal_range_id', 'equal_range_id'),
-                ('equal_indifference_id', 'equal_indifference_id')
-                ]),
-            (regressors, specify_model, [('regressors', 'regressors')])
+                ])
         ])
 
         if method in ('equalRange', 'equalIndifference'):
-            contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
+            specify_model.inputs.contrasts = [
+                ('Group', 'T', ['mean'], [1]),
+                ('Group', 'T', ['mean'], [-1])
+                ]
+            specify_model.inputs.regressors = dict(
+                group_mean = [1 for _ in self.subject_list]
+                )
+            specify_model.inputs.groups = [1 for _ in self.subject_list]
 
             if method == 'equalIndifference':
                 group_level_analysis.connect([
@@ -958,13 +945,24 @@ class PipelineTeam08MQ(Pipeline):
                 ])
 
         elif method == 'groupComp':
-            contrasts = [
-                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])
-            ]
+            specify_model.inputs.contrasts = [(
+                'Eq range vs Eq indiff in loss',
+                'T',
+                ['equalRange', 'equalIndifference'],
+                [1, -1]
+                )]
 
             group_level_analysis.connect([
                 (select_files, merge_copes, [('cope', 'in_files')]),
-                (select_files, merge_varcopes, [('varcope', 'in_files')])
+                (select_files, merge_varcopes, [('varcope', 'in_files')]),
+                (get_contrasts, regressors_two_sample, [
+                    ('equal_range_ids', 'equal_range_ids'),
+                    ('equal_indifference_ids', 'equal_indifference_ids')
+                    ]),
+                (regressors_two_sample, specify_model, [
+                    ('regressors', 'regressors'),
+                    ('groups', 'groups')
+                    ])
             ])
 
         group_level_analysis.connect([
