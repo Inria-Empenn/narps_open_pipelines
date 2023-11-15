@@ -924,8 +924,8 @@ class PipelineTeam08MQ(Pipeline):
 
         if method in ('equalRange', 'equalIndifference'):
             specify_model.inputs.contrasts = [
-                ('Group', 'T', ['mean'], [1]),
-                ('Group', 'T', ['mean'], [-1])
+                ('Group', 'T', ['group_mean'], [1]),
+                ('Group', 'T', ['group_mean'], [-1])
                 ]
             specify_model.inputs.regressors = dict(
                 group_mean = [1 for _ in self.subject_list]
