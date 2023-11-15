@@ -70,7 +70,7 @@ class TestPipelinesTeam08MQ:
     @mark.unit_test
     def test_run_level_contrasts():
         """ Test the get_run_level_contrasts method """
-        contrasts = PipelineTeam08MQ().get_run_level_contrasts()
+        contrasts = PipelineTeam08MQ.get_run_level_contrasts()
 
         assert contrasts[0] == ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0])
         assert contrasts[0] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1])
@@ -89,7 +89,7 @@ class TestPipelinesTeam08MQ:
     def test_one_sample_t_test_regressors():
         """ Test the get_one_sample_t_test_regressors method """
 
-        regressors = PipelineTeam08MQ().get_one_sample_t_test_regressors(['001', '002'])
+        regressors = PipelineTeam08MQ.get_one_sample_t_test_regressors(['001', '002'])
         assert regressors == [1, 1]
 
     @staticmethod
@@ -97,7 +97,7 @@ class TestPipelinesTeam08MQ:
     def test_two_sample_t_test_regressors():
         """ Test the get_two_sample_t_test_regressors method """
 
-        regressors, groups = PipelineTeam08MQ().get_two_sample_t_test_regressors(
+        regressors, groups = PipelineTeam08MQ.get_two_sample_t_test_regressors(
             ['001', '003'], # equalRange group
             ['002', '004'], # equalIndifference group
             ['001', '002', '003', '004'] # all subjects
