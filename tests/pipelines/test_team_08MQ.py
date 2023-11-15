@@ -72,9 +72,9 @@ class TestPipelinesTeam08MQ:
         """ Test the get_run_level_contrasts method """
         contrasts = PipelineTeam08MQ().get_run_level_contrasts()
 
-        assert contrasts[0] == ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0]),
-        assert contrasts[0] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1]),
-        assert contrasts[0] == ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1]),
+        assert contrasts[0] == ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0])
+        assert contrasts[0] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1])
+        assert contrasts[0] == ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
 
     @staticmethod
     @mark.unit_test
