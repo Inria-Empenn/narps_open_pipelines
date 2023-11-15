@@ -776,7 +776,7 @@ class PipelineTeam08MQ(Pipeline):
             - dict containing named lists of regressors.
         """
 
-        return dict(group_mean = [1 for _ in self.subject_ids])
+        return dict(group_mean = [1 for _ in subject_ids])
 
     def get_two_sample_t_test_regressors(
         equal_range_ids: list,
