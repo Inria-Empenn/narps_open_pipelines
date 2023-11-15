@@ -9,7 +9,7 @@ from pytest import helpers
 
 @helpers.register
 def mock_event_data(mocker):
-    """ Mocks the retrun of the open function with the contents of a fake event file """
+    """ Mocks the return of the open function with the contents of a fake event file """
 
     fake_event_data = 'onset duration\tgain\tloss\tRT\tparticipant_response\n'
     fake_event_data += '4.071\t4\t14\t6\t2.388\tweakly_accept\n'
@@ -20,7 +20,7 @@ def mock_event_data(mocker):
 
 @helpers.register
 def mock_participants_data(mocker):
-    """ Mocks the retrun of the open function with the contents of a fake participants file """
+    """ Mocks the return of the open function with the contents of a fake participants file """
 
     fake_participants_data = 'participant_id\tgroup\tgender\tage\n'
     fake_participants_data += 'sub-001\tequalIndifference\tM\t24\n'

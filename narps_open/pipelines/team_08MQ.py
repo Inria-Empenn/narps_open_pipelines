@@ -711,7 +711,7 @@ class PipelineTeam08MQ(Pipeline):
                         equal_range_ids.append(subject_id)
                         equal_range_sub_ids.append(info[0])
 
-        # Reurn sorted selected copes and varcopes by group, and corresponding ids
+        # Return sorted selected copes and varcopes by group, and corresponding ids
         return \
             [c for c in copes if any(i in c for i in equal_indifference_sub_ids)],\
             [c for c in copes if any(i in c for i in equal_range_sub_ids)],\
