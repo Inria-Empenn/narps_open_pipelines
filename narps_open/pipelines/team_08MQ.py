@@ -719,18 +719,18 @@ class PipelineTeam08MQ(Pipeline):
             [v for v in varcopes if any(i in v for i in equal_range_sub_ids)],\
             equal_indifference_ids, equal_range_ids
 
-    def get_one_sample_t_test_regressors(subject_ids: list) -> dict:
+    def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
         Create dictionary of regressors for one sample t-test group analysis.
 
         Parameters:
-            - subject_ids: ids of subject in the group for which to do the analysis
+            - subject_list: ids of subject in the group for which to do the analysis
 
         Returns:
             - dict containing named lists of regressors.
         """
 
-        return dict(group_mean = [1 for _ in subject_ids])
+        return dict(group_mean = [1 for _ in subject_list])
 
     def get_two_sample_t_test_regressors(
         equal_range_ids: list,
@@ -833,7 +833,7 @@ class PipelineTeam08MQ(Pipeline):
         regressors_one_sample = Node(
             Function(
                 function = self.get_one_sample_t_test_regressors,
-                input_names = ['subject_ids'],
+                input_names = ['subject_list'],
                 output_names = ['regressors']
             ),
             name = 'regressors_one_sample',
@@ -912,16 +912,16 @@ class PipelineTeam08MQ(Pipeline):
                 group_level_analysis.connect([
                     (get_contrasts, merge_copes, [('copes_equal_indifference', 'in_files')]),
                     (get_contrasts, merge_varcopes, [('varcopes_equal_indifference', 'in_files')]),
-                    (get_contrasts, regressors_one_sample, [('equal_range_ids', 'subject_ids')])
+                    (get_contrasts, regressors_one_sample, [
+                        ('equal_indifference_ids', 'subject_list')
+                        ])
                 ])
 
             elif method == 'equalRange':
                 group_level_analysis.connect([
                     (get_contrasts, merge_copes, [('copes_equal_range', 'in_files')]),
                     (get_contrasts, merge_varcopes, [('varcopes_equal_range', 'in_files')]),
-                    (get_contrasts, regressors_one_sample, [
-                        ('equal_indifference_ids', 'subject_ids')
-                        ])
+                    (get_contrasts, regressors_one_sample, [('equal_range_ids', 'subject_list')])
                 ])
 
         elif method == 'groupComp':
