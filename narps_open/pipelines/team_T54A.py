@@ -34,7 +34,7 @@ class PipelineTeamT54A(Pipeline):
         """ No preprocessing has been done by team T54A """
         return None
 
-    def get_session_infos(event_file):
+    def get_subject_information(event_file):
         """
         Create Bunchs for specifyModel.
 
@@ -46,7 +46,7 @@ class PipelineTeamT54A(Pipeline):
         """
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['trial', 'gain', 'loss', 'difficulty', 'response']
+        condition_names = ['trial', 'gain', 'loss', 'difficulty', 'response', 'missed']
         onset = {}
         duration = {}
         amplitude = {}
@@ -62,36 +62,29 @@ class PipelineTeamT54A(Pipeline):
 
             for line in file:
                 info = line.strip().split()
-                # Creates list with onsets, duration and loss/gain
-                # for amplitude (FSL)
-                for condition in condition_names:
-                    if info[5] != 'NoResp':
-                        if condition == 'gain':
-                            onset[condition].append(float(info[0]))
-                            duration[condition].append(float(info[4]))
-                            amplitude[condition].append(float(info[2]))
-                        elif condition == 'loss':
-                            onset[condition].append(float(info[0]))
-                            duration[condition].append(float(info[4]))
-                            amplitude[condition].append(float(info[3]))
-                        elif condition == 'trial':
-                            onset[condition].append(float(info[0]))
-                            duration[condition].append(float(info[4]))
-                            amplitude[condition].append(float(1))
-                        elif condition == 'difficulty':
-                            onset[condition].append(float(info[0]))
-                            duration[condition].append(float(info[4]))
-                            amplitude[condition].append(
-                                abs(0.5 * float(info[2]) - float(info[3]))
-                                )
-                        elif condition == 'response':
-                            onset[condition].append(float(info[0]) + float(info[4]))
-                            duration[condition].append(float(0))
-                            amplitude[condition].append(float(1))
-                    else:
-                        if condition=='missed':
-                            onset[condition].append(float(info[0]))
-                            duration[condition].append(float(0))
+
+                if info[5] != 'NoResp':
+                    onset['trial'].append(float(info[0]))
+                    duration['trial'].append(float(info[4]))
+                    amplitude['trial'].append(float(1))
+                    onset['gain'].append(float(info[0]))
+                    duration['gain'].append(float(info[4]))
+                    amplitude['gain'].append(float(info[2]))
+                    onset['loss'].append(float(info[0]))
+                    duration['loss'].append(float(info[4]))
+                    amplitude['loss'].append(float(info[3]))
+                    onset['difficulty'].append(float(info[0]))
+                    duration['difficulty'].append(float(info[4]))
+                    amplitude['difficulty'].append(
+                        abs(0.5 * float(info[2]) - float(info[3]))
+                        )
+                    onset['response'].append(float(info[0]) + float(info[4]))
+                    duration['response'].append(float(0))
+                    amplitude['response'].append(float(1))
+                else:
+                    onset['missed'].append(float(info[0]))
+                    duration['missed'].append(float(0))
+                    amplitude['missed'].append(float(1))
 
         return [
             Bunch(
@@ -145,7 +138,7 @@ class PipelineTeamT54A(Pipeline):
 
         return parameters_file
 
-    def get_contrasts():
+    def get_run_level_contrasts():
         """
         Create a list of tuples that represent contrasts.
         Each contrast is in the form :
@@ -236,7 +229,7 @@ class PipelineTeamT54A(Pipeline):
 
         # Function Node get_subject_infos - Get subject specific condition information
         subject_information = Node(Function(
-            function = self.get_session_infos,
+            function = self.get_subject_information,
             input_names = ['event_file'],
             output_names = ['subject_info']
             ), name = 'subject_information')
@@ -247,9 +240,9 @@ class PipelineTeamT54A(Pipeline):
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
-        # Funcion Node get_contrasts - Get the list of contrasts
+        # Funcion Node get_run_level_contrasts - Get the list of contrasts
         contrasts = Node(Function(
-            function = self.get_contrasts,
+            function = self.get_run_level_contrasts,
             input_names = [],
             output_names = ['contrasts']
             ), name = 'contrasts')
@@ -313,11 +306,11 @@ class PipelineTeamT54A(Pipeline):
                 ('subject_id', 'subject_id'),
                 ('run_id', 'run_id')]),
             (model_estimate, remove_smoothed_files, [('results_dir', '_')]),
-            (model_estimate, datasink, [('results_dir', 'run_level_analysis.@results')]),
-            (model_generation, datasink, [
+            (model_estimate, data_sink, [('results_dir', 'run_level_analysis.@results')]),
+            (model_generation, data_sink, [
                 ('design_file', 'run_level_analysis.@design_file'),
                 ('design_image', 'run_level_analysis.@design_img')]),
-            (skull_stripping_func, datasink, [('mask_file', 'run_level_analysis.@skullstriped')])
+            (skull_stripping_func, data_sink, [('mask_file', 'run_level_analysis.@skullstriped')])
             ])
 
         return run_level_analysis
@@ -807,7 +800,7 @@ class PipelineTeamT54A(Pipeline):
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'l3_analysis_{method}_nsub_{nb_subjects}',
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
             '_contrast_id_{contrast_id}',
             '{file}'
             )
@@ -825,7 +818,7 @@ class PipelineTeamT54A(Pipeline):
 
         return_list += [join(
             self.directories.output_dir,
-            f'l3_analysis_groupComp_nsub_{len(self.subject_list)}',
+            f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
             '_contrast_id_ploss', f'{file}') for file in files]
 
         return return_list
@@ -835,41 +828,41 @@ class PipelineTeamT54A(Pipeline):
 
         nb_sub = len(self.subject_list)
         files = [
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'zstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'zstat1.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'zstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_pgain', 'zstat1.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'zstat2.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'zstat2.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'zstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'zstat1.nii.gz'),
-            join(f'l3_analysis_groupComp_nsub_{nb_sub}',
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
-            join(f'l3_analysis_groupComp_nsub_{nb_sub}',
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_ploss', 'zstat1.nii.gz')
         ]
         return [join(self.directories.output_dir, f) for f in files]
