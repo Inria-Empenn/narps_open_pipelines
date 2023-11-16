@@ -10,8 +10,9 @@ def remove_files(_, files):
 
     Parameters:
     - _: input only used for triggering the Node
-    - files: str or list, a single filename or a list of filenames to remove
+    - files: str or list, a single filename or a list of absolute filenames to remove
     """
+    # This import must stay inside the function, as required by Nipype
     from os import remove
 
     if isinstance(files, str):
