@@ -19,3 +19,76 @@ def remove_file(_, file_name):
         remove(file_name)
     except OSError as error:
         print(error)
+
+def file_in_group(file: str, group: list) -> list:
+    """
+    Return the name of the file if it contains one element of the group list.
+    Return None otherwise.
+    This function is meant to be used in a Nipype Function Node.
+
+    Parameters:
+    - file_name: str, a single filename of the file analyse
+    - group: list of str, elements to be searched in file_name
+    """
+    if [e in file for e in group]
+
+
+
+def get_subgroups_contrasts(copes, varcopes, subject_list: list, participants_file: str):
+    """
+    Return the file list containing only the files belonging to subject in the wanted group.
+contrast of parameter estimate
+    Parameters :
+    - copes: original file list selected by select_files node
+    - varcopes: original file list selected by select_files node
+    - subject_list: list of subject IDs that are analyzed
+    - participants_file: file containing participants characteristics
+
+    Returns :
+    - copes_equal_indifference : a subset of copes corresponding to subjects
+      in the equalIndifference group
+    - copes_equal_range : a subset of copes corresponding to subjects
+      in the equalRange group
+    - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
+      in the equalIndifference group
+    - varcopes_equal_range : a subset of varcopes corresponding to subjects
+      in the equalRange group
+    - equal_indifference_ids : a list of subject ids in the equalIndifference group
+    - equal_range_ids : a list of subject ids in the equalRange group
+    """
+
+    subject_list_sub_ids = [] # ids as written in the participants file
+    equal_range_ids = [] # ids as 3-digit string
+    equal_indifference_ids = [] # ids as 3-digit string
+    equal_range_sub_ids = [] # ids as written in the participants file
+    equal_indifference_sub_ids = [] # ids as written in the participants file
+
+    # Reading file containing participants IDs and groups
+    with open(participants_file, 'rt') as file:
+        next(file)  # skip the header
+
+        for line in file:
+            info = line.strip().split()
+            subject_id = info[0][-3:]
+            subject_group = info[1]
+
+            # Check if the participant ID was selected and sort depending on group
+            if subject_id in subject_list:
+                subject_list_sub_ids.append(info[0])
+                if subject_group == 'equalIndifference':
+                    equal_indifference_ids.append(subject_id)
+                    equal_indifference_sub_ids.append(info[0])
+                elif subject_group == 'equalRange':
+                    equal_range_ids.append(subject_id)
+                    equal_range_sub_ids.append(info[0])
+
+
+    # Return sorted selected copes and varcopes by group, and corresponding ids
+    return \
+        [c for c in copes if any(i in c for i in equal_indifference_sub_ids)],\
+        [c for c in copes if any(i in c for i in equal_range_sub_ids)],\
+        [c for c in copes if any(i in c for i in subject_list_sub_ids)],\
+        [v for v in varcopes if any(i in v for i in equal_indifference_sub_ids)],\
+        [v for v in varcopes if any(i in v for i in equal_range_sub_ids)],\
+        [v for v in varcopes if any(i in v for i in subject_list_sub_ids)],\
+        equal_indifference_ids, equal_range_ids
