@@ -29,6 +29,10 @@ class PipelineTeamT54A(Pipeline):
         self.fwhm = 4.0
         self.team_id = 'T54A'
         self.contrast_list = ['1', '2']
+        self.run_level_contrasts = [
+            ('gain', 'T', ['trial', 'gain', 'loss'], [0, 1, 0]),
+            ('loss', 'T', ['trial', 'gain', 'loss'], [0, 0, 1])
+            ]
 
     def get_preprocessing(self):
         """ No preprocessing has been done by team T54A """
@@ -138,25 +142,6 @@ class PipelineTeamT54A(Pipeline):
 
         return parameters_file
 
-    def get_run_level_contrasts():
-        """
-        Create a list of tuples that represent contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # List of condition names
-        conditions = ['trial', 'gain', 'loss']
-
-        # Create contrasts
-        gain = ('gain', 'T', conditions, [0, 1, 0])
-        loss = ('loss', 'T', conditions, [0, 0, 1])
-
-        # Contrast list
-        return [gain, loss]
-
     def remove_smoothed_files(_, subject_id, run_id, working_dir):
         """
         This method is used in a Function node to fully remove
@@ -240,13 +225,6 @@ class PipelineTeamT54A(Pipeline):
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
-        # Funcion Node get_run_level_contrasts - Get the list of contrasts
-        contrasts = Node(Function(
-            function = self.get_run_level_contrasts,
-            input_names = [],
-            output_names = ['contrasts']
-            ), name = 'contrasts')
-
         # Function Node get_parameters_file - Get files with movement parameters
         parameters = Node(Function(
             function = self.get_parameters_file,
@@ -260,6 +238,7 @@ class PipelineTeamT54A(Pipeline):
         model_design.inputs.bases = {'dgamma':{'derivs' : True}}
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
+        model_design.inputs.contrasts = self.run_level_contrasts
 
         # FEATModel Node - Generate run level model
         model_generation = Node(FEATModel(), name = 'model_generation')
@@ -293,7 +272,6 @@ class PipelineTeamT54A(Pipeline):
             (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
             (smoothing_func, specify_model, [('out_file', 'functional_runs')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
-            (contrasts, model_design, [('contrasts', 'contrasts')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_generation, [
                 ('ev_files', 'ev_files'),

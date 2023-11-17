@@ -31,6 +31,11 @@ class TestPipelinesTeamT54A:
         # 1 - check the parameters
         assert pipeline.fwhm == 4.0
         assert pipeline.team_id == 'T54A'
+        assert pipeline.contrast_list == ['1', '2']
+        assert pipeline.run_level_contrasts == [
+            ('gain', 'T', ['trial', 'gain', 'loss'], [0, 1, 0]),
+            ('loss', 'T', ['trial', 'gain', 'loss'], [0, 0, 1])
+            ]
 
         # 2 - check workflows
         assert pipeline.get_preprocessing() is None
@@ -119,17 +124,6 @@ class TestPipelinesTeamT54A:
     @mark.unit_test
     def test_parameters_file(mocker):
         """ Test the get_parameters_file method """
-
-
-
-    @staticmethod
-    @mark.unit_test
-    def test_run_level_contrasts():
-        """ Test the get_run_level_contrasts method """
-
-        contrasts = PipelineTeamT54A.get_run_level_contrasts()
-        assert contrasts[0] == ('gain', 'T', ['trial', 'gain', 'loss'], [0, 1, 0])
-        assert contrasts[1] == ('loss', 'T', ['trial', 'gain', 'loss'], [0, 0, 1])
 
     @staticmethod
     @mark.unit_test
