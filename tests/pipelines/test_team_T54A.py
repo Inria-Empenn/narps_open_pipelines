@@ -10,13 +10,28 @@ Usage:
     pytest -q test_team_T54A.py
     pytest -q test_team_T54A.py -k <selected_test>
 """
+from os import mkdir
+from os.path import exists, join
+from shutil import rmtree
 
-from pytest import helpers, mark
+from pytest import helpers, mark, fixture
 from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
 from narps_open.pipelines.team_T54A import PipelineTeamT54A
+from narps_open.utils.configuration import Configuration
+
+TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_T54A')
+
+@fixture
+def remove_test_dir():
+    """ A fixture to remove temporary directory created by tests """
+
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
+    mkdir(TEMPORARY_DIR)
+    yield # test runs here
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeamT54A:
     """ A class that contains all the unit tests for the PipelineTeamT54A class."""
@@ -70,12 +85,13 @@ class TestPipelinesTeamT54A:
 
     @staticmethod
     @mark.unit_test
-    def test_subject_information(mocker):
+    def test_subject_information():
         """ Test the get_subject_information method """
 
-        helpers.mock_event_data(mocker)
+        event_file_path = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
 
-        information = PipelineTeamT54A.get_subject_information('fake_event_file_path')[0]
+        information = PipelineTeamT54A.get_subject_information(event_file_path)[0]
 
         assert isinstance(information, Bunch)
         assert information.conditions == [
@@ -122,31 +138,25 @@ class TestPipelinesTeamT54A:
 
     @staticmethod
     @mark.unit_test
-    def test_parameters_file(mocker):
+    def test_parameters_file(remove_test_dir):
         """ Test the get_parameters_file method """
 
-    @staticmethod
-    @mark.unit_test
-    def test_subgroups_contrasts(mocker):
-        """ Test the get_subgroups_contrasts method """
+        confounds_file_path = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
 
-        helpers.mock_participants_data(mocker)
-
-        cei, cer, cg, vei, ver, vg, eii, eri = PipelineTeamT54A.get_subgroups_contrasts(
-            ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz'], # copes
-            ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz'], # varcopes
-            ['001', '002', '003', '004'], # subject_list
-            ['fake_participants_file_path'] # participants file
+        PipelineTeamT54A.get_parameters_file(
+            confounds_file_path,
+            'fake_subject_id',
+            'fake_run_id',
+            TEMPORARY_DIR
             )
 
-        assert cei == ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz']
-        assert cer == ['sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz']
-        assert cg ==  ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz']
-        assert vei == ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz']
-        assert ver == ['sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz']
-        assert vg == ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz']
-        assert eii == ['001', '003']
-        assert eri == ['002', '004']
+        # Check parameter file was created
+        assert exists(join(
+            TEMPORARY_DIR,
+            'parameters_file',
+            'parameters_file_sub-fake_subject_id_run-fake_run_id.tsv')
+        )
 
     @staticmethod
     @mark.unit_test
