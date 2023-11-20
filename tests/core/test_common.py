@@ -237,7 +237,7 @@ class TestCoreCommon:
     def test_node_list_intersection():
         """ Test the list_intersection function as a nipype.Node """
 
-        # Inputs / ouptuts
+        # Inputs / outputs
         input_list_1 = ['001', '002', '003', '004']
         input_list_2 = ['002', '004']
         input_list_3 = ['001', '003', '005']
@@ -272,7 +272,7 @@ class TestCoreCommon:
     def test_connect_list_intersection(remove_test_dir):
         """ Test the list_intersection function as evaluated in a connect """
 
-        # Inputs / ouptuts
+        # Inputs / outputs
         input_list_1 = ['001', '002', '003', '004']
         input_list_2 = ['002', '004']
         input_list_3 = ['001', '003', '005']
