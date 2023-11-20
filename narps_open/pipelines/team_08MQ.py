@@ -6,7 +6,7 @@
 from os.path import join
 from itertools import product
 
-from nipype import Node, Workflow
+from nipype import Node, Workflow, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split, Select
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
@@ -26,7 +26,8 @@ from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransfo
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
-
+from narps_open.data.participants import get_group
+from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
 
@@ -38,6 +39,11 @@ class PipelineTeam08MQ(Pipeline):
         self.fwhm = 6.0
         self.team_id = '08MQ'
         self.contrast_list = ['1', '2', '3']
+        self.run_level_contasts = [
+            ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0]),
+            ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1]),
+            ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
+        ]
 
     def remove_files(_, files):
         """
@@ -66,10 +72,10 @@ class PipelineTeam08MQ(Pipeline):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
         # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(IdentityInterface(
+        information_source = Node(IdentityInterface(
             fields = ['subject_id', 'run_id']),
-            name = 'info_source')
-        info_source.iterables = [
+            name = 'information_source')
+        information_source.iterables = [
             ('run_id', self.run_list),
             ('subject_id', self.subject_list),
         ]
@@ -265,7 +271,7 @@ class PipelineTeam08MQ(Pipeline):
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
             # Inputs
-            (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (information_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
 
             # Anatomical images
             (select_files, bias_field_correction, [('anat', 'in_files')]),
@@ -418,23 +424,6 @@ class PipelineTeam08MQ(Pipeline):
                 regressors = None)
             ]
 
-    def get_run_level_contrasts():
-        """
-        Create a list of tuples that represent contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        conditions = ['gain', 'loss']
-
-        return [
-            ('positive_effect_gain', 'T', conditions, [1, 0]), # Positive parametric effect of gain
-            ('positive_effect_loss', 'T', conditions, [0, 1]), # Positive parametric effect of loss
-            ('negative_effect_loss', 'T', conditions, [0, -1]) # Negative parametric effect of loss
-        ]
-
     def get_run_level_analysis(self):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline
 
@@ -443,10 +432,10 @@ class PipelineTeam08MQ(Pipeline):
         """
 
         # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(IdentityInterface(
+        information_source = Node(IdentityInterface(
             fields = ['subject_id', 'run_id']),
-            name = 'info_source')
-        info_source.iterables = [
+            name = 'information_source')
+        information_source.iterables = [
             ('run_id', self.run_list),
             ('subject_id', self.subject_list),
         ]
@@ -489,20 +478,14 @@ class PipelineTeam08MQ(Pipeline):
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
         specify_model.inputs.parameter_source = 'FSL' # Source of motion parameters.
 
-        # Function Node get_contrasts - Get the list of contrasts
-        contrasts = Node(Function(
-            function = self.get_run_level_contrasts,
-            input_names = [],
-            output_names = ['contrasts']
-            ), name = 'contrasts')
-
         # Level1Design Node - Generate files for first level computation
-        l1_design = Node(Level1Design(), 'l1_design')
-        l1_design.inputs.bases = {
+        model_design = Node(Level1Design(), 'model_design')
+        model_design.inputs.bases = {
             'dgamma':{'derivs' : True} # Canonical double gamma HRF plus temporal derivative
             }
-        l1_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
-        l1_design.inputs.model_serial_correlations = True
+        model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        model_design.inputs.model_serial_correlations = True
+        model_design.inputs.contrasts = self.run_level_contasts
 
         # FEATModel Node - Generate first level model
         model_generation = Node(FEATModel(), name = 'model_generation')
@@ -516,14 +499,13 @@ class PipelineTeam08MQ(Pipeline):
             name = 'run_level_analysis'
             )
         run_level_analysis.connect([
-            (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (information_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
             (select_files, subject_information, [('event', 'event_file')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (select_files, specify_model, [('motion', 'realignment_parameters')]),
             (select_files, specify_model, [('func', 'functional_runs')]),
-            (contrasts, l1_design, [('contrasts', 'contrasts')]),
-            (specify_model, l1_design, [('session_info', 'session_info')]),
-            (l1_design, model_generation, [
+            (specify_model, model_design, [('session_info', 'session_info')]),
+            (model_design, model_generation, [
                 ('ev_files', 'ev_files'),
                 ('fsf_files', 'fsf_file')]),
             (select_files, model_estimate, [('func', 'in_file')]),
@@ -583,10 +565,10 @@ class PipelineTeam08MQ(Pipeline):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
         # IdentityInterface node - allows to iterate over subjects and contrasts
-        info_source = Node(IdentityInterface(
+        information_source = Node(IdentityInterface(
             fields = ['subject_id', 'contrast_id']),
-            name = 'info_source')
-        info_source.iterables = [
+            name = 'information_source')
+        information_source.iterables = [
             ('subject_id', self.subject_list),
             ('contrast_id', self.contrast_list)
             ]
@@ -627,7 +609,7 @@ class PipelineTeam08MQ(Pipeline):
             base_dir = self.directories.working_dir,
             name = 'subject_level_analysis')
         subject_level_analysis.connect([
-            (info_source, select_files, [
+            (information_source, select_files, [
                 ('subject_id', 'subject_id'),
                 ('contrast_id', 'contrast_id')]),
             (select_files, merge_copes, [('cope', 'in_files')]),
@@ -662,62 +644,6 @@ class PipelineTeam08MQ(Pipeline):
 
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
-
-    def get_subgroups_contrasts(copes, varcopes, subject_list: list, participants_file: str):
-        """
-        Return the file list containing only the files belonging to subject in the wanted group.
-
-        Parameters :
-        - copes: original file list selected by select_files node
-        - varcopes: original file list selected by select_files node
-        - subject_list: list of subject IDs that are analyzed
-        - participants_file: file containing participants characteristics
-
-        Returns :
-        - copes_equal_indifference : a subset of copes corresponding to subjects
-          in the equalIndifference group
-        - copes_equal_range : a subset of copes corresponding to subjects
-          in the equalRange group
-        - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
-          in the equalIndifference group
-        - varcopes_equal_range : a subset of varcopes corresponding to subjects
-          in the equalRange group
-        - equal_indifference_ids : a list of subject ids in the equalIndifference group
-        - equal_range_ids : a list of subject ids in the equalRange group
-        """
-
-        subject_list_sub_ids = [] # ids as written in the participants file
-        equal_range_ids = [] # ids as 3-digit string
-        equal_indifference_ids = [] # ids as 3-digit string
-        equal_range_sub_ids = [] # ids as written in the participants file
-        equal_indifference_sub_ids = [] # ids as written in the participants file
-
-        # Reading file containing participants IDs and groups
-        with open(participants_file, 'rt') as file:
-            next(file)  # skip the header
-
-            for line in file:
-                info = line.strip().split()
-                subject_id = info[0][-3:]
-                subject_group = info[1]
-
-                # Check if the participant ID was selected and sort depending on group
-                if subject_id in subject_list:
-                    subject_list_sub_ids.append(info[0])
-                    if subject_group == 'equalIndifference':
-                        equal_indifference_ids.append(subject_id)
-                        equal_indifference_sub_ids.append(info[0])
-                    elif subject_group == 'equalRange':
-                        equal_range_ids.append(subject_id)
-                        equal_range_sub_ids.append(info[0])
-
-        # Return sorted selected copes and varcopes by group, and corresponding ids
-        return \
-            [c for c in copes if any(i in c for i in equal_indifference_sub_ids)],\
-            [c for c in copes if any(i in c for i in equal_range_sub_ids)],\
-            [v for v in varcopes if any(i in v for i in equal_indifference_sub_ids)],\
-            [v for v in varcopes if any(i in v for i in equal_range_sub_ids)],\
-            equal_indifference_ids, equal_range_ids
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
@@ -786,14 +712,13 @@ class PipelineTeam08MQ(Pipeline):
             - group_level_analysis: nipype.WorkFlow
         """
         # Infosource Node - iterate over the contrasts generated by the subject level analysis
-        info_source = Node(
+        information_source = Node(
             IdentityInterface(
-                fields = ['contrast_id', 'subjects'],
-                subjects = self.subject_list
+                fields = ['contrast_id']
             ),
-            name = 'info_source',
+            name = 'information_source',
         )
-        info_source.iterables = [('contrast_id', self.contrast_list)]
+        information_source.iterables = [('contrast_id', self.contrast_list)]
 
         # SelectFiles Node - select necessary files
         templates = {
@@ -811,49 +736,29 @@ class PipelineTeam08MQ(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
-        # Function Node get_subgroups_contrasts - Get the contrast files for each subgroup
-        get_contrasts = Node(
-            Function(
-                function = self.get_subgroups_contrasts,
-                input_names = ['copes', 'varcopes', 'subject_list', 'participants_file'],
-                output_names = [
-                    'copes_equal_indifference',
-                    'copes_equal_range',
-                    'varcopes_equal_indifference',
-                    'varcopes_equal_range',
-                    'equal_indifference_ids',
-                    'equal_range_ids'
-                ]
+        # Function Node elements_in_string
+        #   Get contrast of parameter estimates (cope) for these subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_copes = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
             ),
-            name = 'get_contrasts',
+            name = 'get_copes', iterfield = 'input_str'
         )
 
-        # Function Node get_one_sample_t_test_regressors
-        #   Get regressors in the equalRange and equalIndifference method case
-        regressors_one_sample = Node(
-            Function(
-                function = self.get_one_sample_t_test_regressors,
-                input_names = ['subject_list'],
-                output_names = ['regressors']
+        # Function Node elements_in_string
+        #   Get variance of the estimated copes (varcope) for these subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_varcopes = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
             ),
-            name = 'regressors_one_sample',
+            name = 'get_varcopes', iterfield = 'input_str'
         )
-
-        # Function Node get_two_sample_t_test_regressors
-        #   Get regressors in the groupComp method case
-        regressors_two_sample = Node(
-            Function(
-                function = self.get_two_sample_t_test_regressors,
-                input_names = [
-                    'equal_range_ids',
-                    'equal_indifference_ids',
-                    'subject_list',
-                ],
-                output_names = ['regressors', 'groups']
-            ),
-            name = 'regressors_two_sample',
-        )
-        regressors_two_sample.inputs.subject_list = self.subject_list
 
         # Merge Node - Merge cope files
         merge_copes = Node(MergeImages(), name = 'merge_copes')
@@ -889,63 +794,11 @@ class PipelineTeam08MQ(Pipeline):
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}'
         )
         group_level_analysis.connect([
-            (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (info_source, get_contrasts, [('subjects', 'subject_list')]),
-            (select_files, get_contrasts, [
-                ('cope', 'copes'),
-                ('varcope', 'varcopes'),
-                ('participants', 'participants_file'),
-                ])
-        ])
-
-        if method in ('equalRange', 'equalIndifference'):
-            specify_model.inputs.contrasts = [
-                ('Group', 'T', ['group_mean'], [1]),
-                ('Group', 'T', ['group_mean'], [-1])
-                ]
-
-            group_level_analysis.connect([
-                (regressors_one_sample, specify_model, [('regressors', 'regressors')])
-                ])
-
-            if method == 'equalIndifference':
-                group_level_analysis.connect([
-                    (get_contrasts, merge_copes, [('copes_equal_indifference', 'in_files')]),
-                    (get_contrasts, merge_varcopes, [('varcopes_equal_indifference', 'in_files')]),
-                    (get_contrasts, regressors_one_sample, [
-                        ('equal_indifference_ids', 'subject_list')
-                        ])
-                ])
-
-            elif method == 'equalRange':
-                group_level_analysis.connect([
-                    (get_contrasts, merge_copes, [('copes_equal_range', 'in_files')]),
-                    (get_contrasts, merge_varcopes, [('varcopes_equal_range', 'in_files')]),
-                    (get_contrasts, regressors_one_sample, [('equal_range_ids', 'subject_list')])
-                ])
-
-        elif method == 'groupComp':
-            specify_model.inputs.contrasts = [(
-                'Eq range vs Eq indiff in loss',
-                'T',
-                ['equalRange', 'equalIndifference'],
-                [1, -1]
-                )]
-
-            group_level_analysis.connect([
-                (select_files, merge_copes, [('cope', 'in_files')]),
-                (select_files, merge_varcopes, [('varcope', 'in_files')]),
-                (get_contrasts, regressors_two_sample, [
-                    ('equal_range_ids', 'equal_range_ids'),
-                    ('equal_indifference_ids', 'equal_indifference_ids')
-                    ]),
-                (regressors_two_sample, specify_model, [
-                    ('regressors', 'regressors'),
-                    ('groups', 'groups')
-                    ])
-            ])
-
-        group_level_analysis.connect([
+            (information_source, select_files, [('contrast_id', 'contrast_id')]),
+            (select_files, get_copes, [('cope', 'input_str')]),
+            (select_files, get_varcopes, [('varcope', 'input_str')]),
+            (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
+            (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
             (specify_model, estimate_model, [
@@ -969,6 +822,112 @@ class PipelineTeam08MQ(Pipeline):
                 ])
         ])
 
+        if method in ('equalRange', 'equalIndifference'):
+
+            # Setup a one sample t-test
+            specify_model.inputs.contrasts = [
+                ('Group', 'T', ['group_mean'], [1]),
+                ('Group', 'T', ['group_mean'], [-1])
+                ]
+
+            # Function Node get_group_subjects - Get subjects in the group and in the subject_list
+            get_group_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_group_subjects'
+            )
+            get_group_subjects.inputs.list_1 = get_group(method)
+            get_group_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_one_sample_t_test_regressors
+            #   Get regressors in the equalRange and equalIndifference method case
+            regressors_one_sample = Node(
+                Function(
+                    function = self.get_one_sample_t_test_regressors,
+                    input_names = ['subject_list'],
+                    output_names = ['regressors']
+                ),
+                name = 'regressors_one_sample',
+            )
+
+            # Add missing connections
+            group_level_analysis.connect([
+                (get_group_subjects, get_copes, [('out_list', 'elements')]),
+                (get_group_subjects, get_varcopes, [('out_list', 'elements')]),
+                (get_group_subjects, regressors_one_sample, [('out_list', 'subject_list')]),
+                (regressors_one_sample, specify_model, [('regressors', 'regressors')])
+            ])
+
+        elif method == 'groupComp':
+
+            # Select copes and varcopes corresponding to the selected subjects
+            #   Indeed the SelectFiles node asks for all (*) subjects available
+            get_copes.inputs.elements = self.subject_list
+            get_varcopes.inputs.elements = self.subject_list
+
+            # Setup a two sample t-test
+            specify_model.inputs.contrasts = [(
+                'Eq range vs Eq indiff in loss',
+                'T',
+                ['equalRange', 'equalIndifference'],
+                [1, -1]
+                )]
+
+            # Function Node get_equal_range_subjects
+            #   Get subjects in the equalRange group and in the subject_list
+            get_equal_range_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_equal_range_subjects'
+            )
+            get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+            get_equal_range_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_equal_indifference_subjects
+            #   Get subjects in the equalIndifference group and in the subject_list
+            get_equal_indifference_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_equal_indifference_subjects'
+            )
+            get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+            get_equal_indifference_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_two_sample_t_test_regressors
+            #   Get regressors in the groupComp method case
+            regressors_two_sample = Node(
+                Function(
+                    function = self.get_two_sample_t_test_regressors,
+                    input_names = [
+                        'equal_range_ids',
+                        'equal_indifference_ids',
+                        'subject_list',
+                    ],
+                    output_names = ['regressors', 'groups']
+                ),
+                name = 'regressors_two_sample',
+            )
+            regressors_two_sample.inputs.subject_list = self.subject_list
+
+            # Add missing connections
+            group_level_analysis.connect([
+                (get_equal_range_subjects, regressors_two_sample, [
+                    ('out_list', 'equal_range_id')
+                    ]),
+                (get_equal_indifference_subjects, regressors_two_sample, [
+                    ('out_list', 'equal_indifference_id')
+                    ]),
+                (regressors_two_sample, specify_model, [
+                    ('regressors', 'regressors'),
+                    ('groups', 'groups')])
+            ])
+
         return group_level_analysis
 
     def get_hypotheses_outputs(self):
@@ -977,40 +936,40 @@ class PipelineTeam08MQ(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_pgain', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'zstat2.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'randomise_tfce_corrp_tstat2.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'zstat2.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'randomise_tfce_corrp_tstat1.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_ploss', 'zstat1.nii.gz')
+                '_contrast_id_2', 'zstat1.nii.gz')
         ]
         return [join(self.directories.output_dir, f) for f in files]

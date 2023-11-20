@@ -30,6 +30,12 @@ class TestPipelinesTeam08MQ:
         # 1 - check the parameters
         assert pipeline.fwhm == 6.0
         assert pipeline.team_id == '08MQ'
+        assert pipeline.contrast_list == ['1', '2', '3']
+        assert pipeline.run_level_contasts == [
+            ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0]),
+            ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1]),
+            ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
+        ]
 
         # 2 - check workflows
         assert isinstance(pipeline.get_preprocessing(), Workflow)
@@ -78,37 +84,6 @@ class TestPipelinesTeam08MQ:
         assert information.onsets == [
         [4.071, 11.834], [4.071, 11.834], [4.071, 11.834], [4.071, 11.834]
         ]
-
-    @staticmethod
-    @mark.unit_test
-    def test_run_level_contrasts():
-        """ Test the get_run_level_contrasts method """
-
-        contrasts = PipelineTeam08MQ.get_run_level_contrasts()
-        assert contrasts[0] == ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0])
-        assert contrasts[1] == ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1])
-        assert contrasts[2] == ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
-
-    @staticmethod
-    @mark.unit_test
-    def test_subgroups_contrasts(mocker):
-        """ Test the get_subgroups_contrasts method """
-
-        helpers.mock_participants_data(mocker)
-
-        cei, cer, vei, ver, eii, eri = PipelineTeam08MQ.get_subgroups_contrasts(
-            ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz'], # copes
-            ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz'], # varcopes
-            ['001', '002', '003', '004'], # subject_list
-            ['fake_participants_file_path'] # participants file
-            )
-
-        assert cei == ['sub-001/_contrast_id_1/cope1.nii.gz', 'sub-001/_contrast_id_2/cope1.nii.gz', 'sub-003/_contrast_id_1/cope1.nii.gz', 'sub-003/_contrast_id_2/cope1.nii.gz']
-        assert cer == ['sub-002/_contrast_id_1/cope1.nii.gz', 'sub-002/_contrast_id_2/cope1.nii.gz', 'sub-004/_contrast_id_1/cope1.nii.gz', 'sub-004/_contrast_id_2/cope1.nii.gz']
-        assert vei == ['sub-001/_contrast_id_1/varcope1.nii.gz', 'sub-001/_contrast_id_2/varcope1.nii.gz', 'sub-003/_contrast_id_1/varcope1.nii.gz', 'sub-003/_contrast_id_2/varcope1.nii.gz']
-        assert ver == ['sub-002/_contrast_id_1/varcope1.nii.gz', 'sub-002/_contrast_id_2/varcope1.nii.gz', 'sub-004/_contrast_id_1/varcope1.nii.gz', 'sub-004/_contrast_id_2/varcope1.nii.gz']
-        assert eii == ['001', '003']
-        assert eri == ['002', '004']
 
     @staticmethod
     @mark.unit_test
