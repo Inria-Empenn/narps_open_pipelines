@@ -10,11 +10,14 @@ Usage:
     pytest -q test_team_08MQ.py
     pytest -q test_team_08MQ.py -k <selected_test>
 """
+from os.path import join
 
 from pytest import helpers, mark
+from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
+from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_08MQ import PipelineTeam08MQ
 
 class TestPipelinesTeam08MQ:
@@ -70,20 +73,44 @@ class TestPipelinesTeam08MQ:
 
     @staticmethod
     @mark.unit_test
-    def test_subject_information(mocker):
+    def test_subject_information():
         """ Test the get_subject_information method """
 
-        helpers.mock_event_data(mocker)
-
-        information = PipelineTeam08MQ.get_subject_information('fake_event_file_path')[0]
+        information = PipelineTeam08MQ.get_subject_information(join(
+            Configuration()['directories']['test_data'],
+            'pipelines',
+            'events.tsv'
+            ))[0]
 
         assert isinstance(information, Bunch)
-        assert information.amplitudes == [[1.0, 1.0], [14.0, 34.0], [6.0, 14.0], [1.0, 1.0]]
-        assert information.durations == [[4.0, 4.0], [2.388, 2.289], [2.388, 2.289], [4.0, 4.0]]
         assert information.conditions == ['event', 'gain', 'loss', 'response']
-        assert information.onsets == [
-        [4.071, 11.834], [4.071, 11.834], [4.071, 11.834], [4.071, 11.834]
+
+        reference_amplitudes = [
+            [1.0, 1.0, 1.0, 1.0, 1.0],
+            [14.0, 34.0, 38.0, 10.0, 16.0],
+            [6.0, 14.0, 19.0, 15.0, 17.0],
+            [1.0, 1.0, 0.0, -1.0, -1.0]
+            ]
+        for reference_array, test_array in zip(reference_amplitudes, information.amplitudes):
+            assert isclose(reference_array, test_array).all()
+
+        reference_durations = [
+            [4.0, 4.0, 4.0, 4.0, 4.0],
+            [2.388, 2.289, 0.0, 2.08, 2.288],
+            [2.388, 2.289, 0.0, 2.08, 2.288],
+            [4.0, 4.0, 4.0, 4.0, 4.0]
+            ]
+        for reference_array, test_array in zip(reference_durations, information.durations):
+            assert isclose(reference_array, test_array).all()
+
+        reference_onsets = [
+            [4.071, 11.834, 19.535, 27.535, 36.435],
+            [4.071, 11.834, 19.535, 27.535, 36.435],
+            [4.071, 11.834, 19.535, 27.535, 36.435],
+            [4.071, 11.834, 19.535, 27.535, 36.435]
         ]
+        for reference_array, test_array in zip(reference_onsets, information.onsets):
+            assert isclose(reference_array, test_array).all()
 
     @staticmethod
     @mark.unit_test
