@@ -2,9 +2,9 @@
 
 Here are a few functions that could be useful for creating a pipeline with Nipype. These functions are meant to stay as unitary as possible.
 
-These are intented to be inserted in a nipype.Workflow inside a [nipype.Function](https://nipype.readthedocs.io/en/latest/api/generated/nipype.interfaces.utility.wrappers.html#function) interface, or for some of them (see associated docstring) as part of a [nipype.Workflow.connect](https://nipype.readthedocs.io/en/latest/api/generated/nipype.pipeline.engine.workflows.html#nipype.pipeline.engine.workflows.Workflow.connect) method.
+These are intended to be inserted in a nipype.Workflow inside a [nipype.Function](https://nipype.readthedocs.io/en/latest/api/generated/nipype.interfaces.utility.wrappers.html#function) interface, or for some of them (see associated docstring) as part of a [nipype.Workflow.connect](https://nipype.readthedocs.io/en/latest/api/generated/nipype.pipeline.engine.workflows.html#nipype.pipeline.engine.workflows.Workflow.connect) method.
 
-In the following example, we use the `list_intersection` function of `narps_open.core.common`, in both of the mentionned cases.
+In the following example, we use the `list_intersection` function of `narps_open.core.common`, in both of the mentioned cases.
 
 ```python
 from nipype import Node, Function, Workflow
@@ -36,7 +36,7 @@ test_workflow.run()
 ```
 
 > [!TIP]
-> Use a [nipype.MapNode](https://nipype.readthedocs.io/en/latest/api/generated/nipype.pipeline.engine.nodes.html#nipype.pipeline.engine.nodes.MapNode) to run these functions on lists insted of unitary contents. E.g.: the `remove_file` function of `narps_open.core.common` only removes one file at a time, but feel free to pass a list of files using a `nipype.MapNode`.
+> Use a [nipype.MapNode](https://nipype.readthedocs.io/en/latest/api/generated/nipype.pipeline.engine.nodes.html#nipype.pipeline.engine.nodes.MapNode) to run these functions on lists instead of unitary contents. E.g.: the `remove_file` function of `narps_open.core.common` only removes one file at a time, but feel free to pass a list of files using a `nipype.MapNode`.
 
 ```python
 from nipype import MapNode, Function
@@ -53,7 +53,7 @@ remove_files_node = MapNode(Function(
 test_workflow = Workflow(base_dir = '/home/bclenet/dev/tests/nipype_merge/', name = 'test_workflow')
 test_workflow.connect([
 	# ...
-	# Here we assume the select_node's ouptut `out_files` is a list of files
+	# Here we assume the select_node's output `out_files` is a list of files
     (select_node, remove_files_node, [('out_files', 'file_name')])
 	# ...
     ])
