@@ -139,3 +139,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 *pyscript*
+
+# For mac users
+*.DS_Store
