@@ -1,15 +1,19 @@
 # How to contribute to NARPS Open Pipelines ? 
 
-General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
+For the reproductions, we are especially looking for contributors with the following profiles:
+ - 👩‍🎤 SPM, FSL, AFNI or nistats has no secrets for you? You know this fMRI analysis software by heart 💓. Please help us by reproducing the corresponding NARPS pipelines. 👣 after step 1, follow the fMRI expert trail.
+ - 🧑‍🎤 You are a nipype guru? 👣 after step 1, follow the nipype expert trail.
 
-## Reproduce a pipeline :keyboard:
-:thinking: Not sure which one to start with ? You can have a look on [this table](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) giving the work progress status for each pipeline. This will help choosing the one that best suits you!
+# Step 1: Choose a pipeline to reproduce :keyboard:
+:thinking: Not sure which pipeline to start with ? 🚦The [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) provides the progress status for each pipeline. You can pick any pipeline that is in red (not started).
 
-Need more information ? You can have a look to the pipeline description [here](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing). Also feel free to use the `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md).
+Need more information to make a decision? The `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md) provides easy access to all the info we have on each pipeline.
 
 When you are ready, [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**!
 
-### If you have experience with NiPype
+# Step 2: Reproduction 
+
+## 🧑‍🎤 NiPype trail
 
 We created templates with modifications to make and holes to fill to create a pipeline. You can find them in [`narps_open/pipelines/templates`](/narps_open/pipelines/templates).
 
@@ -21,9 +25,9 @@ Feel free to have a look to the following pipelines, these are examples :
 | 2T6S | SPM | Yes | [/narps_open/pipelines/team_2T6S.py](/narps_open/pipelines/team_2T6S.py) |
 | X19V | FSL | Yes | [/narps_open/pipelines/team_X19V.py](/narps_open/pipelines/team_2T6S.py) |
 
-### If you have experience with the original software package but not with NiPype
+## 👩‍🎤 fMRI software trail
 
-A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save your NiPype script in a .py file and send it as a new issue, we will convert this script to a script which works with our specific parameters. 
+...
 
 ## Find or propose an issue :clipboard:
 Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
@@ -64,3 +68,7 @@ Once your PR is ready, you may add a reviewer to your PR, as described [here](ht
 Please turn your Draft Pull Request into a "regular" Pull Request, by clicking **Ready for review** in the Pull Request page.
 
 **:wave: Thank you in advance for contributing to the project!**
+
+## Additional resources
+
+ - git and Gitub: general guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) in the GitHub documentation. 
