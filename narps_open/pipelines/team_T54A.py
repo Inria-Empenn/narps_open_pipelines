@@ -512,7 +512,6 @@ class PipelineTeamT54A(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_*',
                 'varcope1.nii.gz'),
-            'participants' : join(self.directories.dataset_dir, 'participants.tsv'),
             'mask': join(self.directories.output_dir,
                 'run_level_analysis', '_run_id_*_subject_id_*',
                 'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
@@ -523,6 +522,30 @@ class PipelineTeamT54A(Pipeline):
         # Datasink Node - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
+
+        # Function Node elements_in_string
+        #   Get contrast of parameter estimates (cope) for these subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_copes = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_copes', iterfield = 'input_str'
+        )
+
+        # Function Node elements_in_string
+        #   Get variance of the estimated copes (varcope) for these subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_varcopes = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_varcopes', iterfield = 'input_str'
+        )
 
         # Merge Node - Merge cope files
         merge_copes = Node(Merge(), name = 'merge_copes')
@@ -556,6 +579,10 @@ class PipelineTeamT54A(Pipeline):
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
         group_level_analysis.connect([
             (information_source, select_files, [('contrast_id', 'contrast_id')]),
+            (select_files, get_copes, [('cope', 'input_str')]),
+            (select_files, get_varcopes, [('varcope', 'input_str')]),
+            (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
+            (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
             (select_files, estimate_model, [('mask', 'mask_file')]),
             (select_files, randomise, [('mask', 'mask')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
@@ -599,30 +626,6 @@ class PipelineTeamT54A(Pipeline):
             get_group_subjects.inputs.list_1 = get_group(method)
             get_group_subjects.inputs.list_2 = self.subject_list
 
-            # Function Node elements_in_string
-            #   Get contrast of parameter estimates (cope) for these subjects
-            # Note : using a MapNode with elements_in_string requires using clean_list to remove
-            #   None values from the out_list
-            get_copes = MapNode(Function(
-                function = elements_in_string,
-                input_names = ['input_str', 'elements'],
-                output_names = ['out_list']
-                ),
-                name = 'get_copes', iterfield = 'input_str'
-            )
-
-            # Function Node elements_in_string
-            #   Get variance of the estimated copes (varcope) for these subjects
-            # Note : using a MapNode with elements_in_string requires using clean_list to remove
-            #   None values from the out_list
-            get_varcopes = MapNode(Function(
-                function = elements_in_string,
-                input_names = ['input_str', 'elements'],
-                output_names = ['out_list']
-                ),
-                name = 'get_varcopes', iterfield = 'input_str'
-            )
-
             # Function Node get_one_sample_t_test_regressors
             #   Get regressors in the equalRange and equalIndifference method case
             regressors_one_sample = Node(
@@ -636,17 +639,18 @@ class PipelineTeamT54A(Pipeline):
 
             # Add missing connections
             group_level_analysis.connect([
-                (select_files, get_copes, [('cope', 'input_str')]),
-                (select_files, get_varcopes, [('varcope', 'input_str')]),
                 (get_group_subjects, get_copes, [('out_list', 'elements')]),
                 (get_group_subjects, get_varcopes, [('out_list', 'elements')]),
-                (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
-                (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
                 (get_group_subjects, regressors_one_sample, [('out_list', 'subject_list')]),
                 (regressors_one_sample, specify_model, [('regressors', 'regressors')])
             ])
 
         elif method == 'groupComp':
+
+            # Select copes and varcopes corresponding to the selected subjects
+            #   Indeed the SelectFiles node asks for all (*) subjects available
+            get_copes.inputs.elements = self.subject_list
+            get_varcopes.inputs.elements = self.subject_list
 
             # Setup a two sample t-test
             specify_model.inputs.contrasts = [
@@ -695,8 +699,6 @@ class PipelineTeamT54A(Pipeline):
 
             # Add missing connections
             group_level_analysis.connect([
-                (select_files, merge_copes, [('cope', 'in_files')]),
-                (select_files, merge_varcopes,[('varcope', 'in_files')]),
                 (get_equal_range_subjects, regressors_two_sample, [
                     ('out_list', 'equal_range_id')
                     ]),
