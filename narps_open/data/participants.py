@@ -51,9 +51,9 @@ def get_participants_subset(nb_participants: int = 108) -> list:
     return get_all_participants()[0:nb_participants]
 
 def get_group(group_name: str) -> list:
-    """ Return a list containing all the participants inside the group_name group
+    """ Return a list containing all the participants inside the group_name group """
 
-        Warning : the subject ids are return as written in the participants file (i.e.: 'sub-*')
-    """
     participants = get_participants_information()
-    return participants.loc[participants['group'] == group_name]['participant_id'].values.tolist()
+    group = participants.loc[participants['group'] == group_name]['participant_id'].values.tolist()
+
+    return [p.replace('sub-', '') for p in group]
