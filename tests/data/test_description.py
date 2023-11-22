@@ -55,7 +55,7 @@ class TestUtilsDescription:
         assert description['analysis.RT_modeling'] == 'duration'
         assert description['categorized_for_analysis.analysis_SW_with_version'] == 'SPM12'
         assert description['derived.func_fwhm'] == '8'
-        assert description['comments.excluded_from_narps_analysis'] == 'no'
+        assert description['comments.excluded_from_narps_analysis'] == 'No'
 
         # 4 - Check properties
         assert isinstance(description.general, dict)
@@ -84,7 +84,7 @@ class TestUtilsDescription:
         assert description.analysis['RT_modeling'] == 'duration'
         assert description.categorized_for_analysis['analysis_SW_with_version'] == 'SPM12'
         assert description.derived['func_fwhm'] == '8'
-        assert description.comments['excluded_from_narps_analysis'] == 'no'
+        assert description.comments['excluded_from_narps_analysis'] == 'No'
 
         # 6 - Test another team
         description = TeamDescription('9Q6R')
