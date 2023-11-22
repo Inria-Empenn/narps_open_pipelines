@@ -700,10 +700,10 @@ class PipelineTeamT54A(Pipeline):
             # Add missing connections
             group_level_analysis.connect([
                 (get_equal_range_subjects, regressors_two_sample, [
-                    ('out_list', 'equal_range_id')
+                    ('out_list', 'equal_range_ids')
                     ]),
                 (get_equal_indifference_subjects, regressors_two_sample, [
-                    ('out_list', 'equal_indifference_id')
+                    ('out_list', 'equal_indifference_ids')
                     ]),
                 (regressors_two_sample, specify_model, [
                     ('regressors', 'regressors'),
