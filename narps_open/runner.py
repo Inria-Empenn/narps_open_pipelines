@@ -159,12 +159,12 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID')
     subjects = parser.add_mutually_exclusive_group(required=True)
-    subjects.add_argument('-r', '--rsubjects', type=str,
-        help='the number of subjects to be randomly selected')
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
-        help='a list of subjects')
+        help='a list of subjects to be selected')
     subjects.add_argument('-n', '--nsubjects', type=str,
-        help='the number of subjects to be randomly selected')
+        help='the number of subjects to be selected')
+    subjects.add_argument('-r', '--rsubjects', type=str,
+        help='the number of subjects to be selected randomly')
     levels = parser.add_mutually_exclusive_group(required=False)
     levels.add_argument('-g', '--group', action='store_true', default=False,
         help='run the group level only')
