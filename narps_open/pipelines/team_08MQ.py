@@ -11,7 +11,7 @@ from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split,
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     # General usage
-    FSLCommand,
+    FSLCommand, ImageStats,
     # Preprocessing
     FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
     Threshold, Info, SUSAN, FLIRT, ApplyXFM, ConvertXFM,
@@ -177,9 +177,13 @@ class PipelineTeam08MQ(Pipeline):
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
+        # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
+        compute_median = Node(ImageStats(), name = 'compute_median')
+        compute_median.inputs.op_string = '-p 50' # Median is calculated as the 50th percentile
+
         # SUSAN Node - smoothing of functional images
+        #   we set brightness_threshold to .75x median of the input file, as performed by fMRIprep
         smoothing = Node(SUSAN(), name = 'smoothing')
-        smoothing.inputs.brightness_threshold = 2000.0 # TODO : which value ?
         smoothing.inputs.fwhm = self.fwhm
 
         # ApplyXFM Node - Alignment of white matter to functional space
@@ -287,6 +291,10 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, motion_correction, [('sbref', 'ref_file')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
             (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
+            (slice_time_correction, compute_median, [('slice_time_corrected_file', 'in_file')]),
+            (compute_median, smoothing, [(
+                ('out_stat', lambda x : .75 * x), 'brightness_threshold')
+            ]),
             (smoothing, alignment_func_to_anat, [('smoothed_file', 'in_file')]),
             (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
