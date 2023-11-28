@@ -22,7 +22,7 @@ from nipype.interfaces.fsl import (
 from nipype.interfaces.fsl.utils import Merge as MergeImages
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform
+from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform, ApplyTransforms
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -178,6 +178,7 @@ class PipelineTeam08MQ(Pipeline):
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
         # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
+        #   we do not need to filter on not-zero values (option -P) because a mask is passed
         compute_median = Node(ImageStats(), name = 'compute_median')
         compute_median.inputs.op_string = '-p 50' # Median is calculated as the 50th percentile
 
@@ -194,9 +195,9 @@ class PipelineTeam08MQ(Pipeline):
         alignment_csf = Node(ApplyXFM(), name = 'alignment_csf')
         alignment_csf.inputs.apply_xfm = True
 
-        # ApplyWarp Node - Alignment of functional data to anatomical space
-        alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
-        alignment_func_to_anat.inputs.apply_xfm = True
+        # ApplyTransforms Node - Alignment of functional data to anatomical space
+        #   warning : ApplyTransforms only accepts a list as transforms input
+        alignment_func_to_anat = Node(ApplyTransforms(), name = 'alignment_func_to_anat')
 
         # Select Node - Change the order of transforms coming from ANTs Registration
         reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
@@ -292,19 +293,22 @@ class PipelineTeam08MQ(Pipeline):
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
             (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
             (slice_time_correction, compute_median, [('slice_time_corrected_file', 'in_file')]),
+            (brain_extraction_func, compute_median, [('mask_file', 'mask_file')]),
             (compute_median, smoothing, [(
                 ('out_stat', lambda x : .75 * x), 'brightness_threshold')
             ]),
-            (smoothing, alignment_func_to_anat, [('smoothed_file', 'in_file')]),
-            (coregistration_sbref, alignment_func_to_anat, [('out_matrix_file', 'in_matrix_file')]),
-            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
-            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
+            (smoothing, alignment_func_to_anat, [('smoothed_file', 'input_image')]),
+            (coregistration_sbref, alignment_func_to_anat, [(
+                ('out_matrix_file', lambda x : [x]), 'transforms')
+            ]),
+            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference_image')]),
+            (alignment_func_to_anat, alignment_func_to_mni, [('output_image', 'input_image')]),
             (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
             (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
             (slice_time_correction, compute_confounds, [
                 ('slice_time_corrected_file', 'realigned_file')
-                ]),
+            ]),
 
             # Outputs of preprocessing
             (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
@@ -318,7 +322,7 @@ class PipelineTeam08MQ(Pipeline):
             (data_sink, remove_func_1, [('out_file', '_')]),
             (smoothing, remove_func_2, [('smoothed_file', 'file_name')]),
             (data_sink, remove_func_2, [('out_file', '_')]),
-            (alignment_func_to_anat, remove_func_3, [('out_file', 'file_name')]),
+            (alignment_func_to_anat, remove_func_3, [('output_image', 'file_name')]),
             (data_sink, remove_func_3, [('out_file', '_')]),
             (alignment_func_to_mni, remove_func_4, [('output_image', 'file_name')]),
             (data_sink, remove_func_4, [('out_file', '_')])
