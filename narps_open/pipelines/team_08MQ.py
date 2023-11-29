@@ -27,7 +27,9 @@ from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransfo
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
+from narps_open.core.common import (
+    remove_file, list_intersection, elements_in_string, clean_list, list_to_file
+    )
 
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
@@ -85,7 +87,6 @@ class PipelineTeam08MQ(Pipeline):
         # BET Node - Brain extraction for anatomical images
         brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
         brain_extraction_anat.inputs.frac = 0.5
-        #brain_extraction_anat.inputs.mask = True # TODO ?
 
         # FAST Node - Segmentation of anatomical images
         segmentation_anat = Node(FAST(), name = 'segmentation_anat')
@@ -173,6 +174,15 @@ class PipelineTeam08MQ(Pipeline):
         motion_correction.inputs.interpolation = 'spline' # should be 'trilinear'
         motion_correction.inputs.save_plots = True # Save transformation parameters
 
+        # Function Nodes get_slice_timings - Create a file with acquisition timing for each slide
+        slice_timings = Node(Function(
+            function = list_to_file,
+            input_names = ['input_list', 'file_name'],
+            output_names = ['output_file']
+            ), name = 'slice_timings')
+        slice_timings.inputs.input_list = TaskInformation()['SliceTiming']
+        slice_timings.inputs.file_name = 'slice_timings.tsv'
+
         # SliceTimer Node - Slice time correction
         slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
@@ -186,6 +196,7 @@ class PipelineTeam08MQ(Pipeline):
         #   we set brightness_threshold to .75x median of the input file, as performed by fMRIprep
         smoothing = Node(SUSAN(), name = 'smoothing')
         smoothing.inputs.fwhm = self.fwhm
+        compute_brightness_threshold = lambda x : .75 * x
 
         # ApplyXFM Node - Alignment of white matter to functional space
         alignment_white_matter = Node(ApplyXFM(), name = 'alignment_white_matter')
@@ -198,6 +209,7 @@ class PipelineTeam08MQ(Pipeline):
         # ApplyTransforms Node - Alignment of functional data to anatomical space
         #   warning : ApplyTransforms only accepts a list as transforms input
         alignment_func_to_anat = Node(ApplyTransforms(), name = 'alignment_func_to_anat')
+        transform_as_list = lambda x : [x]
 
         # Select Node - Change the order of transforms coming from ANTs Registration
         reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
@@ -290,16 +302,17 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, brain_extraction_func, [('func', 'in_file')]),
             (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
             (select_files, motion_correction, [('sbref', 'ref_file')]),
+            (slice_timings, slice_time_correction, [('output_file', 'custom_timings')]),
             (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
             (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
             (slice_time_correction, compute_median, [('slice_time_corrected_file', 'in_file')]),
             (brain_extraction_func, compute_median, [('mask_file', 'mask_file')]),
             (compute_median, smoothing, [(
-                ('out_stat', lambda x : .75 * x), 'brightness_threshold')
+                ('out_stat', compute_brightness_threshold), 'brightness_threshold')
             ]),
             (smoothing, alignment_func_to_anat, [('smoothed_file', 'input_image')]),
             (coregistration_sbref, alignment_func_to_anat, [(
-                ('out_matrix_file', lambda x : [x]), 'transforms')
+                ('out_matrix_file', transform_as_list), 'transforms')
             ]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference_image')]),
             (alignment_func_to_anat, alignment_func_to_mni, [('output_image', 'input_image')]),
