@@ -1,4 +1,4 @@
-# The NARPS Open Pipelines project
+# NARPS Open Pipelines
 
 <p align="center">
 	<img src="assets/images/project_illustration.png"/> 
@@ -23,16 +23,17 @@ We base our reproductions on the [original descriptions provided by the teams](h
 
 ## Contributing
 
-NARPS open pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analyses. 
+There are many ways you can contribute 🤗 :wave: Any help is welcome ! 
 
-There are many ways you can contribute 🤗 :wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
+NARPS Open Pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproducing the different teams’ analyses. Nevertheless knowing Python or Nipype is not required to take part in the project.
 
-### Installation
+Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
-To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
+## Using the codebase
 
-## Getting started
-If you are interested in using the codebase to run the pipelines, see the [user documentation (work-in-progress)].
+To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md).
+
+If you are interested in using the codebase, see the user documentation in [docs](/docs/) (work-in-progress).
 
 ## References
 
