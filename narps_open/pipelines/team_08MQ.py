@@ -49,7 +49,7 @@ class PipelineTeam08MQ(Pipeline):
         ]
 
     def get_preprocessing(self):
-        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
+        """ Return a Nipype workflow describing the preprocessing part of the pipeline """
 
         # IdentityInterface node - allows to iterate over subjects and runs
         information_source = Node(IdentityInterface(
