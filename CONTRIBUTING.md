@@ -23,11 +23,19 @@ Feel free to have a look to the following pipelines, these are examples :
 | team_id | softwares | fmriprep used ? | pipeline file |
 | --- | --- | --- | --- |
 | 2T6S | SPM | Yes | [/narps_open/pipelines/team_2T6S.py](/narps_open/pipelines/team_2T6S.py) |
-| X19V | FSL | Yes | [/narps_open/pipelines/team_X19V.py](/narps_open/pipelines/team_2T6S.py) |
+| X19V | FSL | Yes | [/narps_open/pipelines/team_X19V.py](/narps_open/pipelines/team_X19V.py) |
 
 ## 👩‍🎤 fMRI software trail
 
-...
+From the description provided by the team you chose, perform the analysis on the associated software to get as many log / configuration files /  as possible from the execution.
+
+Complementary hints on the process would definitely be , to description 
+
+Especially these files contain valuable information about model desing:
+* for FSL pipelines, `design.fsf` setup files coming from FEAT.
+* for SPM pipelines, 
+
+spm matlabbatch
 
 ## Find or propose an issue :clipboard:
 Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
