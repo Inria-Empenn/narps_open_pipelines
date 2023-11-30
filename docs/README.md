@@ -10,6 +10,7 @@
 ## Contribute to the code
 * :goggles: [description](/docs/description.md) - Conveniently access descriptions of the pipelines, as written by the teams involved in NARPS.
 * :writing_hand: [pipelines](/docs/pipelines.md) - How to write pipelines.
+* :compass: [core](/docs/core.md) - Helpful functions for writing pipelines.
 * :microscope: [testing](/docs/testing.md) - How to test the code.
 
 ## For maintainers
