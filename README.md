@@ -50,8 +50,8 @@ This project is supported by Région Bretagne (Boost MIND) and by Inria (Explora
 This project is developed in the Empenn team by Boris Clenet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
 
 In addition, this project was presented and received contributions during the following events:
- - OHBM Brainhack 2022 (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
- - e-ReproNim FENS NENS Cluster Brainhack (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
+ - [OHBM Brainhack 2022](https://ohbm.github.io/hackathon2022/) (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
+ - [e-ReproNim FENS NENS Cluster Brainhack](https://repro.school/2023-e-repronim-brainhack/) (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
  - [OHBM Brainhack 2023](https://ohbm.github.io/hackathon2023/) (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
  - [ORIGAMI lab](https://neurodatascience.github.io/) hackathon (September 2023): 
  - [Brainhack Marseille 2023](https://brainhack-marseille.github.io/) (December 2023): 
