@@ -20,6 +20,7 @@ from nipype.interfaces.fsl import (
     FLAMEO, Randomise, MultipleRegressDesign
     )
 from nipype.interfaces.fsl.utils import Merge as MergeImages
+from nipype.interfaces.fsl.maths import MultiImageMaths
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform, ApplyTransforms
@@ -211,6 +212,10 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_anat = Node(ApplyTransforms(), name = 'alignment_func_to_anat')
         transform_as_list = lambda x : [x]
 
+        # ApplyTransforms Node - Alignment of functional brain mask to anatomical space
+        #   warning : ApplyTransforms only accepts a list as transforms input
+        alignment_func_mask_to_anat = Node(ApplyTransforms(), name = 'alignment_func_mask_to_anat')
+
         # Select Node - Change the order of transforms coming from ANTs Registration
         reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
         reverse_transform_order.inputs.index = [1, 0]
@@ -219,6 +224,12 @@ class PipelineTeam08MQ(Pipeline):
         alignment_func_to_mni = Node(WarpTimeSeriesImageMultiTransform(),
             name = 'alignment_func_to_mni')
         alignment_func_to_mni.inputs.reference_image = \
+            Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
+
+        # ApplyWarp Node - Alignment of functional data to MNI space
+        alignment_func_mask_to_mni = Node(WarpTimeSeriesImageMultiTransform(),
+            name = 'alignment_func_mask_to_mni')
+        alignment_func_mask_to_mni.inputs.reference_image = \
             Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
 
         # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
@@ -315,18 +326,30 @@ class PipelineTeam08MQ(Pipeline):
                 ('out_matrix_file', transform_as_list), 'transforms')
             ]),
             (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference_image')]),
+            (brain_extraction_func, alignment_func_mask_to_anat, [('mask_file', 'input_image')]),
+            (coregistration_sbref, alignment_func_mask_to_anat, [(
+                ('out_matrix_file', transform_as_list), 'transforms')
+            ]),
+            (brain_extraction_anat, alignment_func_mask_to_anat, [
+                ('out_file', 'reference_image')
+            ]),
             (alignment_func_to_anat, alignment_func_to_mni, [('output_image', 'input_image')]),
+            (alignment_func_mask_to_anat, alignment_func_mask_to_mni, [('output_image', 'input_image')]),
             (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
             (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
-            (merge_masks, compute_confounds, [('out', 'mask_files')]), # Masks are in the func space
+            (reverse_transform_order, alignment_func_mask_to_mni, [('out', 'transformation_series')]),
+            (merge_masks, compute_confounds, [('out', 'mask_files')]), #Masks are in the func space
             (slice_time_correction, compute_confounds, [
                 ('slice_time_corrected_file', 'realigned_file')
             ]),
 
             # Outputs of preprocessing
             (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
-            (compute_confounds, data_sink, [('components_file', 'preprocessing.@components_file')]),
+            (compute_confounds, data_sink, [
+                ('components_file', 'preprocessing.@components_file')]),
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')]),
+            (alignment_func_mask_to_mni, data_sink, [
+                ('output_image', 'preprocessing.@output_mask')]),
 
             # File removals
             (motion_correction, remove_func_0, [('out_file', 'file_name')]),
@@ -352,7 +375,8 @@ class PipelineTeam08MQ(Pipeline):
             'file': [
                 'components_file.txt',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz',
+                # mask file 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
             ]
         }
         parameter_sets = product(*parameters.values())
@@ -403,13 +427,13 @@ class PipelineTeam08MQ(Pipeline):
                 durations['event'].append(float(info[1]))
                 amplitudes['event'].append(1.0)
                 onsets['gain'].append(float(info[0]))
-                durations['gain'].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                durations['gain'].append(float(info[1]))
                 amplitudes['gain'].append(float(info[2]))
                 onsets['loss'].append(float(info[0]))
-                durations['loss'].append(float(info[4])) # TODO : change to info[1] (= 4) ?
+                durations['loss'].append(float(info[1]))
                 amplitudes['loss'].append(float(info[3]))
                 onsets['response'].append(float(info[0]))
-                durations['response'].append(float(info[1])) # TODO : change to info[4] (= RT) ?
+                durations['response'].append(float(info[1]))
                 if 'accept' in info[5]:
                     amplitudes['response'].append(1.0)
                 elif 'reject' in info[5]:
@@ -581,6 +605,8 @@ class PipelineTeam08MQ(Pipeline):
             'cope' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'cope{contrast_id}.nii.gz'),
             'varcope' : join(self.directories.output_dir, 'run_level_analysis',
+                '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz'),
+            'masks' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
@@ -602,10 +628,19 @@ class PipelineTeam08MQ(Pipeline):
         merge_varcopes = Node(MergeImages(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
+        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
+        split_masks = Node(Split(), name = 'split_masks')
+        split_masks.inputs.splits = [1, len(self.run_list) - 1]
+        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
+
+        # MultiImageMaths Node - Create a subject mask by
+        #   computing the intersection of all run masks.
+        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
+        mask_intersection.op_string = '-mul %s ' * (len(self.run_list) - 1)
+
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'fe' # Fixed effect
-        estimate_model.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
         subject_level_analysis = Workflow(
@@ -617,8 +652,12 @@ class PipelineTeam08MQ(Pipeline):
                 ('contrast_id', 'contrast_id')]),
             (select_files, merge_copes, [('cope', 'in_files')]),
             (select_files, merge_varcopes, [('varcope', 'in_files')]),
+            (select_files, split_masks, [('masks', 'inlist')]),
+            (split_masks, mask_intersection, [('out1', 'in_file')]),
+            (split_masks, mask_intersection, [('out2', 'operand_files')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
+            (mask_intersection, estimate_model, [('out_file', 'mask_file')]),
             (generate_model, estimate_model, [
                 ('design_mat', 'design_file'),
                 ('design_con', 't_con_file'),
@@ -770,13 +809,20 @@ class PipelineTeam08MQ(Pipeline):
         merge_varcopes = Node(MergeImages(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
+        # MultiImageMaths Node - Create a group mask by
+        #   computing the intersection of all subject masks.
+        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
+        mask_intersection.inputs.in_file = 
+        mask_intersection.op_string = '-mul %s'
+        maths.inputs.operand_files = ["functional2.nii", "functional3.nii"]
+        maths.inputs.out_file = "functional4.nii"
+
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
 
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'ols' # Ordinary least squares
-        estimate_model.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         # Randomise Node -
         randomise = Node(Randomise(), name = 'randomise')
@@ -785,7 +831,6 @@ class PipelineTeam08MQ(Pipeline):
         randomise.inputs.vox_p_values = True
         randomise.inputs.c_thresh = 0.05
         randomise.inputs.tfce_E = 0.01
-        randomise.inputs.mask = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
@@ -803,6 +848,7 @@ class PipelineTeam08MQ(Pipeline):
             (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
+            (mask_intersection, estimate_model, [('out_file', 'mask_file')]),
             (specify_model, estimate_model, [
                 ('design_mat', 'design_file'),
                 ('design_con', 't_con_file'),
