@@ -336,7 +336,7 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_anat, alignment_func_mask_to_anat, [('out_file', 'reference')]),
             (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
             (alignment_func_mask_to_anat, alignment_func_mask_to_mni, [
-                ('output_image', 'input_image')
+                ('out_file', 'input_image')
                 ]),
             (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
             (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
@@ -819,8 +819,8 @@ class PipelineTeam08MQ(Pipeline):
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
         #TODO mask_intersection.inputs.in_file = 
         mask_intersection.op_string = '-mul %s'
-        maths.inputs.operand_files = ["functional2.nii", "functional3.nii"]
-        maths.inputs.out_file = "functional4.nii"
+        #maths.inputs.operand_files = ["functional2.nii", "functional3.nii"]
+        #maths.inputs.out_file = "functional4.nii"
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
