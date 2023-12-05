@@ -612,7 +612,8 @@ class PipelineTeam08MQ(Pipeline):
             'varcope' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz'),
             'masks' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}', 'sub-{subject_id}_task-MGT_run-*_bold_brain_mask_flirt_wtsimt.nii.gz')
+                '_run_id_*_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-*_bold_brain_mask_flirt_wtsimt.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -641,7 +642,7 @@ class PipelineTeam08MQ(Pipeline):
         # MultiImageMaths Node - Create a subject mask by
         #   computing the intersection of all run masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.op_string = '-mul %s ' * (len(self.run_list) - 1)
+        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.run_list) - 1)
 
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
