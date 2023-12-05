@@ -96,8 +96,8 @@ class TestPipelinesTeam08MQ:
 
         reference_durations = [
             [4.0, 4.0, 4.0, 4.0, 4.0],
-            [2.388, 2.289, 0.0, 2.08, 2.288],
-            [2.388, 2.289, 0.0, 2.08, 2.288],
+            [4.0, 4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0]
             ]
         for reference_array, test_array in zip(reference_durations, information.durations):

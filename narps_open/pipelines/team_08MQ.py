@@ -607,9 +607,9 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles Node - select necessary files
         templates = {
-            'cope' : join(self.directories.output_dir, 'run_level_analysis',
+            'copes' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'cope{contrast_id}.nii.gz'),
-            'varcope' : join(self.directories.output_dir, 'run_level_analysis',
+            'varcopes' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz'),
             'masks' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
@@ -656,8 +656,8 @@ class PipelineTeam08MQ(Pipeline):
             (information_source, select_files, [
                 ('subject_id', 'subject_id'),
                 ('contrast_id', 'contrast_id')]),
-            (select_files, merge_copes, [('cope', 'in_files')]),
-            (select_files, merge_varcopes, [('varcope', 'in_files')]),
+            (select_files, merge_copes, [('copes', 'in_files')]),
+            (select_files, merge_varcopes, [('varcopes', 'in_files')]),
             (select_files, split_masks, [('masks', 'inlist')]),
             (split_masks, mask_intersection, [('out1', 'in_file')]),
             (split_masks, mask_intersection, [('out2', 'operand_files')]),
@@ -668,6 +668,7 @@ class PipelineTeam08MQ(Pipeline):
                 ('design_mat', 'design_file'),
                 ('design_con', 't_con_file'),
                 ('design_grp', 'cov_split_file')]),
+            (mask_intersection, data_sink, [('out_file', 'subject_level_analysis.@mask')]),
             (estimate_model, data_sink, [
                 ('zstats', 'subject_level_analysis.@stats'),
                 ('tstats', 'subject_level_analysis.@tstats'),
@@ -770,10 +771,12 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles Node - select necessary files
         templates = {
-            'cope' : join(self.directories.output_dir, 'subject_level_analysis',
+            'copes' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'cope1.nii.gz'),
-            'varcope' : join(self.directories.output_dir, 'subject_level_analysis',
-                '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz')
+            'varcopes' : join(self.directories.output_dir, 'subject_level_analysis',
+                '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
+            'masks' : join(self.directories.output_dir, 'subject_level_analysis',
+                '_contrast_id_{contrast_id}_subject_id_*', 'mask')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -815,13 +818,15 @@ class PipelineTeam08MQ(Pipeline):
         merge_varcopes = Node(MergeImages(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
+        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
+        split_masks = Node(Split(), name = 'split_masks')
+        split_masks.inputs.splits = [1, len(self.subject_list) - 1]
+        split_masks.inputs.squeeze = True
+
         # MultiImageMaths Node - Create a group mask by
         #   computing the intersection of all subject masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        #TODO mask_intersection.inputs.in_file = 
-        mask_intersection.op_string = '-mul %s'
-        #maths.inputs.operand_files = ["functional2.nii", "functional3.nii"]
-        #maths.inputs.out_file = "functional4.nii"
+        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.subject_list) - 1)
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
@@ -848,8 +853,11 @@ class PipelineTeam08MQ(Pipeline):
         )
         group_level_analysis.connect([
             (information_source, select_files, [('contrast_id', 'contrast_id')]),
-            (select_files, get_copes, [('cope', 'input_str')]),
-            (select_files, get_varcopes, [('varcope', 'input_str')]),
+            (select_files, get_copes, [('copes', 'input_str')]),
+            (select_files, get_varcopes, [('varcopes', 'input_str')]),
+            (select_files, split_masks, [('masks', 'inlist')]),
+            (split_masks, mask_intersection, [('out1', 'in_file')]),
+            (split_masks, mask_intersection, [('out2', 'operand_files')]),
             (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
             (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
