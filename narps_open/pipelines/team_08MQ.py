@@ -363,7 +363,7 @@ class PipelineTeam08MQ(Pipeline):
             (data_sink, remove_func_1, [('out_file', '_')]),
             (smoothing, remove_func_2, [('smoothed_file', 'file_name')]),
             (data_sink, remove_func_2, [('out_file', '_')]),
-            (alignment_func_to_anat, remove_func_3, [('output_image', 'file_name')]),
+            (alignment_func_to_anat, remove_func_3, [('out_file', 'file_name')]),
             (data_sink, remove_func_3, [('out_file', '_')]),
             (alignment_func_to_mni, remove_func_4, [('output_image', 'file_name')]),
             (data_sink, remove_func_4, [('out_file', '_')])
