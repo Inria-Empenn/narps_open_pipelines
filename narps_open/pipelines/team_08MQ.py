@@ -202,19 +202,22 @@ class PipelineTeam08MQ(Pipeline):
         # ApplyXFM Node - Alignment of white matter to functional space
         alignment_white_matter = Node(ApplyXFM(), name = 'alignment_white_matter')
         alignment_white_matter.inputs.apply_xfm = True
+        alignment_white_matter.inputs.no_resample = True
 
         # ApplyXFM Node - Alignment of CSF to functional space
         alignment_csf = Node(ApplyXFM(), name = 'alignment_csf')
         alignment_csf.inputs.apply_xfm = True
+        alignment_csf.inputs.no_resample = True
 
-        # ApplyTransforms Node - Alignment of functional data to anatomical space
-        #   warning : ApplyTransforms only accepts a list as transforms input
-        alignment_func_to_anat = Node(ApplyTransforms(), name = 'alignment_func_to_anat')
-        transform_as_list = lambda x : [x]
+        # ApplyXFM Node - Alignment of functional data to anatomical space
+        alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
+        alignment_func_to_anat.inputs.apply_xfm = True
+        alignment_func_to_anat.inputs.no_resample = True
 
         # ApplyTransforms Node - Alignment of functional brain mask to anatomical space
-        #   warning : ApplyTransforms only accepts a list as transforms input
-        alignment_func_mask_to_anat = Node(ApplyTransforms(), name = 'alignment_func_mask_to_anat')
+        alignment_func_mask_to_anat = Node(ApplyXFM(), name = 'alignment_func_mask_to_anat')
+        alignment_func_mask_to_anat.inputs.apply_xfm = True
+        alignment_func_mask_to_anat.inputs.no_resample = True
 
         # Select Node - Change the order of transforms coming from ANTs Registration
         reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
@@ -318,30 +321,32 @@ class PipelineTeam08MQ(Pipeline):
             (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
             (slice_time_correction, compute_median, [('slice_time_corrected_file', 'in_file')]),
             (brain_extraction_func, compute_median, [('mask_file', 'mask_file')]),
-            (compute_median, smoothing, [(
-                ('out_stat', compute_brightness_threshold), 'brightness_threshold')
-            ]),
-            (smoothing, alignment_func_to_anat, [('smoothed_file', 'input_image')]),
-            (coregistration_sbref, alignment_func_to_anat, [(
-                ('out_matrix_file', transform_as_list), 'transforms')
-            ]),
-            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference_image')]),
-            (brain_extraction_func, alignment_func_mask_to_anat, [('mask_file', 'input_image')]),
-            (coregistration_sbref, alignment_func_mask_to_anat, [(
-                ('out_matrix_file', transform_as_list), 'transforms')
-            ]),
-            (brain_extraction_anat, alignment_func_mask_to_anat, [
-                ('out_file', 'reference_image')
-            ]),
-            (alignment_func_to_anat, alignment_func_to_mni, [('output_image', 'input_image')]),
-            (alignment_func_mask_to_anat, alignment_func_mask_to_mni, [('output_image', 'input_image')]),
+            (compute_median, smoothing, [
+                (('out_stat', compute_brightness_threshold), 'brightness_threshold')
+                ]),
+            (smoothing, alignment_func_to_anat, [('smoothed_file', 'in_file')]),
+            (coregistration_sbref, alignment_func_to_anat, [
+                ('out_matrix_file', 'in_matrix_file')
+                ]),
+            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
+            (brain_extraction_func, alignment_func_mask_to_anat, [('mask_file', 'in_file')]),
+            (coregistration_sbref, alignment_func_mask_to_anat, [
+                ('out_matrix_file', 'in_matrix_file')
+                ]),
+            (brain_extraction_anat, alignment_func_mask_to_anat, [('out_file', 'reference')]),
+            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
+            (alignment_func_mask_to_anat, alignment_func_mask_to_mni, [
+                ('output_image', 'input_image')
+                ]),
             (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
             (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
-            (reverse_transform_order, alignment_func_mask_to_mni, [('out', 'transformation_series')]),
+            (reverse_transform_order, alignment_func_mask_to_mni, [
+                ('out', 'transformation_series')
+                ]),
             (merge_masks, compute_confounds, [('out', 'mask_files')]), #Masks are in the func space
             (slice_time_correction, compute_confounds, [
                 ('slice_time_corrected_file', 'realigned_file')
-            ]),
+                ]),
 
             # Outputs of preprocessing
             (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
