@@ -812,7 +812,7 @@ class PipelineTeam08MQ(Pipeline):
         # MultiImageMaths Node - Create a group mask by
         #   computing the intersection of all subject masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.in_file = 
+        #TODO mask_intersection.inputs.in_file = 
         mask_intersection.op_string = '-mul %s'
         maths.inputs.operand_files = ["functional2.nii", "functional3.nii"]
         maths.inputs.out_file = "functional4.nii"
