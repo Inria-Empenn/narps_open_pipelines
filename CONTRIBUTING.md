@@ -27,15 +27,11 @@ Feel free to have a look to the following pipelines, these are examples :
 
 ## 👩‍🎤 fMRI software trail
 
-From the description provided by the team you chose, perform the analysis on the associated software to get as many log / configuration files /  as possible from the execution.
+From the description provided by the team you chose, perform the analysis on the associated software to get as many metadata (log, configuration files, and other relevant files for reproducibility) as possible from the execution. Complementary hints on the process would definitely be welcome, to enrich the description.
 
-Complementary hints on the process would definitely be , to description 
-
-Especially these files contain valuable information about model desing:
-* for FSL pipelines, `design.fsf` setup files coming from FEAT.
-* for SPM pipelines, 
-
-spm matlabbatch
+Especially these files contain valuable information about model design:
+* for FSL pipelines, `design.fsf` setup files coming from FEAT ;
+* for SPM pipelines, matlabbatch files.
 
 ## Find or propose an issue :clipboard:
 Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
