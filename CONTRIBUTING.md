@@ -17,7 +17,7 @@ Not sure which pipeline to start with :thinking:? The [pipeline dashboard](https
 ## 2 - Interact using issues
 `🧠 fMRI soft` `🐍 Python`
 
-Browse [issues](https://github.com/Inria-Empenn/narps_open_pipelines/issues/) before starting a new one. If the pipeline is :orange_circle: the associated issues are listed on the [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status).
+Browse [issues](https://github.com/Inria-Empenn/narps_open_pipelines/issues/) before starting a new one. If the pipeline is :orange_circle:, the associated issues are listed on the [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status).
 
 You can either:
 * comment on an existing issue with details or your findings about the pipeline;
@@ -27,9 +27,9 @@ You can either:
 > As soon as the issue is marked as `🏁 status: ready for dev` you can proceed to the next step.
 
 ## 3 - Use pull requests
-`🧠 fMRI soft` `🐍 Python`
+`🐍 Python`
 
-1. If needed, [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository;
+1. [Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository;
 2. create a separate branch for the issue you're working on (do not make changes to the default branch of your fork).
 3. push your work to the branch as soon as possible;
 4. visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start a draft pull request.
@@ -37,12 +37,12 @@ You can either:
 > [!WARNING]
 > Make sure you create a **Draft Pull Request** as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork), and please stick to the description of the pull request template as much as possible.
 
-## 4 - Reproduction 
-
-Continue writing your work and push it to the branch. Make sure you perform all the items of the pull request checklist.
+## 4 - Reproduce pipeline
 
 ### Translate the pipeline description into code
 `🐍 Python`
+
+Write your code and push it to the branch. Make sure you perform all the items of the pull request checklist.
 
 From the description provided by the team you chose, write Nipype workflows that match the steps performed by the teams (preprocessing, run level analysis, subject level analysis, group level analysis).
 
@@ -54,18 +54,17 @@ We created templates with modifications to make and holes to fill to help you wi
 > | --- | --- | --- | --- |
 > | Q6O0 | SPM | Yes | [/narps_open/pipelines/team_Q6O0.py](/narps_open/pipelines/team_Q6O0.py) |
 
+Once your work is ready, you may ask a reviewer to your pull request, as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review). Please turn your draft pull request into a *regular* pull request, by clicking **Ready for review** in the pull request page.
+
 ### Run the pipeline and produce evidences
 `🧠 fMRI soft`
 
-From the description provided by the team you chose, perform the analysis on the associated software to get as many metadata (log, configuration files, and other relevant files for reproducibility) as possible from the execution. Complementary hints and commend on the process would definitely be welcome, to enrich the description (e.g.: relevant parameters not written in the description, etc.).
+From the description provided by the team you chose, perform the analysis on the associated software to get as many metadata (log, configuration files, and other relevant files for reproducibility) as possible from the execution. Complementary hints and comments on the process would definitely be welcome, to enrich the description (e.g.: relevant parameters not written in the description, etc.).
 
 Especially these files contain valuable information about model design:
 * for FSL pipelines, `design.fsf` setup files coming from FEAT ;
 * for SPM pipelines, `matlabbatch` files.
 
-### Request Review
-`🧠 fMRI soft` `🐍 Python`
-
-Once your work is ready, you may add a reviewer to your PR, as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review). Please turn your draft pull request into a *regular* pull request, by clicking **Ready for review** in the pull request page.
+You can attach these files as comments on the pipeline reproduction issue.
 
 **:wave: Thank you for contributing to the project!**
