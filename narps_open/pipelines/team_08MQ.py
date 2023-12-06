@@ -870,6 +870,7 @@ class PipelineTeam08MQ(Pipeline):
                 ('design_grp', 'cov_split_file')
                 ]),
             (merge_copes, randomise, [('merged_file', 'in_file')]),
+            (mask_intersection, randomise, [('out_file', 'mask')]),
             (specify_model, randomise, [
                 ('design_mat', 'design_mat'),
                 ('design_con', 'tcon')
