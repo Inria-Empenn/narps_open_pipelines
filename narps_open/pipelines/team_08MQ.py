@@ -776,7 +776,8 @@ class PipelineTeam08MQ(Pipeline):
             'varcopes' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
             'masks' : join(self.directories.output_dir, 'subject_level_analysis',
-                '_contrast_id_{contrast_id}_subject_id_*', 'mask')
+                '_contrast_id_{contrast_id}_subject_id_*',
+                'sub-*_task-MGT_run-*_bold_brain_mask_flirt_wtsimt_maths.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
