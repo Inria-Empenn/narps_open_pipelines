@@ -191,7 +191,9 @@ class PipelineTeam08MQ(Pipeline):
         # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
         #   we do not need to filter on not-zero values (option -P) because a mask is passed
         compute_median = Node(ImageStats(), name = 'compute_median')
-        compute_median.inputs.op_string = '-p 50' # Median is calculated as the 50th percentile
+        compute_median.inputs.op_string = '-p 50 -k %s'
+        # Median is calculated as the 50th percentile
+        # -k option adds a mask
 
         # SUSAN Node - smoothing of functional images
         #   we set brightness_threshold to .75x median of the input file, as performed by fMRIprep
