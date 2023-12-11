@@ -189,11 +189,13 @@ class PipelineTeam08MQ(Pipeline):
         slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
         # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
+        #   -k option adds a mask
+        #   -p computes the 50th percentile (= median)
         #   we do not need to filter on not-zero values (option -P) because a mask is passed
+        #   Warning : these options must be passed in the right order
+        #       (i.e.: apply mask then compute stat)
         compute_median = Node(ImageStats(), name = 'compute_median')
-        compute_median.inputs.op_string = '-p 50 -k %s'
-        # Median is calculated as the 50th percentile
-        # -k option adds a mask
+        compute_median.inputs.op_string = '-k %s -p 50'
 
         # SUSAN Node - smoothing of functional images
         #   we set brightness_threshold to .75x median of the input file, as performed by fMRIprep
