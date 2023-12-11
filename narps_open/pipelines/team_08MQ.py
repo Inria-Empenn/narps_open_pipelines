@@ -248,7 +248,7 @@ class PipelineTeam08MQ(Pipeline):
         compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
 
         # Function Nodes remove_files - Remove sizeable files once they aren't needed
-        remove_func_0 = MapNode(Function(
+        """remove_func_0 = MapNode(Function(
             function = remove_file,
             input_names = ['_', 'file_name'],
             output_names = []
@@ -276,7 +276,7 @@ class PipelineTeam08MQ(Pipeline):
             function = remove_file,
             input_names = ['_', 'file_name'],
             output_names = []
-            ), name = 'remove_func_4', iterfield = 'file_name')
+            ), name = 'remove_func_4', iterfield = 'file_name')"""
 
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
@@ -356,7 +356,7 @@ class PipelineTeam08MQ(Pipeline):
                 ('components_file', 'preprocessing.@components_file')]),
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')]),
             (alignment_func_mask_to_mni, data_sink, [
-                ('output_image', 'preprocessing.@output_mask')]),
+                ('output_image', 'preprocessing.@output_mask')])""",
 
             # File removals
             (motion_correction, remove_func_0, [('out_file', 'file_name')]),
@@ -368,7 +368,7 @@ class PipelineTeam08MQ(Pipeline):
             (alignment_func_to_anat, remove_func_3, [('out_file', 'file_name')]),
             (data_sink, remove_func_3, [('out_file', '_')]),
             (alignment_func_to_mni, remove_func_4, [('output_image', 'file_name')]),
-            (data_sink, remove_func_4, [('out_file', '_')])
+            (data_sink, remove_func_4, [('out_file', '_')])"""
         ])
 
         return preprocessing
