@@ -96,6 +96,9 @@ class PipelineTeam08MQ(Pipeline):
         segmentation_anat.inputs.probability_maps = False # Only output partial volume estimation
 
         # Split Node - Split probability maps as they output from the segmentation node
+        #   outputs.out1 is CSF
+        #   outputs.out2 is grey matter
+        #   outputs.out3 is white matter
         split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
         split_segmentation_maps.inputs.splits = [1, 1, 1]
         split_segmentation_maps.inputs.squeeze = True # Unfold one-element splits removing the list
@@ -267,7 +270,7 @@ class PipelineTeam08MQ(Pipeline):
             (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
             (brain_extraction_anat, normalization_anat, [('out_file', 'moving_image')]),
             (segmentation_anat, split_segmentation_maps, [('partial_volume_files', 'inlist')]),
-            (split_segmentation_maps, threshold_white_matter, [('out2', 'in_file')]),
+            (split_segmentation_maps, threshold_white_matter, [('out3', 'in_file')]),
             (split_segmentation_maps, threshold_csf, [('out1', 'in_file')]),
             (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
             (threshold_csf, erode_csf, [('out_file', 'in_file')]),
@@ -289,7 +292,7 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, brain_extraction_sbref, [('sbref', 'in_file')]),
             (brain_extraction_sbref, coregistration_sbref, [('out_file', 'in_file')]),
             (brain_extraction_anat, coregistration_sbref, [('out_file', 'reference')]),
-            (split_segmentation_maps, coregistration_sbref, [('out2', 'wm_seg')]),
+            (split_segmentation_maps, coregistration_sbref, [('out3', 'wm_seg')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
             (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
 
