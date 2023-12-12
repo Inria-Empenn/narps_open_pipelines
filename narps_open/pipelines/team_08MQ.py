@@ -153,6 +153,12 @@ class PipelineTeam08MQ(Pipeline):
         # PrepareFieldmap Node - Convert phase and magnitude to fieldmap images
         convert_to_fieldmap = Node(PrepareFieldmap(), name = 'convert_to_fieldmap')
 
+        # BET Node - Brain extraction for high contrast functional images
+        brain_extraction_sbref = Node(BET(), name = 'brain_extraction_sbref')
+        brain_extraction_sbref.inputs.frac = 0.3
+        brain_extraction_sbref.inputs.mask = True
+        brain_extraction_sbref.inputs.functional = False # 3D data
+
         # FLIRT Node - Align high contrast functional images to anatomical
         #   (i.e.: single-band reference images a.k.a. sbref)
         coregistration_sbref = Node(FLIRT(), name = 'coregistration_sbref')
@@ -280,8 +286,9 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
 
             # High contrast functional volume
-            (select_files, coregistration_sbref, [('sbref', 'in_file')]),
-            (select_files, coregistration_sbref, [('anat', 'reference')]),
+            (select_files, brain_extraction_sbref, [('sbref', 'in_file')]),
+            (brain_extraction_sbref, coregistration_sbref, [('out_file', 'in_file')]),
+            (brain_extraction_anat, coregistration_sbref, [('out_file', 'reference')]),
             (threshold_white_matter, coregistration_sbref, [('out_file', 'wm_seg')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
             (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
