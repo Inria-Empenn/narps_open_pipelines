@@ -258,6 +258,33 @@ class PipelineTeam08MQ(Pipeline):
         compute_confounds.inputs.merge_method = 'union'
         compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
 
+        # Function Nodes remove_files - Remove sizeable files once they aren't needed
+        remove_func_0 = MapNode(Function(
+            function = remove_file,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'remove_func_0', iterfield = 'file_name')
+        remove_func_1 = MapNode(Function(
+            function = remove_file,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'remove_func_1', iterfield = 'file_name')
+        remove_func_2 = MapNode(Function(
+            function = remove_file,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'remove_func_2', iterfield = 'file_name')
+        remove_func_3 = MapNode(Function(
+            function = remove_file,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'remove_func_3', iterfield = 'file_name')
+        remove_func_4 = MapNode(Function(
+            function = remove_file,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'remove_func_4', iterfield = 'file_name')
+
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
@@ -338,7 +365,19 @@ class PipelineTeam08MQ(Pipeline):
                 ('components_file', 'preprocessing.@components_file')]),
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')]),
             (alignment_func_mask_to_mni, data_sink, [
-                ('output_image', 'preprocessing.@output_mask')])
+                ('output_image', 'preprocessing.@output_mask')]),
+            
+            # File removals
+            (motion_correction, remove_func_0, [('out_file', 'file_name')]),
+            (data_sink, remove_func_0, [('out_file', '_')]),
+            (slice_time_correction, remove_func_1, [('slice_time_corrected_file', 'file_name')]),
+            (data_sink, remove_func_1, [('out_file', '_')]),
+            (smoothing, remove_func_2, [('smoothed_file', 'file_name')]),
+            (data_sink, remove_func_2, [('out_file', '_')]),
+            (alignment_func_to_anat, remove_func_3, [('out_file', 'file_name')]),
+            (data_sink, remove_func_3, [('out_file', '_')]),
+            (alignment_func_to_mni, remove_func_4, [('output_image', 'file_name')]),
+            (data_sink, remove_func_4, [('out_file', '_')])
         ])
 
         return preprocessing
