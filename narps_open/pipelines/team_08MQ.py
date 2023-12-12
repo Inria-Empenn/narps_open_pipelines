@@ -282,6 +282,7 @@ class PipelineTeam08MQ(Pipeline):
             # High contrast functional volume
             (select_files, coregistration_sbref, [('sbref', 'in_file')]),
             (select_files, coregistration_sbref, [('anat', 'reference')]),
+            (threshold_white_matter, coregistration_sbref, [('out_file', 'wm_seg')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
             (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
 
