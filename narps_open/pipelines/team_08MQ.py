@@ -289,7 +289,7 @@ class PipelineTeam08MQ(Pipeline):
             (select_files, brain_extraction_sbref, [('sbref', 'in_file')]),
             (brain_extraction_sbref, coregistration_sbref, [('out_file', 'in_file')]),
             (brain_extraction_anat, coregistration_sbref, [('out_file', 'reference')]),
-            (threshold_white_matter, coregistration_sbref, [('out_file', 'wm_seg')]),
+            (split_segmentation_maps, coregistration_sbref, [('out2', 'wm_seg')]),
             (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
             (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
 
