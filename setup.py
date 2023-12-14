@@ -17,6 +17,7 @@ requires = [
     'importlib_resources>=5.10.2,<5.11',
     'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
+    'nilearn>=0.10.0,<0.11',
     'nipype',
     'pandas'
 ]
@@ -59,7 +60,8 @@ setup(
     data_files = [
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/default_config.toml']),
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/testing_config.toml']),
-        ('narps_open/utils/description', ['narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv']),
-        ('narps_open/utils/description', ['narps_open/utils/description/analysis_pipelines_full_descriptions.tsv'])
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_comments.tsv']),
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_derived_descriptions.tsv']),
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_full_descriptions.tsv'])
     ]
 )

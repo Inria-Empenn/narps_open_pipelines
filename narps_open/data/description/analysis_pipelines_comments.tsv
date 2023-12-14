@@ -1,0 +1,71 @@
+teamID	excluded_from_narps_analysis	exclusion_comment	reproducibility	reproducibility_comment
+50GV	No	N/A	3	Uses custom software (Denoiser)
+9Q6R	No	N/A	2	
+O21U	No	N/A	3	
+U26C	No	N/A	4	Link to shared analysis code : https://github.com/gladomat/narps
+43FJ	No	N/A	2	
+C88N	No	N/A	3	
+4TQ6	Yes	Resampled image offset and too large compared to template.	3	
+T54A	No	N/A	3	
+2T6S	No	N/A	3	
+L7J7	No	N/A	3	
+0JO0	No	N/A	3	
+X1Y5	No	N/A	2	
+51PW	No	N/A	3	
+6VV2	No	N/A	2	
+O6R6	No	N/A	3	
+C22U	No	N/A	1	Custom Matlab script for white matter PCA confounds
+3PQ2	No	N/A	2	
+UK24	No	N/A	2	
+4SZ2	Yes	Resampled image offset from template brain.	3	
+9T8E	No	N/A	3	
+94GU	No	N/A	1	Multiple software dependencies : SPM + ART + TAPAS + Matlab.
+I52Y	No	N/A	2	
+5G9K	Yes	Values in the unthresholded images are not z / t stats	3	
+2T7P	Yes	Missing thresholded images.	2	Link to shared analysis code : https://osf.io/3b57r
+UI76	No	N/A	3	
+B5I6	No	N/A	3	
+V55J	Yes	Bad histogram : very small values.	2	
+X19V	No	N/A	3	
+0C7Q	Yes	Appears to be a p-value distribution, with slight excursions below and above zero.	2	
+R5K7	No	N/A	2	
+0I4U	No	N/A	2	
+3C6G	No	N/A	2	
+R9K3	No	N/A	3	
+O03M	No	N/A	3	
+08MQ	No	N/A	2	
+80GC	No	N/A	3	
+J7F9	No	N/A	3	
+R7D1	No	N/A	3	Link to shared analysis code : https://github.com/IMTAltiStudiLucca/NARPS_R7D1
+Q58J	Yes	Bad histogram : bimodal, zero-inflated with a second distribution centered around 5.	3	Link to shared analysis code : https://github.com/amrka/NARPS_Q58J
+L3V8	Yes	Rejected due to large amount of missing brain in center.	2	
+SM54	No	N/A	3	
+1KB2	No	N/A	2	
+0H5E	Yes	Rejected due to large amount of missing brain in center.	2	
+P5F3	Yes	Rejected due to large amounts of missing data across brain.	2	
+Q6O0	No	N/A	3	
+R42Q	No	N/A	2	Uses fMRIflows, a custom software based on NiPype. Code available here : https://github.com/ilkayisik/narps_R42Q
+L9G5	No	N/A	2	
+DC61	No	N/A	3	
+E3B6	Yes	Bad histogram : very long tail, with substantial inflation at a value just below zero.	4	Link to shared analysis code : doi.org/10.5281/zenodo.3518407
+16IN	Yes	Values in the unthresholded images are not z / t stats	2	Multiple software dependencies : matlab + SPM + FSL + R + TExPosition + neuroim. Link to shared analysis code : https://github.com/jennyrieck/NARPS
+46CD	No	N/A	1	
+6FH5	Yes	Missing much of the central brain.	2	
+K9P0	No	N/A	3	
+9U7M	No	N/A	2	
+VG39	Yes	Performed small volume corrected instead of whole-brain analysis	3	
+1K0E	Yes	Used surface-based analysis, only provided data for cortical ribbon.	1	
+X1Z4	Yes	Used surface-based analysis, only provided data for cortical ribbon.	1	Multiple software dependencies : FSL + fmriprep + ciftify + HCP workbench + Freesurfer + ANTs
+I9D6	No	N/A	2	
+E6R3	No	N/A	2	
+27SS	No	N/A	2	
+B23O	No	N/A	3	
+AO86	No	N/A	2	
+L1A8	Yes	Not in MNI standard space.	2	
+IZ20	No	N/A	1	
+3TR7	No	N/A	3	
+98BT	Yes	Rejected due to very bad normalization.	2	
+XU70	No	N/A	1	Uses custom software : FSL + 4drealign
+0ED6	No	N/A	2	
+I07H	Yes	Bad histogram : bimodal, with second distribution centered around 2.5.	2	
+1P0Y	No	N/A	2	

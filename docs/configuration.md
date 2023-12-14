@@ -32,4 +32,4 @@ configuration.config_file = '/path/to/my/own/configuration/file.toml'
 
 Configuration files must conform with the [TOML](https://toml.io/en/) format. See this [article](https://realpython.com/python-toml/#use-toml-as-a-configuration-format) on Real Python to know more about configuration files with TOML.
 
-For python versions below 3.11, we use [tomli](https://pypi.org/project/tomli/) as a dependancy for parsing TOML. Starting from python 3.11, [tomllib](https://docs.python.org/3/library/tomllib.html) is included in the Standard Library and would replace tomli.
+For python versions below 3.11, we use [tomli](https://pypi.org/project/tomli/) as a dependency for parsing TOML. Starting from python 3.11, [tomllib](https://docs.python.org/3/library/tomllib.html) is included in the Standard Library and would replace tomli.

@@ -1,6 +1,6 @@
 # :microscope: How to test NARPS open pipelines ?
 
-:mega: This file descripes the test suite and features for the project.
+:mega: This file describes the test suite and features for the project.
 
 ## Static analysis
 
@@ -46,7 +46,7 @@ Tests can be launched manually or while using CI (Continuous Integration).
 
 The main idea is to create one test file per source module (eg.: *tests/pipelines/test_pipelines.py* contains all the unit tests for the module `narps_open.pipelines`).
 
-Each test file defines a class (in the example: `TestPipelines`), in which each test is written in a static method begining with `test_`.
+Each test file defines a class (in the example: `TestPipelines`), in which each test is written in a static method beginning with `test_`.
 
 Finally we use one or several `assert` ; each one of them making the whole test fail if the assertion is False. One can also use the `raises` method of pytest, writing `with raises(Exception):` to test if a piece of code raised the expected Exception. See the reference [here](https://docs.pytest.org/en/6.2.x/reference.html?highlight=raises#pytest.raises).
 
@@ -59,7 +59,7 @@ Use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to i
 
 ## Save time by downsampling data
 
-Running pipelines over all the subjects is time and resource consuming. Ideally, this could be done only once we are confident that the pipeline is correcly reproduced, just to make sure the final values of correlations between original team results and the reproduced ones are above the expected thresholds.
+Running pipelines over all the subjects is time and resource consuming. Ideally, this could be done only once we are confident that the pipeline is correctly reproduced, just to make sure the final values of correlations between original team results and the reproduced ones are above the expected thresholds.
 
 But most of the time we need to run pipelines earlier in the development process, and for this step we need a (quick) answer whether it is going the right way or not.
 

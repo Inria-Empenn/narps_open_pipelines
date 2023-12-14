@@ -7,20 +7,39 @@ from os.path import join, basename
 from json import dumps
 from argparse import ArgumentParser
 from glob import glob
+from collections import OrderedDict
 
 from requests import get
 from importlib_resources import files
 
-from narps_open.utils.description import TeamDescription
+from narps_open.data.description import TeamDescription
 from narps_open.pipelines import implemented_pipelines
 
 def get_opened_issues():
-    """ Return a list of opened issues for the NARPS Open Pipelines project """
-    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
+    """ Return a list of opened issues and pull requests for the NARPS Open Pipelines project """
+
+    # First get the number of issues of the project
+    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines'
     response = get(request_url, timeout = 2)
     response.raise_for_status()
+    nb_issues = response.json()['open_issues']
 
-    return response.json()
+    # Get all opened issues
+    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
+    request_url += '?page={page_number}'
+
+    issues = []
+    page = True # Will later be replaced by a table
+    page_number = 1 # According to the doc, first page is not page 0
+    # https://docs.github.com/en/rest/issues/issues#list-repository-issues
+    while bool(page) is True : # Test if the page is empty
+        response = get(request_url.format(page_number = str(page_number)), timeout = 2)
+        response.raise_for_status()
+        page = response.json()
+        issues += page
+        page_number += 1
+
+    return issues
 
 def get_teams_with_pipeline_files():
     """ Return a set of teams having a file for their pipeline in the repository """
@@ -55,32 +74,55 @@ class PipelineStatusReport():
 
             self.contents[team_id] = {}
 
-            # Get softwares used in the pipeline, from the team description
+            # Get software used in the pipeline, from the team description
             description = TeamDescription(team_id)
-            self.contents[team_id]['softwares'] = \
+            self.contents[team_id]['software'] = \
                 description.categorized_for_analysis['analysis_SW']
             self.contents[team_id]['fmriprep'] = description.preprocessing['used_fmriprep_data']
 
-            # Get issues related to the team
-            issues = {}
-            for issue in opened_issues:
-                if team_id in issue['title'] or team_id in issue['body']:
-                    issues[issue['number']] = issue['html_url']
-            self.contents[team_id]['issues'] = issues
+            # Get comments about the pipeline
+            self.contents[team_id]['excluded'] = \
+                description.comments['excluded_from_narps_analysis']
+            self.contents[team_id]['reproducibility'] = \
+                int(description.comments['reproducibility'])
+            self.contents[team_id]['reproducibility_comment'] = \
+                description.comments['reproducibility_comment']
 
-            # Derive the satus of the pipeline
-            has_issues = len(issues) > 0
+            # Get issues and pull requests related to the team
+            issues = {}
+            pulls = {}
+            for issue in opened_issues:
+                if issue['title'] is None or issue['body'] is None:
+                    continue
+                if team_id in issue['title'] or team_id in issue['body']:
+                    if 'pull_request' in issue: # check if issue is a pull_request
+                        pulls[issue['number']] = issue['html_url']
+                    else:
+                        issues[issue['number']] = issue['html_url']
+            self.contents[team_id]['issues'] = issues
+            self.contents[team_id]['pulls'] = pulls
+
+            # Derive the status of the pipeline
+            has_issues = len(issues) + len(pulls) > 0
             is_implemeted = pipeline_class is not None
             has_file = team_id in teams_having_pipeline
 
             if is_implemeted and not has_file:
-                raise AttributeError(f'Pipeline {team_id} refered as implemented with no file')
-            elif not is_implemeted and not has_issues and not has_file:
-                self.contents[team_id]['status'] = 'idle'
+                raise AttributeError(f'Pipeline {team_id} referred as implemented with no file')
+
+            if not is_implemeted and not has_issues and not has_file:
+                self.contents[team_id]['status'] = '2-idle'
             elif is_implemeted and has_file and not has_issues:
-                self.contents[team_id]['status'] = 'done'
+                self.contents[team_id]['status'] = '0-done'
             else:
-                self.contents[team_id]['status'] = 'progress'
+                self.contents[team_id]['status'] = '1-progress'
+
+        # Sort contents with the following priorities :
+        #    1-"status", 2-"softwares", 3-"fmriprep"
+        self.contents = OrderedDict(sorted(
+            self.contents.items(),
+            key=lambda k: (k[1]['status'], k[1]['software'], k[1]['fmriprep'])
+            ))
 
     def markdown(self):
         """ Return a string representing the report as markdown format """
@@ -91,36 +133,59 @@ class PipelineStatusReport():
         output_markdown += '<br>:red_circle: not started yet\n'
         output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br>The *softwares* column gives a simplified version of what can be '
-        output_markdown += 'found in the [team descriptions](/docs/description.md) under the '
+        output_markdown += '<br><br>The *main software* column gives a simplified version of '
+        output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
+        output_markdown += '<br><br>The *reproducibility* column rates the pipeline as follows:\n'
+        output_markdown += ' * default score is :star::star::star::star:;\n'
+        output_markdown += ' * -1 if the team did not use fmriprep data;\n'
+        output_markdown += ' * -1 if the team used several pieces of software '
+        output_markdown += '(e.g.: FSL and AFNI);\n'
+        output_markdown += ' * -1 if the team used custom or marginal software '
+        output_markdown += '(i.e.: something else than SPM, FSL, AFNI or nistats);\n'
+        output_markdown += ' * -1 if the team did not provided his source code.\n'
 
         # Start table
-        output_markdown += '| team_id | status | softwares used | fmriprep used ? |'
-        output_markdown += ' related issues |\n'
-        output_markdown += '| --- |:---:| --- | --- | --- |\n'
+        output_markdown += '\n| team_id | status | main software | fmriprep used ? |'
+        output_markdown += ' related issues | related pull requests |'
+        output_markdown += ' excluded from NARPS analysis | reproducibility |\n'
+        output_markdown += '| --- |:---:| --- | --- | --- | --- | --- | --- |\n'
 
         # Add table contents
         for team_key, team_values in self.contents.items():
             output_markdown += f'| {team_key} '
 
             status = ''
-            if team_values['status'] == 'done':
+            if team_values['status'] == '0-done':
                 status = ':green_circle:'
-            elif team_values['status'] == 'progress':
+            elif team_values['status'] == '1-progress':
                 status = ':orange_circle:'
             else:
                 status = ':red_circle:'
 
             output_markdown += f'| {status} '
-            output_markdown += f'| {team_values["softwares"]} '
+            output_markdown += f'| {team_values["software"]} '
             output_markdown += f'| {team_values["fmriprep"]} '
 
             issues = ''
             for issue_number, issue_url in team_values['issues'].items():
                 issues += f'[{issue_number}]({issue_url}), '
 
-            output_markdown += f'| {issues} |\n'
+            output_markdown += f'| {issues} '
+
+            pulls = ''
+            for issue_number, issue_url in team_values['pulls'].items():
+                pulls += f'[{issue_number}]({issue_url}), '
+
+            output_markdown += f'| {pulls} '
+            output_markdown += f'| {team_values["excluded"]} '
+
+            reproducibility_ranking = ''
+            for _ in range(team_values['reproducibility']):
+                reproducibility_ranking += ':star:'
+            for _ in range(4-team_values['reproducibility']):
+                reproducibility_ranking += ':black_small_square:'
+            output_markdown += f'| {reproducibility_ranking}<br />{team_values["reproducibility_comment"]} |\n'
 
         return output_markdown
 

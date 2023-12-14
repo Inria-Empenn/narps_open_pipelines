@@ -8,9 +8,11 @@ on:
   push:
     paths:
       - '**.py'
+      - '.github/workflows/code_quality.yml'
   pull_request:
     paths:
       - '**.py'
+      - '.github/workflows/code_quality.yml'
 
 # Jobs that define the workflow
 jobs:
@@ -33,22 +35,23 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-pylint
+        key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
         restore-keys: |
-          ${{ runner.os }}-pip-pylint
+          ${{ runner.os }}-pip-
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint
+        pip install .[tests]
 
     - name: Analyse the code with pylint
       run: |
-        pylint --exit-zero narps_open > pylint_report_narps_open.txt
-        pylint --exit-zero tests > pylint_report_narps_open.txt
+        pylint --fail-under 8 --ignore-paths narps_open/pipelines/ narps_open > pylint_report_narps_open.txt
+        pylint --fail-under 8 tests > pylint_report_tests.txt
 
     - name: Archive pylint results
       uses: actions/upload-artifact@v3
+      if: failure() # Only if previous step failed
       with:
         name: pylint-reports-python
         path: |

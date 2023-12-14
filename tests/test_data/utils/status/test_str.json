@@ -1,0 +1,58 @@
+{
+    "Q6O0": {
+        "software": "SPM",
+        "fmriprep": "Yes",
+        "excluded": "No",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
+        "issues": {},
+        "pulls": {},
+        "status": "0-done"
+    },
+    "UK24": {
+        "software": "SPM",
+        "fmriprep": "No",
+        "excluded": "No",
+        "reproducibility": 2,
+        "reproducibility_comment": "",
+        "issues": {
+            "2": "url_issue_2"
+        },
+        "pulls": {},
+        "status": "1-progress"
+    },
+    "2T6S": {
+        "software": "SPM",
+        "fmriprep": "Yes",
+        "excluded": "No",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
+        "issues": {
+            "5": "url_issue_5"
+        },
+        "pulls": {
+            "3": "url_pull_3"
+        },
+        "status": "1-progress"
+    },
+    "1KB2": {
+        "software": "FSL",
+        "fmriprep": "No",
+        "excluded": "No",
+        "reproducibility": 2,
+        "reproducibility_comment": "",
+        "issues": {},
+        "pulls": {},
+        "status": "2-idle"
+    },
+    "C88N": {
+        "software": "SPM",
+        "fmriprep": "Yes",
+        "excluded": "No",
+        "reproducibility": 3,
+        "reproducibility_comment": "",
+        "issues": {},
+        "pulls": {},
+        "status": "2-idle"
+    }
+}

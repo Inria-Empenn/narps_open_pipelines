@@ -48,31 +48,85 @@ aws s3 sync --no-sign-request s3://openneuro.org/ds001734 ds001734/
 
 Stat maps from teams can be downloaded from [NeuroVault](https://www.neurovault.org) [(Gorgolewski & al, 2015)](https://www.frontiersin.org/articles/10.3389/fninf.2015.00008/full).
 
-The `narps_open.utils.results` module will help you download these collections. Here is how to use it:
+The `narps_open.data.results` module will help you download these collections. Note that it is also possible to rectify the collection, i.e: to pre-process the images as done by the NARPS analysis team during the NARPS study.
+
+Here is how to use the module, both using python code or with the command line:
 
 ```python
 # In a python script
-from narps_open.utils.results import download_all_result_collections, download_result_collection
+from narps_open.data.results import ResultsCollectionFactory
 
-# Either download all collections
-download_all_result_collections()
+# Create a collection factory
+factory = ResultsCollectionFactory()
 
-# Or select the ones you need
-teams = ['2T6S', 'C88N', 'L1A8']
+# Select the collections you need
+teams = ['2T6S', 'C88N', 'L1A8'] # Alternatively use the keys from narps_open.pipelines.implemented_pipelines to get all the team ids
 for team in teams:
-    download_result_collection(team)
+    collection = factory.get_collection(team)
+    collection.download() # Collections are downloaded
+    collection.rectify() # Rectified versions are created
 ```
 
 ```bash
 # From the command line
+$ python narps_open/data/results -h
+usage: results [-h] (-t TEAMS [TEAMS ...] | -a) [-r]
+
+Get Neurovault collection of results from NARPS teams.
+
+options:
+  -h, --help            show this help message and exit
+  -t TEAMS [TEAMS ...], --teams TEAMS [TEAMS ...]
+                        a list of team IDs
+  -a, --all             download results from all teams
+  -r, --rectify         rectify the results
 
 # Either download all collections
 python narps_open/utils/results -a
 
 # Or select the ones you need
 python narps_open/utils/results -t 2T6S C88N L1A8
+
+# Download and rectify the collections
+python narps_open/utils/results -r -t 2T6S C88N L1A8
 ```
 
 The collections are also available [here](https://zenodo.org/record/3528329/) as one release on Zenodo that you can download.
 
-Each team results collection is kept in the `orig` in folder organized using the pattern `<neurovault_collection_id>_<team_id>` (e.g.: `4881_2T6S` for the 2T6S team).
+Each team results collection is kept in the `data/results/orig` directory, in a folder using the pattern `<neurovault_collection_id>_<team_id>` (e.g.: `4881_2T6S` for the 2T6S team).
+
+## Access NARPS data
+
+Inside `narps_open.data`, several modules allow to parse data from the NARPS file, so it's easier to use it inside the Narps Open Pipelines project. These are :
+
+### `narps_open.data.description`
+Get textual description of the pipelines, as written by the teams (see [docs/description.md](/docs/description.md)).
+
+### `narps_open.data.results`
+Get the result collections, as described earlier in this file.
+
+### `narps_open.data.participants`
+Get the participants data (parses the `data/original/ds001734/participants.tsv` file) as well as participants subsets to perform analyses on lower numbers of images.
+
+### `narps_open.data.task`
+Get information about the task (parses the `data/original/ds001734/task-MGT_bold.json` file). Here is an example how to use it :
+
+```python
+from narps_open.data.task import TaskInformation
+
+task_info = TaskInformation() # task_info is a dict
+
+# All available keys
+print(task_info.keys())
+# dict_keys(['TaskName', 'Manufacturer', 'ManufacturersModelName', 'MagneticFieldStrength', 'RepetitionTime', 'EchoTime', 'FlipAngle', 'MultibandAccelerationFactor', 'EffectiveEchoSpacing', 'SliceTiming', 'BandwidthPerPixelPhaseEncode', 'PhaseEncodingDirection', 'TaskDescription', 'CogAtlasID', 'NumberOfSlices', 'AcquisitionTime', 'TotalReadoutTime'])
+
+# Original data
+print(task_info['TaskName'])
+print(task_info['Manufacturer'])
+print(task_info['RepetitionTime']) # And so on ...
+
+# Derived data
+print(task_info['NumberOfSlices'])
+print(task_info['AcquisitionTime'])
+print(task_info['TotalReadoutTime'])
+```

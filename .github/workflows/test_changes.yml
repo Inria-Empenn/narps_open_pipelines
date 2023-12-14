@@ -5,9 +5,6 @@ name: test_changes
 
 # Define when it runs
 on:
-  push:
-    paths:
-      - 'tests/**/test_*.py'
   pull_request:
     paths:
       - 'tests/**/test_*.py'
@@ -16,37 +13,21 @@ on:
 jobs:
 
   # A job to list the tests to be run
-  pytest:
+  identify-tests:
     runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.identify.outputs.tests }}
     steps:
     - name: Checkout main branch for comparison
       uses: actions/checkout@v3
       with:
-        ref: main
         fetch-depth: 0
-
-    - name: Checkout current branch
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v3
-      with:
-        python-version: 3.9
-
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
     - name: Create a list of tests for changed tests
       id: identify
       run: |
-        # Loop through modified files
-        for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
+        # Loop through modified files between PR base and last head
+        for file in $(git diff --name-only --diff-filter=d remotes/origin/main...$GITHUB_SHA)
         do
           # List files corresponding to tests/**/test_**.py
           if [[ "$file" =~ .*"tests".*"test_".*".py" ]]; then
@@ -57,10 +38,25 @@ jobs:
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
 
+  # A job to run the tests
+  pytest:
+    needs: identify-tests
+    runs-on: self-hosted
+    timeout-minutes: 2880 # 48h
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v3
+
+    - name: Load configuration for self-hosted runner
+      run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install .[tests]
 
-    - name: Collect tests with pytest
-      run: pytest --collect-only -q ${{ steps.identify.outputs.tests }}
+    - name: Execute tests with pytest
+      run: |
+        if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
+          pytest -s -q ${{ needs.identify-tests.outputs.tests }}
+        fi
