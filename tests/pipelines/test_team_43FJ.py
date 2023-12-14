@@ -70,7 +70,7 @@ class TestPipelinesTeam43FJ:
     def test_subject_information():
         """ Test the get_subject_information method """
 
-        information = PipelineTeam43FJ.get_subject_information(join(
+        information = PipelineTeam43FJ.get_subject_infos(join(
             Configuration()['directories']['test_data'],
             'pipelines',
             'events.tsv'
