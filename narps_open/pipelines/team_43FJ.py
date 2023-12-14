@@ -907,7 +907,7 @@ class PipelineTeam43FJ(Pipeline):
             name = 'data_sink',
         )
 
-        contrasts = Node(
+        subgroups_contrasts = Node(
             Function(
                 input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
                 output_names=[
