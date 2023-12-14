@@ -2,6 +2,7 @@
 # coding: utf-8
 
 from os.path import join
+from itertools import product
 
 # [INFO] The import of base objects from Nipype, to create Workflows
 from nipype import Node, Workflow, MapNode
