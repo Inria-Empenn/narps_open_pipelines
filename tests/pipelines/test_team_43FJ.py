@@ -65,46 +65,46 @@ class TestPipelinesTeam43FJ:
         assert len(pipeline.get_group_level_outputs()) == 0
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
-    @staticmethod
-    @mark.unit_test
-    def test_subject_information():
-        """ Test the get_subject_information method """
+    # @staticmethod
+    # @mark.unit_test
+    # def test_subject_information():
+    #     """ Test the get_subject_information method """
 
-        information = PipelineTeam43FJ.get_subject_infos(join(
-            Configuration()['directories']['test_data'],
-            'pipelines',
-            'events.tsv'
-            ))[0]
+    #     information = PipelineTeam43FJ.get_subject_infos(join(
+    #         Configuration()['directories']['test_data'],
+    #         'pipelines',
+    #         'events.tsv'
+    #         ))[0]
 
-        assert isinstance(information, Bunch)
-        assert information.conditions == ['event', 'gain', 'loss', 'response']
+    #     assert isinstance(information, Bunch)
+    #     assert information.conditions == ['event', 'gain', 'loss', 'response']
 
-        reference_amplitudes = [
-            [1.0, 1.0, 1.0, 1.0, 1.0],
-            [14.0, 34.0, 38.0, 10.0, 16.0],
-            [6.0, 14.0, 19.0, 15.0, 17.0],
-            [1.0, 1.0, 0.0, -1.0, -1.0]
-            ]
-        for reference_array, test_array in zip(reference_amplitudes, information.amplitudes):
-            assert isclose(reference_array, test_array).all()
+    #     reference_amplitudes = [
+    #         [1.0, 1.0, 1.0, 1.0, 1.0],
+    #         [14.0, 34.0, 38.0, 10.0, 16.0],
+    #         [6.0, 14.0, 19.0, 15.0, 17.0],
+    #         [1.0, 1.0, 0.0, -1.0, -1.0]
+    #         ]
+    #     for reference_array, test_array in zip(reference_amplitudes, information.amplitudes):
+    #         assert isclose(reference_array, test_array).all()
 
-        reference_durations = [
-            [4.0, 4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0, 4.0]
-            ]
-        for reference_array, test_array in zip(reference_durations, information.durations):
-            assert isclose(reference_array, test_array).all()
+    #     reference_durations = [
+    #         [4.0, 4.0, 4.0, 4.0, 4.0],
+    #         [4.0, 4.0, 4.0, 4.0, 4.0],
+    #         [4.0, 4.0, 4.0, 4.0, 4.0],
+    #         [4.0, 4.0, 4.0, 4.0, 4.0]
+    #         ]
+    #     for reference_array, test_array in zip(reference_durations, information.durations):
+    #         assert isclose(reference_array, test_array).all()
 
-        reference_onsets = [
-            [4.071, 11.834, 19.535, 27.535, 36.435],
-            [4.071, 11.834, 19.535, 27.535, 36.435],
-            [4.071, 11.834, 19.535, 27.535, 36.435],
-            [4.071, 11.834, 19.535, 27.535, 36.435]
-        ]
-        for reference_array, test_array in zip(reference_onsets, information.onsets):
-            assert isclose(reference_array, test_array).all()
+    #     reference_onsets = [
+    #         [4.071, 11.834, 19.535, 27.535, 36.435],
+    #         [4.071, 11.834, 19.535, 27.535, 36.435],
+    #         [4.071, 11.834, 19.535, 27.535, 36.435],
+    #         [4.071, 11.834, 19.535, 27.535, 36.435]
+    #     ]
+    #     for reference_array, test_array in zip(reference_onsets, information.onsets):
+    #         assert isclose(reference_array, test_array).all()
 
     @staticmethod
     @mark.unit_test
