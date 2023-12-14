@@ -1056,12 +1056,12 @@ class PipelineTeam43FJ(Pipeline):
                 group_level_analysis.connect([
                     (
                         subgroups_contrasts, 
-                        merge_copes_3rdlevel, 
+                        merge_copes, 
                         [('copes_equalRange', 'in_files')]
                     ),
                     (
                         subgroups_contrasts, 
-                        merge_varcopes_3rdlevel, 
+                        merge_varcopes, 
                         [('varcopes_equalRange', 'in_files')]
                     )
                 ])
