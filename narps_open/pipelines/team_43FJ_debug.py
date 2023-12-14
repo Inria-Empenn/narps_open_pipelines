@@ -822,8 +822,10 @@ class PipelineTeam43FJ(Pipeline):
         # with a list of the size of the number of participants
         if method == 'equalRange':
             regressors = dict(group_mean = [1 for i in range(len(equal_range_id))])
+            group = [1 for i in equal_range_id]
         elif method == 'equalIndifference':
             regressors = dict(group_mean = [1 for i in range(len(equal_indifference_id))])
+            group = [1 for i in equal_indifference_id]
 
         # For two sample t-test, creates 2 lists:
         #  - one for equal range group,
@@ -848,7 +850,9 @@ class PipelineTeam43FJ(Pipeline):
                 equalIndifference = equalIndifference_reg
             )
 
-        return regressors
+            group = [1 if i == 1 else 2 for i in equalRange_reg]
+
+        return regressors, group
 
     def get_group_level_analysis(self):
         """
@@ -941,7 +945,10 @@ class PipelineTeam43FJ(Pipeline):
                     'method',
                     'subject_list',
                 ],
-                output_names = ['regressors'],
+                output_names = [
+                'regressors',
+                'group'
+                ],
                 function = self.get_regressors,
             ),
             name = 'regs',
