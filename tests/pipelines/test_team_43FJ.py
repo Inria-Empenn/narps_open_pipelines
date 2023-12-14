@@ -48,7 +48,7 @@ class TestPipelinesTeam43FJ:
     @mark.unit_test
     def test_outputs():
         """ Test the expected outputs of a PipelineTeam43FJ object """
-        pipeline = PipelineTeam()
+        pipeline = PipelineTeam43FJ()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
         assert len(pipeline.get_preprocessing_outputs()) == 6*4
