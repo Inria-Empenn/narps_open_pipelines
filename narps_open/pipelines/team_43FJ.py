@@ -565,7 +565,7 @@ class PipelineTeam43FJ(Pipeline):
                 '_contrast_id_{contrast_id}_run_id_*_subject_id_{subject_id}',
                 '_warpall_varcope0', 
                 'varcope{contrast_id}.nii.gz',
-            )
+            ),
             'func2anat_transform':join(
                 self.directories.output_dir, 
                 'preprocess', 
