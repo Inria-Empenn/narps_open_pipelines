@@ -258,32 +258,21 @@ class PipelineTeam08MQ(Pipeline):
         compute_confounds.inputs.merge_method = 'union'
         compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
 
+        # Merge Node - Merge file names to be removed after datasink node is performed
+        merge_removable_files = Node(Merge(8), name = 'merge_removable_files')
+        merge_removable_files.inputs.ravel_inputs = True
+
         # Function Nodes remove_files - Remove sizeable files once they aren't needed
-        remove_func_0 = MapNode(Function(
+        remove_after_datasink = MapNode(Function(
             function = remove_file,
             input_names = ['_', 'file_name'],
             output_names = []
-            ), name = 'remove_func_0', iterfield = 'file_name')
-        remove_func_1 = MapNode(Function(
+            ), name = 'remove_after_datasink', iterfield = 'file_name')
+        remove_func = MapNode(Function(
             function = remove_file,
             input_names = ['_', 'file_name'],
             output_names = []
-            ), name = 'remove_func_1', iterfield = 'file_name')
-        remove_func_2 = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_func_2', iterfield = 'file_name')
-        remove_func_3 = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_func_3', iterfield = 'file_name')
-        remove_func_4 = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_func_4', iterfield = 'file_name')
+            ), name = 'remove_func', iterfield = 'file_name')
 
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
@@ -368,16 +357,19 @@ class PipelineTeam08MQ(Pipeline):
                 ('output_image', 'preprocessing.@output_mask')]),
             
             # File removals
-            (motion_correction, remove_func_0, [('out_file', 'file_name')]),
-            (data_sink, remove_func_0, [('out_file', '_')]),
-            (slice_time_correction, remove_func_1, [('slice_time_corrected_file', 'file_name')]),
-            (data_sink, remove_func_1, [('out_file', '_')]),
-            (smoothing, remove_func_2, [('smoothed_file', 'file_name')]),
-            (data_sink, remove_func_2, [('out_file', '_')]),
-            (alignment_func_to_anat, remove_func_3, [('out_file', 'file_name')]),
-            (data_sink, remove_func_3, [('out_file', '_')]),
-            (alignment_func_to_mni, remove_func_4, [('output_image', 'file_name')]),
-            (data_sink, remove_func_4, [('out_file', '_')])
+            (alignment_func_to_anat, remove_func, [('out_file', 'file_name')]),
+            (alignment_func_to_mni, remove_func, [('output_image', '_')]),
+
+            (motion_correction, merge_removable_files, [('out_file', 'in1')]),
+            (slice_time_correction, merge_removable_files, [('slice_time_corrected_file', 'in2')]),
+            (smoothing, merge_removable_files, [('smoothed_file', 'in3')]),
+            (alignment_func_to_mni, merge_removable_files, [('output_image', 'in4')]),
+            (brain_extraction_func, merge_removable_files, [('out_file', 'in5')]),
+            (brain_extraction_anat, merge_removable_files, [('out_file', 'in6')]),
+            (bias_field_correction, merge_removable_files, [('restored_image', 'in7')]),
+            (normalization_anat, merge_removable_files, [('forward_transforms', 'in8')]),
+            (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
+            (data_sink, remove_after_datasink, [('out_file', '_')])
         ])
 
         return preprocessing
