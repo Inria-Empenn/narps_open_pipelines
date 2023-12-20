@@ -226,6 +226,7 @@ class PipelineTeam08MQ(Pipeline):
         #   To save disk space we force isotropic resampling with 2.0 mm voxel dimension
         #   instead of 1.0 mm as reference file would suggest
         alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
+        alignment_func_to_anat.inputs.apply_xfm = False
         alignment_func_to_anat.inputs.apply_isoxfm = 2.0
         alignment_func_to_anat.inputs.no_resample = True
 
