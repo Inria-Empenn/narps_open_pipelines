@@ -223,8 +223,10 @@ class PipelineTeam08MQ(Pipeline):
         alignment_csf.inputs.no_resample = True
 
         # ApplyXFM Node - Alignment of functional data to anatomical space
+        #   To save disk space we force isotropic resampling with 2.0 mm voxel dimension
+        #   instead of 1.0 mm as reference file would suggest
         alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
-        alignment_func_to_anat.inputs.apply_xfm = True
+        alignment_func_to_anat.inputs.apply_isoxfm = 2.0
         alignment_func_to_anat.inputs.no_resample = True
 
         # ApplyTransforms Node - Alignment of functional brain mask to anatomical space
