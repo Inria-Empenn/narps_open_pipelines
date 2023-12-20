@@ -10,7 +10,7 @@ Usage:
     pytest -q test_team_51PW.py
     pytest -q test_team_51PW.py -k <selected_test>
 """
-from os.path import join
+from os.path import join, isfile
 
 from pytest import helpers, mark
 from numpy import isclose
@@ -57,16 +57,16 @@ class TestPipelinesTeam51PW:
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
         assert len(pipeline.get_preprocessing_outputs()) == 1*4
-        assert len(pipeline.get_run_level_outputs()) == 8+4*3*4
-        assert len(pipeline.get_subject_level_outputs()) == 4*3
+        assert len(pipeline.get_run_level_outputs()) == 8+4*2*4
+        assert len(pipeline.get_subject_level_outputs()) == 4*2
         assert len(pipeline.get_group_level_outputs()) == 0
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
         assert len(pipeline.get_preprocessing_outputs()) == 4*1*4
-        assert len(pipeline.get_run_level_outputs()) == (8+4*3*4)*4
-        assert len(pipeline.get_subject_level_outputs()) == 4*3*4
+        assert len(pipeline.get_run_level_outputs()) == (8+4*2*4)*4
+        assert len(pipeline.get_subject_level_outputs()) == 4*2*4
         assert len(pipeline.get_group_level_outputs()) == 0
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
@@ -82,19 +82,17 @@ class TestPipelinesTeam51PW:
             ))[0]
 
         assert isinstance(information, Bunch)
-        assert information.conditions == ['event', 'gain', 'loss', 'response']
+        assert information.conditions == ['gamble', 'gain', 'loss']
 
         reference_amplitudes = [
             [1.0, 1.0, 1.0, 1.0, 1.0],
             [14.0, 34.0, 38.0, 10.0, 16.0],
-            [6.0, 14.0, 19.0, 15.0, 17.0],
-            [1.0, 1.0, 0.0, -1.0, -1.0]
+            [6.0, 14.0, 19.0, 15.0, 17.0]
             ]
         for reference_array, test_array in zip(reference_amplitudes, information.amplitudes):
             assert isclose(reference_array, test_array).all()
 
         reference_durations = [
-            [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0]
@@ -105,11 +103,30 @@ class TestPipelinesTeam51PW:
         reference_onsets = [
             [4.071, 11.834, 19.535, 27.535, 36.435],
             [4.071, 11.834, 19.535, 27.535, 36.435],
-            [4.071, 11.834, 19.535, 27.535, 36.435],
             [4.071, 11.834, 19.535, 27.535, 36.435]
         ]
         for reference_array, test_array in zip(reference_onsets, information.onsets):
             assert isclose(reference_array, test_array).all()
+
+    @staticmethod
+    @mark.unit_test
+    def test_confounds():
+        """ Test the get_confounds method """
+        
+        # in_file, subject_id, run_id, working_dir
+        out_filename = PipelineTeam51PW.get_confounds(join(
+            Configuration()['directories']['test_data'], 'pipelines','confounds.tsv'),
+            'subject_id',
+            'run_id',
+            Configuration()['directories']['test_runs']
+            )
+
+        assert isfile(out_filename)
+
+        with open(out_filename, 'r', encoding = 'utf-8') as file:
+            lines = file.readlines()
+            assert len(lines) == 1
+            assert lines[0] == '-2.56954e-05\t-0.00923735\t0.0549667\t0.000997278\t-0.00019745\t-0.000398988\t0.12437666391\t0.0462141151999999\t0.005774624\t-0.0439093598\t-0.075619539\t0.1754689153999999\n'
 
     @staticmethod
     @mark.unit_test

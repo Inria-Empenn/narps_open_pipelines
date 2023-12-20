@@ -12,6 +12,8 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     # General usage
     FSLCommand, ImageStats,
+    # Preprocessing
+    SUSAN,
     # Analyses
     Level1Design, FEATModel, L2Model, FILMGLS,
     FLAMEO, Randomise, MultipleRegressDesign
@@ -83,7 +85,7 @@ class PipelineTeam51PW(Pipeline):
         #   Warning : these options must be passed in the right order
         #       (i.e.: apply mask then compute stat)
         compute_mean = Node(ImageStats(), name = 'compute_mean')
-        compute_median.inputs.op_string = '-k %s -m'
+        compute_mean.inputs.op_string = '-k %s -m'
 
         # MathsCommand Node - Perform grand-mean intensity normalisation of the entire 4D data
         intensity_normalization = Node(MathsCommand(), name = 'intensity_normalization')
@@ -123,7 +125,7 @@ class PipelineTeam51PW(Pipeline):
                 (('out_stat', compute_brightness_threshold), 'brightness_threshold')
                 ]),
             (intensity_normalization, smoothing, [('out_file', 'in_file')]),
-            (smoothing, data_sink, [('output_image', 'preprocessing.@output_image')])
+            (smoothing, data_sink, [('smoothed_file', 'preprocessing.@output_image')])
             ])
 
         return preprocessing
@@ -334,7 +336,9 @@ class PipelineTeam51PW(Pipeline):
             (information_source, select_files, [
                 ('subject_id', 'subject_id'), ('run_id', 'run_id')
                 ]),
-            (information_source, confounds, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (information_source, select_confounds, [
+                ('subject_id', 'subject_id'), ('run_id', 'run_id')
+                ]),
             (select_files, subject_information, [('event', 'event_file')]),
             (select_files, select_confounds, [('confounds', 'in_file')]),
             (select_files, exclude_time_points, [('func', 'in_file')]),
