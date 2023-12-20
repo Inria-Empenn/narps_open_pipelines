@@ -112,5 +112,5 @@ class TestParticipants:
         """ Test the get_group function """
 
         assert part.get_group('') == []
-        assert part.get_group('equalRange') == ['sub-002', 'sub-004']
-        assert part.get_group('equalIndifference') == ['sub-001', 'sub-003']
+        assert part.get_group('equalRange') == ['002', '004']
+        assert part.get_group('equalIndifference') == ['001', '003']
