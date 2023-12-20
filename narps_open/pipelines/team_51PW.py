@@ -7,29 +7,24 @@ from os.path import join
 from itertools import product
 
 from nipype import Node, Workflow, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split, Select
+from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     # General usage
     FSLCommand, ImageStats,
-    # Preprocessing
-    FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN, FLIRT, ApplyXFM, ConvertXFM,
     # Analyses
     Level1Design, FEATModel, L2Model, FILMGLS,
     FLAMEO, Randomise, MultipleRegressDesign
     )
-from nipype.interfaces.fsl.utils import Merge as MergeImages
-from nipype.interfaces.fsl.maths import MultiImageMaths
-from nipype.algorithms.confounds import CompCor
+from nipype.interfaces.fsl.utils import ExtractROI, Merge as MergeImages
+from nipype.interfaces.fsl.maths import MathsCommand, MultiImageMaths
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform, ApplyTransforms
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.core.common import (
-    remove_file, list_intersection, elements_in_string, clean_list, list_to_file
+    remove_file, list_intersection, elements_in_string, clean_list
     )
 
 # Setup FSL
@@ -49,14 +44,110 @@ class PipelineTeam51PW(Pipeline):
         ]
 
     def get_preprocessing(self):
-        """ Return a Nipype workflow describing the preprocessing part of the pipeline """
+        """ Return a Nipype workflow describing the preprocessing part of the pipeline
 
-        # intensity_normalization : For each scan, we used a grand-mean intensity normalisation of the entire 4D dataset by a single multiplicative factor (FSL default).
-        # spatial_smoothing : Spatial smoothing performed using FSL 5.0.10 and FEAT (FMRI Expert Analysis Tool) Version 6.00 A Gaussian kernel of FWHM 5mm; Performed in MNI space
-        # preprocessing_comments : We also applied a highpass temporal filtering (Gaussian-weighted least-squares straight line fitting, with sigma=50.0s).
+        Returns:
+            - preprocessing : nipype.WorkFlow
+        """
+        # IdentityInterface node - allows to iterate over subjects and runs
+        information_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source')
+        information_source.iterables = [
+            ('run_id', self.run_list),
+            ('subject_id', self.subject_list),
+        ]
+
+        # SelectFiles node - to select necessary files
+        templates = {
+            # Functional MRI - from the fmriprep derivatives
+            'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'
+                ),
+            # Mask - from the fmriprep derivatives
+            'mask' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'
+                )
+        }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+
+        # DataSink Node - store the wanted results in the wanted directory
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+
+        # ImageStats Node - Compute mean value of the 4D data
+        #   -k option adds a mask
+        #   -m computes the mean value
+        #   we do not need to filter on not-zero values (option -P) because a mask is passed
+        #   Warning : these options must be passed in the right order
+        #       (i.e.: apply mask then compute stat)
+        compute_mean = Node(ImageStats(), name = 'compute_mean')
+        compute_median.inputs.op_string = '-k %s -m'
+
+        # MathsCommand Node - Perform grand-mean intensity normalisation of the entire 4D data
+        intensity_normalization = Node(MathsCommand(), name = 'intensity_normalization')
+        build_ing_args = lambda x : f'-ing {x}'
+
+        # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
+        #   -k option adds a mask
+        #   -p computes the 50th percentile (= median)
+        #   we do not need to filter on not-zero values (option -P) because a mask is passed
+        #   Warning : these options must be passed in the right order
+        #       (i.e.: apply mask then compute stat)
+        compute_median = Node(ImageStats(), name = 'compute_median')
+        compute_median.inputs.op_string = '-k %s -p 50'
+
+        # SUSAN Node - smoothing of functional images
+        #   we set brightness_threshold to .75x median of the input file, as performed by fMRIprep
+        smoothing = Node(SUSAN(), name = 'smoothing')
+        smoothing.inputs.fwhm = self.fwhm
+        compute_brightness_threshold = lambda x : .75 * x
+
+        # Define workflow
+        preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
+        preprocessing.config['execution']['stop_on_first_crash'] = 'true'
+        preprocessing.connect([
+            (information_source, select_files, [
+                ('subject_id', 'subject_id'), ('run_id', 'run_id')
+                ]),
+            (select_files, compute_mean, [('func', 'in_file')]),
+            (select_files, compute_mean, [('mask', 'mask_file')]),
+            (select_files, intensity_normalization, [('func', 'in_file')]),
+            (select_files, compute_median, [('func', 'in_file')]),
+            (select_files, compute_median, [('mask', 'mask_file')]),
+            (compute_mean, intensity_normalization, [
+                (('out_stat', build_ing_args), 'args')
+                ]),
+            (compute_median, smoothing, [
+                (('out_stat', compute_brightness_threshold), 'brightness_threshold')
+                ]),
+            (intensity_normalization, smoothing, [('out_file', 'in_file')]),
+            (smoothing, data_sink, [('output_image', 'preprocessing.@output_image')])
+            ])
+
+        return preprocessing
 
     def get_preprocessing_outputs(self):
         """ Return a list of the files generated by the preprocessing """
+
+        parameters = {
+            'subject_id': self.subject_list,
+            'run_id': self.run_list,
+            'file': [
+                ''
+            ]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'preprocessing',
+            '_run_id_{run_id}_subject_id_{subject_id}',
+            '{file}'
+            )
+
+        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
     def get_subject_information(event_file):
         """
@@ -120,7 +211,7 @@ class PipelineTeam51PW(Pipeline):
         - path to a new file containing only desired confounds.
         """
         from os import makedirs
-        from os.path import join, isdir
+        from os.path import join
 
         from pandas import read_csv, DataFrame
         from numpy import array, transpose
@@ -139,7 +230,6 @@ class PipelineTeam51PW(Pipeline):
 
         # Exclude 2 time points for each run
         confounds = confounds.iloc[2:]
-        nb_time_points = 
 
         # Write confounds to a file
         confounds_file_path = join(working_dir, 'confounds_files',
@@ -151,7 +241,7 @@ class PipelineTeam51PW(Pipeline):
             writer.write(confounds.to_csv(
                     sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-        return confounds_file_path, nb_time_points
+        return confounds_file_path
 
     def get_run_level_analysis(self):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline
@@ -170,8 +260,11 @@ class PipelineTeam51PW(Pipeline):
 
         # SelectFiles node - to select necessary files
         templates = {
-            # Functional MRI - from the fmriprep derivatives
-            'func' : join(),
+            # Functional MRI - from the preprocessing
+            'func' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_{run_id}_subject_id_{subject_id}',
+                ''
+                ),
             # Events file - from the original dataset
             'events' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'
@@ -191,7 +284,7 @@ class PipelineTeam51PW(Pipeline):
         # ExtractROI Node - Exclude the first 2 time points/scans for each run
         exclude_time_points = Node(ExtractROI(), name = 'exclude_time_points')
         exclude_time_points.inputs.t_min = 2
-        exclude_time_points.inputs.t_size = 451 # TODO nb_time_points - 2 ??
+        exclude_time_points.inputs.t_size = 451 # TODO nb_time_points - 2
 
         # Function Node get_subject_information - Get subject information from event files
         subject_information = Node(Function(
@@ -206,6 +299,7 @@ class PipelineTeam51PW(Pipeline):
             input_names = ['in_file', 'subject_id', 'run_id', 'working_dir'],
             output_names = ['confounds_file']
             ), name = 'select_confounds', iterfield = ['run_id'])
+        select_confounds.inputs.working_dir = self.directories.working_dir
 
         # SpecifyModel Node - Generates a model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -222,9 +316,6 @@ class PipelineTeam51PW(Pipeline):
         model_design.inputs.model_serial_correlations = True
         model_design.inputs.contrasts = self.run_level_contasts
 
-        # spatial smoothing using a Gaussian kernel of FWHM 5mm;
-        # grandmean intensity normalisation of the entire 4D dataset by a single multiplicative factor;
-
         # FEATModel Node - Generate first level model
         model_generation = Node(FEATModel(), name = 'model_generation')
 
@@ -240,14 +331,15 @@ class PipelineTeam51PW(Pipeline):
             name = 'run_level_analysis'
             )
         run_level_analysis.connect([
-            (information_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-            (information_source, confounds, [
+            (information_source, select_files, [
                 ('subject_id', 'subject_id'), ('run_id', 'run_id')
                 ]),
+            (information_source, confounds, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
             (select_files, subject_information, [('event', 'event_file')]),
             (select_files, select_confounds, [('confounds', 'in_file')]),
-            (select_files, specify_model, [('func', 'functional_runs')]),
-            (select_files, model_estimate, [('func', 'in_file')]),
+            (select_files, exclude_time_points, [('func', 'in_file')]),
+            (exclude_time_points, specify_model, [('roi_file', 'functional_runs')]),
+            (exclude_time_points, model_estimate, [('roi_file', 'in_file')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (select_confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
