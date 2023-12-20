@@ -57,7 +57,7 @@ class TestPipelinesTeam08MQ:
         pipeline = PipelineTeam08MQ()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 3*4
+        assert len(pipeline.get_preprocessing_outputs()) == 4*4
         assert len(pipeline.get_run_level_outputs()) == 8+4*3*4
         assert len(pipeline.get_subject_level_outputs()) == 4*3
         assert len(pipeline.get_group_level_outputs()) == 0
@@ -65,7 +65,7 @@ class TestPipelinesTeam08MQ:
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 3*4*4
+        assert len(pipeline.get_preprocessing_outputs()) == 4*4*4
         assert len(pipeline.get_run_level_outputs()) == (8+4*3*4)*4
         assert len(pipeline.get_subject_level_outputs()) == 4*3*4
         assert len(pipeline.get_group_level_outputs()) == 0

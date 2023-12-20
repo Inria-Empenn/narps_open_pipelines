@@ -23,7 +23,7 @@ from nipype.interfaces.fsl.utils import Merge as MergeImages
 from nipype.interfaces.fsl.maths import MultiImageMaths
 from nipype.algorithms.confounds import CompCor
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform, ApplyTransforms
+from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -222,11 +222,12 @@ class PipelineTeam08MQ(Pipeline):
         alignment_csf.inputs.apply_xfm = True
         alignment_csf.inputs.no_resample = True
 
-        # ApplyXFM Node - Alignment of functional data to anatomical space
+        # FLIRT Node - Alignment of functional data to anatomical space
         #   To save disk space we force isotropic resampling with 2.0 mm voxel dimension
-        #   instead of 1.0 mm as reference file would suggest
-        alignment_func_to_anat = Node(ApplyXFM(), name = 'alignment_func_to_anat')
-        alignment_func_to_anat.inputs.apply_xfm = False
+        #   instead of 1.0 mm as reference file would suggest.
+        #   We have to use FLIRT instead of ApplyXFM because there is a bug with
+        #   apply_isoxfm and the latter.
+        alignment_func_to_anat = Node(FLIRT(), name = 'alignment_func_to_anat')
         alignment_func_to_anat.inputs.apply_isoxfm = 2.0
         alignment_func_to_anat.inputs.no_resample = True
 
@@ -281,7 +282,9 @@ class PipelineTeam08MQ(Pipeline):
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
             # Inputs
-            (information_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (information_source, select_files, [
+                ('subject_id', 'subject_id'), ('run_id', 'run_id')
+                ]),
 
             # Anatomical images
             (select_files, bias_field_correction, [('anat', 'in_files')]),
@@ -358,7 +361,7 @@ class PipelineTeam08MQ(Pipeline):
             (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')]),
             (alignment_func_mask_to_mni, data_sink, [
                 ('output_image', 'preprocessing.@output_mask')]),
-            
+
             # File removals
             (alignment_func_to_anat, remove_func, [('out_file', 'file_name')]),
             (alignment_func_to_mni, remove_func, [('output_image', '_')]),
@@ -387,7 +390,7 @@ class PipelineTeam08MQ(Pipeline):
                 'components_file.txt',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz',
-                # mask file 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mask_flirt_wtsimt.nii.gz'
             ]
         }
         parameter_sets = product(*parameters.values())
@@ -537,7 +540,9 @@ class PipelineTeam08MQ(Pipeline):
             name = 'run_level_analysis'
             )
         run_level_analysis.connect([
-            (information_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (information_source, select_files, [
+                ('subject_id', 'subject_id'), ('run_id', 'run_id')
+                ]),
             (select_files, subject_information, [('event', 'event_file')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (select_files, specify_model, [('motion', 'realignment_parameters')]),
