@@ -24,7 +24,7 @@ from narps_open.core.common import remove_file, list_intersection, elements_in_s
 FSLCommand.set_default_output_type('NIFTI_GZ')
 
 class PipelineTeamT54A(Pipeline):
-    """ A class that defines the pipeline of team T54A. """
+    """ A class that defines the pipeline of team T54A """
 
     def __init__(self):
         super().__init__()
