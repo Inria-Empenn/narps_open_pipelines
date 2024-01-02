@@ -11,4 +11,5 @@ Here are the available topics :
 * :microscope: [testing](/docs/testing.md) details the testing features of the project, i.e.: how is the code tested ?
 * :package: [ci-cd](/docs/ci-cd.md) contains the information on how continuous integration and delivery (knowned as CI/CD) is set up.
 * :writing_hand: [pipeline](/docs/pipelines.md) tells you all you need to know in order to write pipelines
+* :compass: [core](/docs/core.md) a list of helpful functions when writing pipelines
 * :vertical_traffic_light: [status](/docs/status.md) contains the information on how to get the work progress status for a pipeline.

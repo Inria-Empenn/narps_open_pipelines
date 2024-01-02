@@ -1,0 +1,12 @@
+{
+  "RepetitionTime": 1,
+  "EffectiveEchoSpacing": 2,
+  "SliceTiming": [
+    0,
+    0.4375,
+    0.875,
+    0.3125,
+    0.75,
+    0.1875
+  ]
+}
