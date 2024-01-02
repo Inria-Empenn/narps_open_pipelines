@@ -11,9 +11,14 @@ Usage:
     pytest -q test_team_C88N.py -k <selected_test>
 """
 
-from pytest import helpers, mark
-from nipype import Workflow
+from os.path import join
 
+from pytest import helpers, mark
+from numpy import isclose
+from nipype import Workflow
+from nipype.interfaces.base import Bunch
+
+from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_C88N import PipelineTeamC88N
 
 class TestPipelinesTeamC88N:
@@ -60,6 +65,75 @@ class TestPipelinesTeamC88N:
         assert len(pipeline.get_subject_level_outputs()) == 32
         assert len(pipeline.get_group_level_outputs()) == 53
         assert len(pipeline.get_hypotheses_outputs()) == 18
+
+    @staticmethod
+    @mark.unit_test
+    def test_subject_information():
+        """ Test the get_subject_information method """
+
+        # Test with 'gain'
+        test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        information = PipelineTeamC88N.get_subject_information(
+            [test_event_file, test_event_file],
+            'gain',
+            ['01', '02']
+            )[0]
+
+        assert isinstance(information, Bunch)
+        assert information.conditions == ['trial']
+
+        reference_durations = [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        assert len(reference_durations) == len(information.durations)
+        for reference_array, test_array in zip(reference_durations, information.durations):
+            assert isclose(reference_array, test_array).all()
+
+        reference_onsets = [[4.071, 11.834, 19.535, 27.535, 36.435]]
+        assert len(reference_onsets) == len(information.onsets)
+        for reference_array, test_array in zip(reference_onsets, information.onsets):
+            assert isclose(reference_array, test_array).all()
+
+        paramateric_modulation = information.pmod[0]
+
+        assert isinstance(paramateric_modulation, Bunch)
+        assert paramateric_modulation.name == ['loss', 'gain']
+        assert paramateric_modulation.poly == [1, 1]
+
+        reference_param = [[6.0, 14.0, 19.0, 15.0, 17.0], [14.0, 34.0, 38.0, 10.0, 16.0]]
+        assert len(reference_param) == len(paramateric_modulation.param)
+        for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
+            assert isclose(reference_array, test_array).all()
+
+        # Test with 'loss'
+        test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        information = PipelineTeamC88N.get_subject_information(
+            [test_event_file, test_event_file],
+            'gain',
+            ['01', '02']
+            )[0]
+
+        assert isinstance(information, Bunch)
+        assert information.conditions == ['trial']
+
+        reference_durations = [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        assert len(reference_durations) == len(information.durations)
+        for reference_array, test_array in zip(reference_durations, information.durations):
+            assert isclose(reference_array, test_array).all()
+
+        reference_onsets = [[4.071, 11.834, 19.535, 27.535, 36.435]]
+        assert len(reference_onsets) == len(information.onsets)
+        for reference_array, test_array in zip(reference_onsets, information.onsets):
+            assert isclose(reference_array, test_array).all()
+
+        paramateric_modulation = information.pmod[0]
+
+        assert isinstance(paramateric_modulation, Bunch)
+        assert paramateric_modulation.name == ['loss', 'gain']
+        assert paramateric_modulation.poly == [1, 1]
+
+        reference_param = [[6.0, 14.0, 19.0, 15.0, 17.0], [14.0, 34.0, 38.0, 10.0, 16.0]]
+        assert len(reference_param) == len(paramateric_modulation.param)
+        for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
+            assert isclose(reference_array, test_array).all()
 
     @staticmethod
     @mark.pipeline_test
