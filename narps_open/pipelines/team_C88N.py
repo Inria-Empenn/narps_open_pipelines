@@ -31,7 +31,7 @@ class PipelineTeamC88N(Pipeline):
         self.team_id = 'C88N'
         self.model_list = ['gain', 'loss']
         self.subject_level_contrasts_gain = [
-            ['effect_of_gain', 'T', ['trialxgain^1', 'trialxloss^1'], [1, 0]]
+            ['effect_of_gain', 'T', ['trialxloss^1', 'trialxgain^1'], [0, 1]]
         ]
         self.subject_level_contrasts_loss = [
             ['positive_effect_of_loss', 'T', ['trialxgain^1', 'trialxloss^1'], [0, 1]],
