@@ -32,7 +32,7 @@ def remove_test_dir():
     rmtree(TEMPORARY_DIR, ignore_errors = True)
     mkdir(TEMPORARY_DIR)
     yield # test runs here
-    #rmtree(TEMPORARY_DIR, ignore_errors = True)
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeamJ7F9:
     """ A class that contains all the unit tests for the PipelineTeamJ7F9 class."""
