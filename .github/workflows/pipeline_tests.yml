@@ -47,7 +47,7 @@ jobs:
         echo "tests=$test_files" >> $GITHUB_OUTPUT
         echo "teams=$teams" >> $GITHUB_OUTPUT
 
-  # A job to identify and run the tests
+  # A job to run the tests
   pytest:
     needs: identify-tests
     runs-on: self-hosted

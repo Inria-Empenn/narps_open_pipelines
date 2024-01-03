@@ -5,6 +5,7 @@
 
 from os.path import join
 from csv import DictReader
+from json import dumps
 from importlib_resources import files
 
 class TeamDescription(dict):
@@ -19,11 +20,17 @@ class TeamDescription(dict):
     derived_description_file = join(
         files('narps_open.data.description'),
         'analysis_pipelines_derived_descriptions.tsv')
+    comments_description_file = join(
+        files('narps_open.data.description'),
+        'analysis_pipelines_comments.tsv')
 
     def __init__(self, team_id):
         super().__init__()
         self.team_id = team_id
         self._load()
+
+    def __str__(self):
+        return dumps(self, indent = 4)
 
     @property
     def general(self) -> dict:
@@ -54,6 +61,42 @@ class TeamDescription(dict):
     def derived(self) -> dict:
         """ Getter for the sub dictionary containing derived team description """
         return self._get_sub_dict('derived')
+
+    @property
+    def comments(self) -> dict:
+        """ Getter for the sub dictionary containing comments for NARPS Open Pipeline """
+        return self._get_sub_dict('comments')
+
+    def markdown(self):
+        """ Return the team description as a string formatted in markdown """
+        return_string = f'# NARPS team description : {self.team_id}\n'
+
+        dictionaries = [
+            self.general,
+            self.exclusions,
+            self.preprocessing,
+            self.analysis,
+            self.categorized_for_analysis,
+            self.derived,
+            self.comments
+            ]
+
+        names = [
+            'General',
+            'Exclusions',
+            'Preprocessing',
+            'Analysis',
+            'Categorized for analysis',
+            'Derived',
+            'Comments'
+            ]
+
+        for dictionary, name in zip(dictionaries, names):
+            return_string += f'## {name}\n'
+            for key in dictionary:
+                return_string += f'* `{key}` : {dictionary[key]}\n'
+
+        return return_string
 
     def _get_sub_dict(self, key_first_part:str) -> dict:
         """ Return a sub-dictionary of self, with keys that contain key_first_part.
@@ -142,3 +185,29 @@ class TeamDescription(dict):
             if not found:
                 raise AttributeError(f'Team {self.team_id}\
                     was not found in the derived description.')
+
+        # Parsing third file : self.comments_description_file
+        with open(self.comments_description_file, newline='', encoding='utf-8') as csv_file:
+            # Prepare first line (whose elements are second part of the keys)
+            first_line = csv_file.readline().replace('\n','').split('\t')
+
+            # Read the rest of the file as a dict
+            reader = DictReader(
+                csv_file,
+                fieldnames = ['comments.' + k2 for k2 in first_line],
+                delimiter = '\t'
+                )
+
+            # Update self with the key/value pairs from the file
+            found = False
+            for row in reader:
+                if row['comments.teamID'] == self.team_id:
+                    found = True
+                    row.pop('comments.teamID', None) # Remove useless 'comments.teamID' key
+                    self.update(row)
+                    break
+
+            # If team id was not found in the file
+            if not found:
+                raise AttributeError(f'Team {self.team_id}\
+                    was not found in the comments description.')
