@@ -96,3 +96,8 @@ Model EVs (2): eq_indiff, eq_range
 * `excluded_participants` : 018, 030, 088, 100
 * `func_fwhm` : 5
 * `con_fwhm` : 
+## Comments
+* `excluded_from_narps_analysis` : No
+* `exclusion_comment` : N/A
+* `reproducibility` : 2
+* `reproducibility_comment` : 

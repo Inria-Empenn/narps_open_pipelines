@@ -61,6 +61,7 @@ setup(
     data_files = [
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/default_config.toml']),
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/testing_config.toml']),
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_comments.tsv']),
         ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_derived_descriptions.tsv']),
         ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_full_descriptions.tsv'])
     ]
