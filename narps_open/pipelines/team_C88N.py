@@ -352,12 +352,12 @@ class PipelineTeamC88N(Pipeline):
         # SelectFiles Node
         templates = {
             # Contrast files for all participants
-            'contrasts' : join(
+            'contrasts' : join(self.directories.output_dir,
                 'subject_level_analysis_{model_type}', '_subject_id_*', 'con_{contrast_id}.nii'
                 )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.output_dir
+        select_files.inputs.base_directory = self.directories.dataset_dir
         select_files.inputs.force_list = True
 
         # Datasink - save important files
