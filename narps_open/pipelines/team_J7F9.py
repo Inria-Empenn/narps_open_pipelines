@@ -229,7 +229,7 @@ class PipelineTeamJ7F9(Pipeline):
             function = self.get_confounds_file,
             input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
             output_names = ['confounds_file']),
-            name = 'confounds', iterfield = 'run_id')
+            name = 'confounds', iterfield = ['filepath', 'run_id'])
         confounds.inputs.working_dir = self.directories.working_dir
         confounds.inputs.run_id = self.run_list
 
@@ -270,7 +270,7 @@ class PipelineTeamJ7F9(Pipeline):
             (smoothing, remove_gunzip_files, [('smoothed_files', '_')]),
             (smoothing, remove_smoothed_files, [('smoothed_files', 'file_name')]),
             (smoothing, specify_model, [('smoothed_files', 'functional_runs')]),
-            (confounds, specify_model, [('parameters_file', 'realignment_parameters')]),
+            (confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
             (model_estimate, contrast_estimate, [
