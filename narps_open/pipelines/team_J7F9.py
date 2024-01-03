@@ -174,8 +174,7 @@ class PipelineTeamJ7F9(Pipeline):
 
         # Templates to select files node
         template = {
-            # Parameter file
-            'param' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+            'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
             'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'),
@@ -262,7 +261,7 @@ class PipelineTeamJ7F9(Pipeline):
             (information_source, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (information_source, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
-            (select_files, confounds, [('param', 'filepaths')]),
+            (select_files, confounds, [('confounds', 'filepath')]),
             (select_files, subject_information, [('event', 'event_files')]),
             (information_source, confounds, [('subject_id', 'subject_id')]),
             (select_files, gunzip_func, [('func', 'in_file')]),
