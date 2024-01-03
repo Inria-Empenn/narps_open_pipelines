@@ -48,12 +48,12 @@ class PipelineTeamC88N(Pipeline):
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subject_information(event_files: list, modulation: str):
+    def get_subject_information(event_files: list, model: str):
         """ Create Bunchs for SpecifySPMModel.
 
         Parameters :
         - event_files: list of str, list of events files (one per run) for the subject
-        - modulation: str, either 'gain' or 'loss'
+        - model: str, either 'gain' or 'loss'
 
         Returns :
         - subject_information : list of Bunch for 1st level analysis.
@@ -84,13 +84,13 @@ class PipelineTeamC88N(Pipeline):
                         weights_loss.append(float(info[3]))
 
             # Create Bunch
-            if modulation == 'gain':
+            if model == 'gain':
                 parametric_modulation_bunch = Bunch(
                     name = ['loss', 'gain'],
                     poly = [1, 1],
                     param = [weights_loss, weights_gain]
                     )
-            elif modulation == 'loss':
+            elif model == 'loss':
                 parametric_modulation_bunch = Bunch(
                     name = ['gain', 'loss'],
                     poly = [1, 1],
@@ -157,19 +157,19 @@ class PipelineTeamC88N(Pipeline):
         # Function node get_subject_information - get subject specific condition information
         subject_infos_gain = Node(Function(
             function = self.get_subject_information,
-            input_names = ['event_files', 'modulation'],
+            input_names = ['event_files', 'model'],
             output_names = ['subject_info']
             ),
             name = 'subject_infos_gain')
-        subject_infos_gain.inputs.modulation = 'gain'
+        subject_infos_gain.inputs.model = 'gain'
 
         subject_infos_loss = Node(Function(
             function = self.get_subject_information,
-            input_names = ['event_files', 'modulation'],
+            input_names = ['event_files', 'model'],
             output_names = ['subject_info']
             ),
             name = 'subject_infos_loss')
-        subject_infos_loss.inputs.modulation = 'loss'
+        subject_infos_loss.inputs.model = 'loss'
 
         # SpecifyModel - Generates SPM-specific Model
         specify_model_gain = Node(SpecifySPMModel(), name = 'specify_model_gain')
