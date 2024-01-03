@@ -133,7 +133,7 @@ class PipelineTeamJ7F9(Pipeline):
         - confounds_file : path to new file containing only desired confounds
         """
         from os import makedirs
-        from os.path import join, isdir
+        from os.path import join
 
         from pandas import DataFrame, read_csv
         from numpy import array, transpose
