@@ -203,10 +203,9 @@ class PipelineTeamJ7F9(Pipeline):
         # Function node get_subject_information - get subject specific condition information
         subject_information = Node(Function(
             function = self.get_subject_information,
-            input_names = ['event_files', 'runs'],
+            input_names = ['event_files'],
             output_names = ['subject_info']),
             name = 'subject_information')
-        subject_information.inputs.runs = self.run_list
 
         # SpecifyModel - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
