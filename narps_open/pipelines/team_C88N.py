@@ -19,7 +19,8 @@ from nipype.algorithms.misc import Gunzip
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
-from narps_open.core.common import remove_file
+from narps_open.data.participants import get_group
+from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
 
 class PipelineTeamC88N(Pipeline):
     """ A class that defines the pipeline of team C88N. """
@@ -47,7 +48,7 @@ class PipelineTeamC88N(Pipeline):
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subject_information(event_files: list, modulation: str, run_list: list):
+    def get_subject_information(event_files: list, modulation: str):
         """ Create Bunchs for SpecifySPMModel.
 
         Parameters :
@@ -76,10 +77,11 @@ class PipelineTeamC88N(Pipeline):
 
                 for line in file:
                     info = line.strip().split()
-                    onsets.append(float(info[0]))
-                    durations.append(0.0)
-                    weights_gain.append(float(info[2]))
-                    weights_loss.append(float(info[3]))
+                    if 'NoResp' not in info[5]:
+                        onsets.append(float(info[0]))
+                        durations.append(0.0)
+                        weights_gain.append(float(info[2]))
+                        weights_loss.append(float(info[3]))
 
             # Create Bunch
             if modulation == 'gain':
@@ -160,7 +162,6 @@ class PipelineTeamC88N(Pipeline):
             ),
             name = 'subject_infos_gain')
         subject_infos_gain.inputs.modulation = 'gain'
-        subject_infos_gain.inputs.run_list = self.run_list
 
         subject_infos_loss = Node(Function(
             function = self.get_subject_information,
@@ -169,7 +170,6 @@ class PipelineTeamC88N(Pipeline):
             ),
             name = 'subject_infos_loss')
         subject_infos_loss.inputs.modulation = 'loss'
-        subject_infos_loss.inputs.run_list = self.run_list
 
         # SpecifyModel - Generates SPM-specific Model
         specify_model_gain = Node(SpecifySPMModel(), name = 'specify_model_gain')
@@ -302,41 +302,6 @@ class PipelineTeamC88N(Pipeline):
 
         return return_list
 
-    # @staticmethod # Starting python 3.10, staticmethod should be used here
-    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subset_contrasts(file_list, subject_list, participants_file):
-        """
-        Parameters :
-        - file_list : original file list selected by selectfiles node
-        - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants characteristics
-
-        This function return the file list containing only the files belonging to
-        subject in the wanted group.
-        """
-        equal_indifference_id = []
-        equal_range_id = []
-        equal_indifference_files = []
-        equal_range_files = []
-
-        with open(participants_file, 'rt') as file:
-            next(file)  # skip the header
-            for line in file:
-                info = line.strip().split()
-                if info[0][-3:] in subject_list and info[1] == 'equalIndifference':
-                    equal_indifference_id.append(info[0][-3:])
-                elif info[0][-3:] in subject_list and info[1] == 'equalRange':
-                    equal_range_id.append(info[0][-3:])
-
-        for file in file_list:
-            sub_id = file.split('/')
-            if sub_id[-2][-3:] in equal_indifference_id:
-                equal_indifference_files.append(file)
-            elif sub_id[-2][-3:] in equal_range_id:
-                equal_range_files.append(file)
-
-        return equal_indifference_id, equal_range_id, equal_indifference_files, equal_range_files
-
     def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
@@ -376,42 +341,64 @@ class PipelineTeamC88N(Pipeline):
         nb_subjects = len(self.subject_list)
 
         # Infosource - iterate over the list of contrasts
-        infosource_groupanalysis = Node(IdentityInterface(
-            fields = ['model_type', 'contrast_id', 'subjects'],
-            subjects = self.subject_list),
-            name = 'infosource_groupanalysis')
-        infosource_groupanalysis.iterables = [
+        information_source = Node(IdentityInterface(
+            fields = ['model_type', 'contrast_id']),
+            name = 'information_source')
+        information_source.iterables = [
             ('model_type', self.model_list),
             ('contrast_id', self.contrast_list)
             ]
 
         # SelectFiles Node
         templates = {
-            # Contrast for all participants
-            'contrasts' : join(self.directories.output_dir,
-                'subject_level_analysis_{model_type}', '_subject_id_*', 'con_{contrast_id}.nii'),
-
-            # Participants file
-            'participants' : join(self.directories.dataset_dir, 'participants.tsv')
-            }
+            # Contrast files for all participants
+            'contrasts' : join(
+                'subject_level_analysis_{model_type}', '_subject_id_*', 'con_{contrast_id}.nii'
+                )
+        }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.results_dir
+        select_files.inputs.base_directory = self.directories.output_dir
         select_files.inputs.force_list = True
 
         # Datasink - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
-        # Node to select subset of contrasts
-        sub_contrasts = Node(Function(
-            function = self.get_subset_contrasts,
-            input_names = ['file_list', 'subject_list', 'participants_file'],
-            output_names = [
-                'equalIndifference_id',
-                'equalRange_id',
-                'equalIndifference_files',
-                'equalRange_files']),
-            name = 'sub_contrasts')
+        # Function Node get_equal_range_subjects
+        #   Get subjects in the equalRange group and in the subject_list
+        get_equal_range_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_range_subjects'
+        )
+        get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+        get_equal_range_subjects.inputs.list_2 = self.subject_list
+
+        # Function Node get_equal_indifference_subjects
+        #   Get subjects in the equalIndifference group and in the subject_list
+        get_equal_indifference_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_indifference_subjects'
+        )
+        get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+        get_equal_indifference_subjects.inputs.list_2 = self.subject_list
+
+        # Function Node elements_in_string
+        #   Get contrast files for required subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_contrasts', iterfield = 'input_str'
+        )
 
         # Estimate model
         estimate_model = Node(EstimateModel(), name = 'estimate_model')
@@ -436,13 +423,10 @@ class PipelineTeamC88N(Pipeline):
             base_dir = self.directories.working_dir,
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
         group_level_analysis.connect([
-            (infosource_groupanalysis, select_files, [
+            (information_source, select_files, [
                 ('contrast_id', 'contrast_id'),
                 ('model_type', 'model_type')]),
-            (infosource_groupanalysis, sub_contrasts, [('subjects', 'subject_list')]),
-            (select_files, sub_contrasts, [
-                ('contrasts', 'file_list'),
-                ('participants', 'participants_file')]),
+            (select_files, get_contrasts, [('contrasts', 'input_str')]),
             (estimate_model, estimate_contrast, [
                 ('spm_mat_file', 'spm_mat_file'),
                 ('residual_image', 'residual_image'),
@@ -460,36 +444,65 @@ class PipelineTeamC88N(Pipeline):
                 ('thresholded_map', f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh')])])
 
         if method in ('equalRange', 'equalIndifference'):
-            contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
+            estimate_contrast.inputs.contrasts = [
+                ('Group', 'T', ['mean'], [1]),
+                ('Group', 'T', ['mean'], [-1])
+                ]
             threshold.inputs.contrast_index = [1, 2]
 
             # Specify design matrix
             one_sample_t_test_design = Node(OneSampleTTestDesign(),
                 name = 'one_sample_t_test_design')
-
             group_level_analysis.connect([
-                (sub_contrasts, one_sample_t_test_design, [(f'{method}_files', 'in_files')]),
+                (get_contrasts, one_sample_t_test_design, [
+                    (('out_list', clean_list), 'in_files')
+                    ]),
                 (one_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])
                 ])
 
+        if method == 'equalRange':
+            group_level_analysis.connect([
+                (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')])
+                ])
+
+        elif method == 'equalIndifference':
+            group_level_analysis.connect([
+                (get_equal_indifference_subjects, get_contrasts, [('out_list', 'elements')])
+                ])
+
         elif method == 'groupComp':
-            contrasts = [
-                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])]
+            estimate_contrast.inputs.contrasts = [
+                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])
+                ]
             threshold.inputs.contrast_index = [1]
+
+            # Function Node elements_in_string
+            #   Get contrast files for required subjects
+            # Note : using a MapNode with elements_in_string requires using clean_list to remove
+            #   None values from the out_list
+            get_contrasts_2 = MapNode(Function(
+                function = elements_in_string,
+                input_names = ['input_str', 'elements'],
+                output_names = ['out_list']
+                ),
+                name = 'get_contrasts_2', iterfield = 'input_str'
+            )
 
             # Specify design matrix
             two_sample_t_test_design = Node(TwoSampleTTestDesign(),
                 name = 'two_sample_t_test_design')
 
             group_level_analysis.connect([
-                (sub_contrasts, two_sample_t_test_design, [
-                    ('equalRange_files', 'group1_files'),
-                    ('equalIndifference_files', 'group2_files')]),
-                (two_sample_t_test_design, estimate_model, [
-                    ('spm_mat_file', 'spm_mat_file')])
+                (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')]),
+                (get_equal_indifference_subjects, get_contrasts_2, [('out_list', 'elements')]),
+                (get_contrasts, two_sample_t_test_design, [
+                    (('out_list', clean_list), 'group1_files')
+                    ]),
+                (get_contrasts_2, two_sample_t_test_design, [
+                    (('out_list', clean_list), 'group2_files')
+                    ]),
+                (two_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])
                 ])
-
-        estimate_contrast.inputs.contrasts = contrasts
 
         return group_level_analysis
 

@@ -75,19 +75,18 @@ class TestPipelinesTeamC88N:
         test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
         information = PipelineTeamC88N.get_subject_information(
             [test_event_file, test_event_file],
-            'gain',
-            ['01', '02']
+            'gain'
             )[0]
 
         assert isinstance(information, Bunch)
         assert information.conditions == ['trial']
 
-        reference_durations = [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        reference_durations = [[0.0, 0.0, 0.0, 0.0]]
         assert len(reference_durations) == len(information.durations)
         for reference_array, test_array in zip(reference_durations, information.durations):
             assert isclose(reference_array, test_array).all()
 
-        reference_onsets = [[4.071, 11.834, 19.535, 27.535, 36.435]]
+        reference_onsets = [[4.071, 11.834, 27.535, 36.435]]
         assert len(reference_onsets) == len(information.onsets)
         for reference_array, test_array in zip(reference_onsets, information.onsets):
             assert isclose(reference_array, test_array).all()
@@ -98,7 +97,7 @@ class TestPipelinesTeamC88N:
         assert paramateric_modulation.name == ['loss', 'gain']
         assert paramateric_modulation.poly == [1, 1]
 
-        reference_param = [[6.0, 14.0, 19.0, 15.0, 17.0], [14.0, 34.0, 38.0, 10.0, 16.0]]
+        reference_param = [[6.0, 14.0, 15.0, 17.0], [14.0, 34.0, 10.0, 16.0]]
         assert len(reference_param) == len(paramateric_modulation.param)
         for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
             assert isclose(reference_array, test_array).all()
@@ -107,19 +106,18 @@ class TestPipelinesTeamC88N:
         test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
         information = PipelineTeamC88N.get_subject_information(
             [test_event_file, test_event_file],
-            'gain',
-            ['01', '02']
+            'loss'
             )[0]
 
         assert isinstance(information, Bunch)
         assert information.conditions == ['trial']
 
-        reference_durations = [[0.0, 0.0, 0.0, 0.0, 0.0]]
+        reference_durations = [[0.0, 0.0, 0.0, 0.0]]
         assert len(reference_durations) == len(information.durations)
         for reference_array, test_array in zip(reference_durations, information.durations):
             assert isclose(reference_array, test_array).all()
 
-        reference_onsets = [[4.071, 11.834, 19.535, 27.535, 36.435]]
+        reference_onsets = [[4.071, 11.834, 27.535, 36.435]]
         assert len(reference_onsets) == len(information.onsets)
         for reference_array, test_array in zip(reference_onsets, information.onsets):
             assert isclose(reference_array, test_array).all()
@@ -127,10 +125,10 @@ class TestPipelinesTeamC88N:
         paramateric_modulation = information.pmod[0]
 
         assert isinstance(paramateric_modulation, Bunch)
-        assert paramateric_modulation.name == ['loss', 'gain']
+        assert paramateric_modulation.name == ['gain', 'loss']
         assert paramateric_modulation.poly == [1, 1]
 
-        reference_param = [[6.0, 14.0, 19.0, 15.0, 17.0], [14.0, 34.0, 38.0, 10.0, 16.0]]
+        reference_param = [[14.0, 34.0, 10.0, 16.0], [6.0, 14.0, 15.0, 17.0]]
         assert len(reference_param) == len(paramateric_modulation.param)
         for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
             assert isclose(reference_array, test_array).all()
