@@ -113,57 +113,51 @@ class PipelineTeamJ7F9(Pipeline):
                         )
                     ],
                     regressor_names = None,
-                    regressors=None
+                    regressors = None
                 )
             )
 
         return subject_information
 
-    def get_parameters_file(filepaths, subject_id, working_dir):
+    def get_confounds_file(filepath, subject_id, run_id, working_dir):
         """
-        Create new tsv files with only desired parameters per subject per run.
+        Create a new tsv files with only desired confounds per subject per run.
 
         Parameters :
-        - filepaths : paths to subject parameters file (i.e. one per run)
-        - subject_id : subject for whom the 1st level analysis is made
+        - filepath : path to the subject confounds file
+        - subject_id : related subject id
+        - run_id : related run id
     	- working_dir: str, name of the directory for intermediate results
 
         Return :
-        - parameters_file : paths to new files containing only desired parameters.
+        - confounds_file : path to new file containing only desired confounds
         """
         from os import makedirs
         from os.path import join, isdir
+
         from pandas import DataFrame, read_csv
         from numpy import array, transpose
 
-        if not isinstance(filepaths, list):
-            filepaths = [filepaths]
+        # Open original confounds file
+        data_frame = read_csv(filepath, sep = '\t', header=0)
 
-        parameters_file = []
-        for file_id, file in enumerate(filepaths):
-            data_frame = read_csv(file, sep = '\t', header=0)
+        # Extract confounds we want to use for the model
+        retained_parameters = DataFrame(transpose(array([
+            data_frame['X'], data_frame['Y'], data_frame['Z'],
+            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
+            data_frame['CSF'], data_frame['WhiteMatter'], data_frame['GlobalSignal']])))
 
-            # Parameters we want to use for the model
-            temp_list = array([
-                data_frame['X'], data_frame['Y'], data_frame['Z'],
-                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
-                data_frame['CSF'], data_frame['WhiteMatter'], data_frame['GlobalSignal']])
-            retained_parameters = DataFrame(transpose(temp_list))
+        # Write confounds to a file
+        confounds_file = join(working_dir, 'confounds_files',
+            f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
 
-            # Write parameters to a parameters file
-            # TODO : warning !!! filepaths must be ordered (1,2,3,4) for the following code to work
-            new_path = join(working_dir, 'parameters_file',
-                f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
+        makedirs(join(working_dir, 'confounds_files'), exist_ok = True)
 
-            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
+        with open(confounds_file, 'w', encoding = 'utf-8') as writer:
+            writer.write(retained_parameters.to_csv(
+                sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-            with open(new_path, 'w') as writer:
-                writer.write(retained_parameters.to_csv(
-                    sep = '\t', index = False, header = False, na_rep = '0.0'))
-
-            parameters_file.append(new_path)
-
-        return parameters_file
+        return confounds_file
 
     def get_subject_level_analysis(self):
         """
@@ -232,13 +226,14 @@ class PipelineTeamJ7F9(Pipeline):
         model_estimate = Node(EstimateModel(), name = 'model_estimate')
         model_estimate.inputs.estimation_method = {'Classical': 1}
 
-        # Function node get_parameters_file - get parameters files
-        parameters = Node(Function(
-            function = self.get_parameters_file,
-            input_names = ['filepaths', 'subject_id', 'working_dir'],
-            output_names = ['parameters_file']),
-            name = 'parameters')
-        parameters.inputs.working_dir = self.directories.working_dir
+        # Function node get_confounds_file - get confounds files
+        confounds = MapNode(Function(
+            function = self.get_confounds_file,
+            input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
+            output_names = ['confounds_file']),
+            name = 'confounds', iterfield = 'run_id')
+        confounds.inputs.working_dir = self.directories.working_dir
+        confounds.inputs.run_id = self.run_list
 
         # EstimateContrast - estimates contrasts
         contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
@@ -268,16 +263,16 @@ class PipelineTeamJ7F9(Pipeline):
             (information_source, remove_gunzip_files, [('subject_id', 'subject_id')]),
             (information_source, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
-            (select_files, parameters, [('param', 'filepaths')]),
+            (select_files, confounds, [('param', 'filepaths')]),
             (select_files, subject_information, [('event', 'event_files')]),
-            (information_source, parameters, [('subject_id', 'subject_id')]),
+            (information_source, confounds, [('subject_id', 'subject_id')]),
             (select_files, gunzip_func, [('func', 'in_file')]),
             (gunzip_func, smoothing, [('out_file', 'in_files')]),
             (gunzip_func, remove_gunzip_files, [('out_file', 'file_name')]),
             (smoothing, remove_gunzip_files, [('smoothed_files', '_')]),
             (smoothing, remove_smoothed_files, [('smoothed_files', 'file_name')]),
             (smoothing, specify_model, [('smoothed_files', 'functional_runs')]),
-            (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
+            (confounds, specify_model, [('parameters_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
             (model_estimate, contrast_estimate, [

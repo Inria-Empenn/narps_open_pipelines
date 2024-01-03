@@ -10,15 +10,29 @@ Usage:
     pytest -q test_team_J7F9.py
     pytest -q test_team_J7F9.py -k <selected_test>
 """
-from os.path import join
+from os import mkdir
+from os.path import join, exists
+from shutil import rmtree
+from filecmp import cmp
 
-from pytest import helpers, mark
+from pytest import helpers, mark, fixture
 from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_J7F9 import PipelineTeamJ7F9
+
+TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_J7F9')
+
+@fixture
+def remove_test_dir():
+    """ A fixture to remove temporary directory created by tests """
+
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
+    mkdir(TEMPORARY_DIR)
+    yield # test runs here
+    #rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeamJ7F9:
     """ A class that contains all the unit tests for the PipelineTeamJ7F9 class."""
@@ -108,6 +122,27 @@ class TestPipelinesTeamJ7F9:
             assert len(reference_param) == len(paramateric_modulation.param)
             for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
                 assert isclose(reference_array, test_array).all()
+
+    @staticmethod
+    @mark.unit_test
+    def test_confounds_file(remove_test_dir):
+        """ Test the get_confounds_file method """
+
+        confounds_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
+        reference_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'team_J7F9', 'confounds.tsv')
+
+        # Get new confounds file
+        PipelineTeamJ7F9.get_confounds_file(confounds_file, 'sid', 'rid', TEMPORARY_DIR)
+
+        # Check confounds file was created
+        created_confounds_file = join(
+            TEMPORARY_DIR, 'confounds_files', 'confounds_file_sub-sid_run-rid.tsv')
+        assert exists(created_confounds_file)
+
+        # Check contents
+        assert cmp(reference_file, created_confounds_file)
 
     @staticmethod
     @mark.pipeline_test
