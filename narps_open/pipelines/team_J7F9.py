@@ -85,7 +85,7 @@ class PipelineTeamJ7F9(Pipeline):
                     weights_loss.append(float(info[3]))
 
                     # Missed trials
-                    if float(info[4]) < 0.1 or str(info[5]) == 'NoResp':
+                    if float(info[4]) < 0.1 or 'NoResp' in info[5]:
                         onsets_missed.append(float(info[0]))
                         durations_missed.append(0.0)
 
@@ -258,8 +258,6 @@ class PipelineTeamJ7F9(Pipeline):
             )
         subject_level_analysis.connect([
             (information_source, select_files, [('subject_id', 'subject_id')]),
-            (information_source, remove_gunzip_files, [('subject_id', 'subject_id')]),
-            (information_source, remove_smoothed_files, [('subject_id', 'subject_id')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (select_files, confounds, [('confounds', 'filepath')]),
             (select_files, subject_information, [('event', 'event_files')]),
@@ -267,7 +265,6 @@ class PipelineTeamJ7F9(Pipeline):
             (select_files, gunzip_func, [('func', 'in_file')]),
             (gunzip_func, smoothing, [('out_file', 'in_files')]),
             (gunzip_func, remove_gunzip_files, [('out_file', 'file_name')]),
-            (smoothing, remove_gunzip_files, [('smoothed_files', '_')]),
             (smoothing, remove_smoothed_files, [('smoothed_files', 'file_name')]),
             (smoothing, specify_model, [('smoothed_files', 'functional_runs')]),
             (confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
@@ -281,7 +278,8 @@ class PipelineTeamJ7F9(Pipeline):
                 ('con_images', 'subject_level_analysis.@con_images'),
                 ('spmT_images', 'subject_level_analysis.@spmT_images'),
                 ('spm_mat_file', 'subject_level_analysis.@spm_mat_file')]),
-            (contrast_estimate, remove_smoothed_files, [('spmT_images', '_')])
+            (data_sink, remove_smoothed_files, [('out_file', '_')]),
+            (data_sink, remove_gunzip_files, [('out_file', '_')])
             ])
 
         return subject_level_analysis
