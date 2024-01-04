@@ -60,18 +60,28 @@ class PipelineTeamJ7F9(Pipeline):
 
         subject_information = []
 
-        # Create one Bunch per run
-        for event_file in event_files:
+        # Create empty dicts
+        onsets = {}
+        durations = {}
+        weights_gain = {}
+        weights_loss = {}
+        onsets_missed = {}
+        durations_missed = {}
 
-            # Create empty lists
-            onsets = []
-            durations = []
-            weights_gain = []
-            weights_loss = []
-            onsets_missed = []
-            durations_missed = []
+        # Run list
+        run_list = [str(r).zfill(2) for r in range(1, len(event_files) + 1)]
 
-            # Parse event file
+        # Parse event file
+        for run_id, event_file in zip(run_list, event_files):
+
+            # Init empty lists inside directiries
+            onsets[run_id] = []
+            durations[run_id] = []
+            weights_gain[run_id] = []
+            weights_loss[run_id] = []
+            onsets_missed[run_id] = []
+            durations_missed[run_id] = []
+
             with open(event_file, 'rt') as file:
                 next(file)  # skip the header
 
@@ -79,37 +89,47 @@ class PipelineTeamJ7F9(Pipeline):
                     info = line.strip().split()
 
                     # Trials
-                    onsets.append(float(info[0]))
-                    durations.append(0.0)
-                    weights_gain.append(float(info[2]))
-                    weights_loss.append(float(info[3]))
+                    onsets[run_id].append(float(info[0]))
+                    durations[run_id].append(0.0)
+                    weights_gain[run_id].append(float(info[2]))
+                    weights_loss[run_id].append(float(info[3]))
 
                     # Missed trials
                     if float(info[4]) < 0.1 or 'NoResp' in info[5]:
-                        onsets_missed.append(float(info[0]))
-                        durations_missed.append(0.0)
+                        onsets_missed[run_id].append(float(info[0]))
+                        durations_missed[run_id].append(0.0)
+
+        # Compute mean weight values across all runs
+        mean_gain_weight = mean(list(weights_gain.values()))
+        mean_loss_weight = mean(list(weights_loss.values()))
+
+        # Check if there are any missed trials across all runs
+        missed_trials = any(t for t in onsets_missed.values())
+
+        # Create one Bunch per run
+        for run_id in run_list:
 
             # Mean center gain and loss weights
-            mean_weight = mean(weights_gain)
-            for element_id, element in enumerate(weights_gain):
-                weights_gain[element_id] = element - mean_weight
-            mean_weight = mean(weights_loss)
-            for element_id, element in enumerate(weights_loss):
-                weights_loss[element_id] = element - mean_weight
+            for element_id, element in enumerate(weights_gain[run_id]):
+                weights_gain[run_id][element_id] = element - mean_gain_weight
+            for element_id, element in enumerate(weights_loss[run_id]):
+                weights_loss[run_id][element_id] = element - mean_loss_weight
 
             # Fill Bunch
             subject_information.append(
                 Bunch(
-                    conditions = ['trial', 'missed'],
-                    onsets = [onsets, onsets_missed],
-                    durations = [durations, durations_missed],
+                    conditions = ['trial', 'missed'] if missed_trials else ['trial'],
+                    onsets = [onsets[run_id], onsets_missed[run_id]] if missed_trials\
+                        else [onsets[run_id]],
+                    durations = [durations[run_id], durations_missed[run_id]] if missed_trials\
+                        else [durations[run_id]],
                     amplitudes = None,
                     tmod = None,
                     pmod = [
                         Bunch(
                             name = ['gain', 'loss'],
                             poly = [1, 1],
-                            param = [weights_gain, weights_loss]
+                            param = [weights_gain[run_id], weights_loss[run_id]]
                         )
                     ],
                     regressor_names = None,
