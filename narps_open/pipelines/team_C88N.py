@@ -493,6 +493,7 @@ class PipelineTeamC88N(Pipeline):
                 name = 'two_sample_t_test_design')
 
             group_level_analysis.connect([
+                (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
                 (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')]),
                 (get_equal_indifference_subjects, get_contrasts_2, [('out_list', 'elements')]),
                 (get_contrasts, two_sample_t_test_design, [
