@@ -100,9 +100,9 @@ class PipelineTeamJ7F9(Pipeline):
             # Fill Bunch
             subject_information.append(
                 Bunch(
-                    conditions = ['trial'] if not onsets_missed else ['trial', 'missed'],
-                    onsets = [onsets] if not onsets_missed else [onsets, onsets_missed],
-                    durations = [durations] if not onsets_missed else [durations, durations_missed],
+                    conditions = ['trial', 'missed'],
+                    onsets = [onsets, onsets_missed],
+                    durations = [durations, durations_missed],
                     amplitudes = None,
                     tmod = None,
                     pmod = [
