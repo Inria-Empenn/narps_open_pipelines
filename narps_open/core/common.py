@@ -63,3 +63,24 @@ def list_intersection(list_1: list, list_2: list) -> list:
     - list, the intersection of list_1 and list_2
     """
     return [e for e in list_1 if e in list_2]
+
+def list_to_file(input_list: list, file_name: str = 'elements.tsv') -> str:
+    """
+    Create a tsv file containing elements of the input list.
+    This function is meant to be used in a Nipype Function Node.
+
+    Parameters :
+    - input_list: list
+
+    Returns:
+    - output_file: path to the created file
+    """
+    from os.path import abspath
+    output_file = abspath(file_name)
+
+    # Write un element per line
+    with open(output_file, 'w') as writer:
+        for element in input_list:
+            writer.write(f'{element}\n')
+
+    return output_file
