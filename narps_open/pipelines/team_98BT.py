@@ -111,37 +111,6 @@ class PipelineTeam98BT(Pipeline):
 
         return dartel
 
-    def remove_temporary_files(_, subject_id, run_id, working_dir):
-        """
-        This method is used in a Function node to fully remove
-        temporary files, once they aren't needed anymore.
-
-        Parameters:
-        - _: Node input only used for triggering the Node
-        - subject_id: str, subject id from which to remove the files
-        - run_id: str, run id of the files to remove
-        - working_dir: str, path to the working directory
-        """
-        from os.path import join
-        from shutil import rmtree
-
-        preprocessing_dir = join(working_dir, 'preprocessing',
-            f'run_id_{run_id}_subject_id_{subject_id}')
-
-        for directory in [
-            'gunzip_func',
-            'gunzip_phasediff',
-            'fieldmap_infos',
-            'gunzip_magnitude',
-            'fieldmap',
-            'slice_timing']:
-            try:
-                rmtree(join(preprocessing_dir, directory))
-            except OSError as error:
-                print(error)
-            else:
-                print(f'Successfully deleted : {directory}')
-
     def get_fieldmap_info(fieldmap_info_file, magnitude):
         """
         Function to get information necessary to compute the fieldmap.
@@ -460,16 +429,12 @@ class PipelineTeam98BT(Pipeline):
                 Bunch(
                     name = ['gain', 'loss', 'answer'], # TODO : warning here : former names must be kept ?
                     poly = [1, 1, 1],
-                    param = [
-                        weights_gain,
-                        weights_loss,
-                        answers
-                    ]
+                    param = [weights_gain, weights_loss, answers]
                 )
             ],
             regressor_names = None,
             regressors = None
-            )
+        )
 
     def get_subject_level_analysis(self):
         """
@@ -712,8 +677,7 @@ class PipelineTeam98BT(Pipeline):
             base_dir = self.directories.working_dir,
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
         group_level_analysis.connect([
-            (information_source, select_files, [
-                ('contrast_id', 'contrast_id')]),
+            (information_source, select_files, [('contrast_id', 'contrast_id')]),
             (select_files, get_contrasts, [('contrasts', 'input_str')]),
             (estimate_model, estimate_contrast, [
                 ('spm_mat_file', 'spm_mat_file'),
@@ -784,6 +748,7 @@ class PipelineTeam98BT(Pipeline):
                 name = 'two_sample_t_test_design')
 
             group_level_analysis.connect([
+                (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
                 (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')]),
                 (get_equal_indifference_subjects, get_contrasts_2, [('out_list', 'elements')]),
                 (get_contrasts, two_sample_t_test_design, [
