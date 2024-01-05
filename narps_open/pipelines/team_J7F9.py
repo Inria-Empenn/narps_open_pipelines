@@ -285,8 +285,10 @@ class PipelineTeamJ7F9(Pipeline):
             (select_files, gunzip_func, [('func', 'in_file')]),
             (gunzip_func, smoothing, [('out_file', 'in_files')]),
             (gunzip_func, remove_gunzip_files, [('out_file', 'file_name')]),
+            (smoothing, remove_gunzip_files, [('smoothed_files', '_')]),
             (smoothing, remove_smoothed_files, [('smoothed_files', 'file_name')]),
             (smoothing, specify_model, [('smoothed_files', 'functional_runs')]),
+            (specify_model, remove_smoothed_files, [('session_info', '_')]),
             (confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
@@ -297,10 +299,9 @@ class PipelineTeamJ7F9(Pipeline):
             (contrast_estimate, data_sink, [
                 ('con_images', 'subject_level_analysis.@con_images'),
                 ('spmT_images', 'subject_level_analysis.@spmT_images'),
-                ('spm_mat_file', 'subject_level_analysis.@spm_mat_file')]),
-            (data_sink, remove_smoothed_files, [('out_file', '_')]),
-            (data_sink, remove_gunzip_files, [('out_file', '_')])
+                ('spm_mat_file', 'subject_level_analysis.@spm_mat_file')
             ])
+        ])
 
         return subject_level_analysis
 
