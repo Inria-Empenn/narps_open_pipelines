@@ -502,6 +502,7 @@ class PipelineTeam2T6S(Pipeline):
             height_threshold = 0.001, height_threshold_type = 'p-value',
             force_activation = True),
             name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
+        threshold.synchronize = True
 
         l2_analysis = Workflow(
             base_dir = self.directories.working_dir,
@@ -512,7 +513,8 @@ class PipelineTeam2T6S(Pipeline):
             (selectfiles_groupanalysis, sub_contrasts, [
                 ('contrast', 'file_list'),
                 ('participants', 'participants_file')]),
-            (estimate_model, estimate_contrast, [('spm_mat_file', 'spm_mat_file'),
+            (estimate_model, estimate_contrast, [
+                ('spm_mat_file', 'spm_mat_file'),
                 ('residual_image', 'residual_image'),
                 ('beta_images', 'beta_images')]),
             (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),
@@ -528,11 +530,9 @@ class PipelineTeam2T6S(Pipeline):
 
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
-
             threshold.inputs.contrast_index = [1, 2]
-            threshold.synchronize = True
 
-            ## Specify design matrix
+            # Specify design matrix
             one_sample_t_test_design = Node(OneSampleTTestDesign(),
                 name = 'one_sample_t_test_design')
 
@@ -543,11 +543,9 @@ class PipelineTeam2T6S(Pipeline):
         elif method == 'groupComp':
             contrasts = [
                 ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1])]
-
             threshold.inputs.contrast_index = [1]
-            threshold.synchronize = True
 
-            # Node for the design matrix
+            # Specify design matrix
             two_sample_t_test_design = Node(TwoSampleTTestDesign(),
                 name = 'two_sample_t_test_design')
 
