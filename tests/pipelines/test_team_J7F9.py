@@ -34,6 +34,14 @@ def remove_test_dir():
     yield # test runs here
     rmtree(TEMPORARY_DIR, ignore_errors = True)
 
+def compare_float_2d_arrays(array_1, array_2):
+    """ Assert array_1 and array_2 are close enough """
+
+    assert len(array_1) == len(array_2)
+    for reference_array, test_array in zip(array_1, array_2):
+        assert len(reference_array) == len(test_array)
+        assert isclose(reference_array, test_array).all()
+
 class TestPipelinesTeamJ7F9:
     """ A class that contains all the unit tests for the PipelineTeamJ7F9 class."""
 
@@ -84,44 +92,94 @@ class TestPipelinesTeamJ7F9:
     def test_subject_information():
         """ Test the get_subject_information method """
 
-        test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
-        information = PipelineTeamJ7F9.get_subject_information([test_event_file, test_event_file])
+        # Get test files
+        test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        test_file_2 = join(Configuration()['directories']['test_data'],
+            'pipelines', 'team_J7F9', 'events_resp.tsv')
 
-        for run_id in [0, 1]:
-            bunch = information [run_id] 
+        # Prepare several scenarii
+        info_missed = PipelineTeamJ7F9.get_subject_information([test_file, test_file])
+        info_ok = PipelineTeamJ7F9.get_subject_information([test_file_2, test_file_2])
+        info_half = PipelineTeamJ7F9.get_subject_information([test_file_2, test_file])
 
-            assert isinstance(bunch, Bunch)
-            assert bunch.conditions == ['trial', 'missed']
+        # Compare bunches to expected
+        bunch = info_missed[0]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'missed']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435], [19.535]])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0, 0.0], [0.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-8.4, 11.6, 15.6, -12.4, -6.4], [-8.2, -0.2, 4.8, 0.8, 2.8]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
-            reference_durations = [
-                [0.0, 0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 0.0]
-                ]
-            assert len(reference_durations) == len(bunch.durations)
-            for reference_array, test_array in zip(reference_durations, bunch.durations):
-                assert isclose(reference_array, test_array).all()
+        bunch = info_missed[1]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'missed']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435], [19.535]])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0, 0.0], [0.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-8.4, 11.6, 15.6, -12.4, -6.4], [-8.2, -0.2, 4.8, 0.8, 2.8]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
-            reference_onsets = [
-                [4.071, 11.834, 19.535, 27.535, 36.435],
-                [19.535]
-                ]
-            assert len(reference_onsets) == len(bunch.onsets)
-            for reference_array, test_array in zip(reference_onsets, bunch.onsets):
-                assert isclose(reference_array, test_array).all()
+        bunch = info_ok[0]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 27.535, 36.435]])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-4.5, 15.5, -8.5, -2.5], [-7.0, 1.0, 2.0, 4.0]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
-            paramateric_modulation = bunch.pmod[0]
+        bunch = info_ok[1]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 27.535, 36.435]])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-4.5, 15.5, -8.5, -2.5], [-7.0, 1.0, 2.0, 4.0]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
+        
+        bunch = info_half[0]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'missed']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 27.535, 36.435], []])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0], []])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-6.666666666666668, 13.333333333333332, -10.666666666666668, -4.666666666666668], [-7.666666666666666, 0.3333333333333339, 1.333333333333334, 3.333333333333334]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
-            assert isinstance(paramateric_modulation, Bunch)
-            assert paramateric_modulation.name == ['gain', 'loss']
-            assert paramateric_modulation.poly == [1, 1]
-
-            reference_param = [
-                [-8.4, 11.6, 15.6, -12.4, -6.4],
-                [-8.2, -0.2, 4.8, 0.8, 2.8]
-                ]
-            assert len(reference_param) == len(paramateric_modulation.param)
-            for reference_array, test_array in zip(reference_param, paramateric_modulation.param):
-                assert isclose(reference_array, test_array).all()
+        bunch = info_half[1]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'missed']
+        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435], [19.535]])
+        compare_float_2d_arrays(bunch.durations, [[0.0, 0.0, 0.0, 0.0, 0.0], [0.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.pmod[0].name == ['gain', 'loss']
+        assert bunch.pmod[0].poly == [1, 1]
+        compare_float_2d_arrays(bunch.pmod[0].param, [[-6.666666666666668, 13.333333333333332, 17.333333333333332, -10.666666666666668, -4.666666666666668], [-7.666666666666666, 0.3333333333333339, 5.333333333333334, 1.333333333333334, 3.333333333333334]])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
     @staticmethod
     @mark.unit_test

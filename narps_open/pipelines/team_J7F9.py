@@ -55,7 +55,7 @@ class PipelineTeamJ7F9(Pipeline):
         Returns :
         - subject_information : list of Bunch for subject level analysis.
         """
-        from numpy import mean
+        from numpy import mean, ravel
         from nipype.interfaces.base import Bunch
 
         subject_information = []
@@ -100,8 +100,15 @@ class PipelineTeamJ7F9(Pipeline):
                         durations_missed[run_id].append(0.0)
 
         # Compute mean weight values across all runs
-        mean_gain_weight = mean(list(weights_gain.values()))
-        mean_loss_weight = mean(list(weights_loss.values()))
+        all_weights_gain = []
+        for value in weights_gain.values():
+            all_weights_gain += value
+        mean_gain_weight = mean(all_weights_gain)
+
+        all_weights_loss = []
+        for value in weights_loss.values():
+            all_weights_loss += value
+        mean_loss_weight = mean(all_weights_loss)
 
         # Check if there are any missed trials across all runs
         missed_trials = any(t for t in onsets_missed.values())
