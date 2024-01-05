@@ -524,6 +524,7 @@ class PipelineTeamJ7F9(Pipeline):
             two_sample_t_test_design.inputs.unequal_variance = True
 
             group_level_analysis.connect([
+                (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
                 (get_equal_range_subjects, get_contrasts, [
                     (('out_list', complete_subject_ids), 'elements')
                 ]),
