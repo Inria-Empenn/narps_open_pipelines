@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 # List all the available pipelines and the corresponding class for each
 implemented_pipelines = {
-    '08MQ': None,
+    '08MQ': 'PipelineTeam08MQ',
     '0C7Q': None,
     '0ED6': None,
     '0H5E': None,
@@ -43,7 +43,7 @@ implemented_pipelines = {
     'B23O': None,
     'B5I6': None,
     'C22U': None,
-    'C88N': None,
+    'C88N': 'PipelineTeamC88N',
     'DC61': None,
     'E3B6': None,
     'E6R3': None,
