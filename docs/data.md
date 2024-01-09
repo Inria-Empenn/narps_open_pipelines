@@ -2,7 +2,7 @@
 
 The datasets used for the project can be downloaded using one of the two options below.
 
-The path to these datasets must conform with the information located in the configuration file you plan to use (cf. [documentation about configuration](docs/configuration.md)). By default, these paths are in the repository:
+The path to these datasets must conform with the information located in the configuration file you plan to use (cf. [documentation about configuration](/docs/configuration.md)). By default, these paths are in the repository:
    * `data/original/`: original data from NARPS
    * `data/results/`: results from NARPS teams
 
