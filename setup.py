@@ -67,6 +67,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'narps_open_runner = narps_open.runner:main',
+            'narps_open_tester = narps_open.tester:main',
             'narps_open_status = narps_open.utils.status:main',
             'narps_description = narps_open.data.description.__main__:main',
             'narps_results = narps_open.data.results.__main__:main'
