@@ -74,12 +74,30 @@ cd /home/neuro/code/
 pip install .
 ```
 
-Finally, you are able to run pipelines :
+Finally, you are able to use the scripts of the project :
+
+* `narps_open_runner`: run pipelines
+* `narps_description`: get the textual description made by a team
+* `narps_results`: download the original results from teams
+* `narps_open_status`: get status information about the development process of the pipelines
 
 ```bash
-python narps_open/runner.py
-  usage: runner.py [-h] -t TEAM (-r RSUBJECTS | -s SUBJECTS [SUBJECTS ...] | -n NSUBJECTS) [-g | -f] [-c]
+# Run the pipeline for team 2T6S, with 40 subjects
+narps_open_runner -t 2T6S -n 40
+
+# Get the description of team C88N in markdown formatting
+narps_description -t C88N --md
+
+# Download the results from all teams
+narps_results -a
+
+#  Get the pipeline work status information in json formatting
+narps_open_status --json
 ```
 
 > [!NOTE]  
-> For further information, read this documentation page [docs/running.md](docs/running.md).
+> For further information about these command line tools, read the corresponding documentation pages.
+> * `narps_open_runner` : [docs/running.md](docs/running.md)
+> * `narps_description` : [docs/description.md](docs/description.md)
+> * `narps_results` : [docs/data.md](docs/data.md)
+> * `narps_open_status` : [docs/status.md](docs/status.md)

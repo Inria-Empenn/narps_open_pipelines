@@ -4,7 +4,7 @@
 
 The `narps_open.runner` module allows to run pipelines from the command line.
 
-> [! TIP]
+> [!TIP]
 > In the following examples, use `narps_open_runner` or `python narps_open/runner.py` indifferently to launch the command line tool.
 
 ```bash
@@ -28,7 +28,7 @@ narps_open_runner -t 2T6S -r 4 -f
 narps_open_runner -t 2T6S -r 4 -f -c # Check the output files without launching the runner
 ```
 
-> [! NOTE]
+> [!NOTE]
 > In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
 
 ## Using the `PipelineRunner` object

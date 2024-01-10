@@ -67,7 +67,7 @@ for team in teams:
     collection.rectify() # Rectified versions are created
 ```
 
-> [! TIP]
+> [!TIP]
 > In the following examples, use `narps_results` or `python narps_open/data/results` indifferently to launch the command line tool.
 
 ```bash

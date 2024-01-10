@@ -12,7 +12,7 @@ The class `TeamDescription` of module `narps_open.data.description` acts as a pa
 
 You can use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, `categorized_for_analysis`, `derived`, and `comments`. Options `--json` and `--md` allow to choose the export format you prefer between JSON and Markdown.
 
-> [! TIP]
+> [!TIP]
 > In the following examples, use `narps_description` or `python narps_open/data/description` indifferently to launch the command line tool.
 
 ```bash
