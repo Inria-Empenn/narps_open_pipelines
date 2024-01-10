@@ -6,7 +6,7 @@
 
 ## 2 - Clone the code
 
-First, install [Datalad](https://www.datalad.org/). This will allow you to access the NARPS data easily, as it is included in the repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
+First, install [Datalad](https://handbook.datalad.org/en/latest/intro/installation.html#install-datalad). This will allow you to access the NARPS data easily, as it is included in the repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
 
 Then, [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) the project :
 
