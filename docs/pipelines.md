@@ -149,4 +149,13 @@ First have a look at the [testing page of the documentation](/docs/testing.md). 
 All tests must be contained in a single file named `tests/pipelines/test_team_<team_id>.py`. You can start by copy-pasting the template file : [tests/pipelines/templates/template_test.py](/tests/pipelines/templates/template_test.py) inside the `tests/pipelines/` directory, renaming it accordingly. Then, follow the instructions and tips inside the template and don't forget to replace `XXXX` with the actual team id, inside the document.
 
 > [!NOTE]  
-> Feel free to have a look at [tests/pipelines/test_team_2T6S.py](/tests/pipelines/test_team_2T6S.py), which is the file containing all the automatic tests for the 2T6S pipeline : it gives an example.
+> Feel free to have a look at [tests/pipelines/test_team_C88N.py](/tests/pipelines/test_team_C88N.py), which is the file containing all the automatic tests for the C88N pipeline : it gives an example.
+
+Your test file must contain the following methods:
+* one testing the execution of the pipeline and comparing the results with the original ones. This can be simply achieved with this line :
+```python
+helpers.test_pipeline_evaluation('C88N')
+```
+* one for each method you declared in the pipeline class (e.g.: testing the `get_subject_information` method)
+* one testing the instantiation of your pipeline (see `test_create` in `test_team_C88N.py`)
+* one testing the `get_*_outputs` methods of your pipeline (see `test_outputs` in `test_team_C88N.py`)
