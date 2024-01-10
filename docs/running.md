@@ -2,10 +2,13 @@
 
 ## Using the runner application
 
-The `narps_open.runner` module allows to run pipelines from the command line :
+The `narps_open.runner` module allows to run pipelines from the command line.
+
+> [! TIP]
+> In the following examples, use `narps_open_runner` or `python narps_open/runner.py` indifferently to launch the command line tool.
 
 ```bash
-python narps_open/runner.py -h
+narps_open_runner -h
 	usage: runner.py [-h] -t TEAM (-r RANDOM | -s SUBJECTS [SUBJECTS ...]) [-g | -f]
 
 	Run the pipelines from NARPS.
@@ -19,13 +22,14 @@ python narps_open/runner.py -h
 	  -f, --first           run the first levels only (preprocessing + subjects + runs)
 	  -c, --check           check pipeline outputs (runner is not launched)
 
-python narps_open/runner.py -t 2T6S -s 001 006 020 100
-python narps_open/runner.py -t 2T6S -r 4
-python narps_open/runner.py -t 2T6S -r 4 -f
-python narps_open/runner.py -t 2T6S -r 4 -f -c # Check the output files without launching the runner
+narps_open_runner -t 2T6S -s 001 006 020 100
+narps_open_runner -t 2T6S -r 4
+narps_open_runner -t 2T6S -r 4 -f
+narps_open_runner -t 2T6S -r 4 -f -c # Check the output files without launching the runner
 ```
 
-In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
+> [! NOTE]
+> In this usecase, the paths where to store the outputs and to the dataset are picked by the runner from the [configuration](docs/configuration.md).
 
 ## Using the `PipelineRunner` object
 
