@@ -133,7 +133,7 @@ class PipelineTeam48CD(Pipeline):
         Returns :
         - subject_info : list of Bunch containing event information
         """
-        # [INFO] nipype requires to import all dependancies from inside the methods that are
+        # [INFO] nipype requires to import all dependencies from inside the methods that are
         #   later used in Function nodes
         from nipype.interfaces.base import Bunch
 
