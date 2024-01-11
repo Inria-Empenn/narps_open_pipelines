@@ -1,12 +1,14 @@
 # More information about the NARPS study
 
-This page aims at summarizing the NARPS study (Botvinik-Nezer et al., 2020) for the future contributors of NARPS Open Pipelines.
+This page aims at summarizing the NARPS study [(Botvinik-Nezer et al., 2020)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7771346/) for the future contributors of NARPS Open Pipelines.
+
+In the following, the citations come from the associated data article : [Botvinik-Nezer, R. et al. (2019), 'fMRI data of mixed gambles from the Neuroimaging Analysis Replication and Prediction Study', Scientific Data](https://www.nature.com/articles/s41597-019-0113-7).
 
 ## Context
 
 > In the Neuroimaging Analysis Replication and Prediction Study (NARPS), we aim to provide the first scientific evidence on the variability of results across analysis teams in neuroscience.
 
-From this starting point, 70 teams were asked to analyse the same dataset, providing their methods and results to be later analysed and compared.
+From this starting point, 70 teams were asked to analyse the same dataset, providing their methods and results to be later analysed and compared. Nine hypotheses where to be tested and a binary decision for each one had to be reported, whether it was significantly supported based on a whole-brain analysis.
 
 ## The data
 
@@ -42,6 +44,8 @@ This file contains the onsets, response time, and response of the participant, a
 
 For each participant, the associated data (preprocessed volumes, confounds, brain masks, ...) is under :
 * `data/original/ds001734/derivatives/fmriprep/sub-*/func/`
+
+Some teams chose to use this pre-processed data directly as inputs for the statistical analysis, while other performed their own method of pre-processing.
 
 ### Task-related data
 
