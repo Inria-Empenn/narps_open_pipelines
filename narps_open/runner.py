@@ -152,7 +152,8 @@ class PipelineRunner():
 
         return [f for f in files if not isfile(f)]
 
-if __name__ == '__main__':
+def main():
+    """ Entry-point for the command line tool narps_open_runner """
 
     # Parse arguments
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
@@ -191,7 +192,6 @@ if __name__ == '__main__':
 
     # Check data
     if arguments.check:
-        missing_files = []
         print('Missing files for team', arguments.team, 'after running',
             len(runner.pipeline.subject_list), 'subjects:')
         if not arguments.group:
@@ -202,3 +202,6 @@ if __name__ == '__main__':
     # Start the runner
     else:
         runner.start(arguments.first, arguments.group)
+
+if __name__ == '__main__':
+    main()
