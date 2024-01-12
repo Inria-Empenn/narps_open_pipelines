@@ -67,28 +67,31 @@ for team in teams:
     collection.rectify() # Rectified versions are created
 ```
 
+> [!TIP]
+> In the following examples, use `narps_results` or `python narps_open/data/results` indifferently to launch the command line tool.
+
 ```bash
 # From the command line
-$ python narps_open/data/results -h
-usage: results [-h] (-t TEAMS [TEAMS ...] | -a) [-r]
+narps_results -h
+    usage: results [-h] (-t TEAMS [TEAMS ...] | -a) [-r]
 
-Get Neurovault collection of results from NARPS teams.
+    Get Neurovault collection of results from NARPS teams.
 
-options:
-  -h, --help            show this help message and exit
-  -t TEAMS [TEAMS ...], --teams TEAMS [TEAMS ...]
-                        a list of team IDs
-  -a, --all             download results from all teams
-  -r, --rectify         rectify the results
+    options:
+      -h, --help            show this help message and exit
+      -t TEAMS [TEAMS ...], --teams TEAMS [TEAMS ...]
+                            a list of team IDs
+      -a, --all             download results from all teams
+      -r, --rectify         rectify the results
 
 # Either download all collections
-python narps_open/utils/results -a
+narps_results -a
 
 # Or select the ones you need
-python narps_open/utils/results -t 2T6S C88N L1A8
+narps_results -t 2T6S C88N L1A8
 
 # Download and rectify the collections
-python narps_open/utils/results -r -t 2T6S C88N L1A8
+narps_results -r -t 2T6S C88N L1A8
 ```
 
 The collections are also available [here](https://zenodo.org/record/3528329/) as one release on Zenodo that you can download.
