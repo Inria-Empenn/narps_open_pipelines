@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 from json import dumps
 
 from narps_open.data.description import TeamDescription
+from narps_open.pipelines import implemented_pipelines
 
 def main():
     """ Entry-point for the command line tool narps_description """
@@ -14,7 +15,7 @@ def main():
     # Parse arguments
     parser = ArgumentParser(description='Get description of a NARPS pipeline.')
     parser.add_argument('-t', '--team', type=str, required=True,
-        help='the team ID')
+        help='the team ID', choices=implemented_pipelines.keys())
     parser.add_argument('-d', '--dictionary', type=str, required=False,
         choices=[
             'general',
