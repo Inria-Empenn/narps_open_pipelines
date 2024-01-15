@@ -34,7 +34,7 @@ def test_pipeline_execution(
 
     Returns:
         - list(float) the correlation coefficients between the following
-        (reference and computed) files:
+        (result and reproduced) files:
 
     This function can be used as follows:
         results = pytest.helpers.test_pipeline('2T6S', 4)

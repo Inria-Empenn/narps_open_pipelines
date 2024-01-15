@@ -12,8 +12,11 @@ The class `TeamDescription` of module `narps_open.data.description` acts as a pa
 
 You can use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, `categorized_for_analysis`, `derived`, and `comments`. Options `--json` and `--md` allow to choose the export format you prefer between JSON and Markdown.
 
+> [!TIP]
+> In the following examples, use `narps_description` or `python narps_open/data/description` indifferently to launch the command line tool.
+
 ```bash
-python narps_open/data/description -h
+narps_description -h
 # usage: __init__.py [-h] -t TEAM [-d {general,exclusions,preprocessing,analysis,categorized_for_analysis,derived,comments}]
 #
 # Get description of a NARPS pipeline.
@@ -26,7 +29,7 @@ python narps_open/data/description -h
 #  --json                output team description as JSON
 #  --md                  output team description as Markdown
 
-python narps_open/data/description -t 2T6S --json
+narps_description -t 2T6S --json
 # {
 #     "general.teamID": "2T6S",
 #     "general.NV_collection_link": "https://neurovault.org/collections/4881/",
@@ -41,7 +44,7 @@ python narps_open/data/description -t 2T6S --json
 #     "preprocessing.preprocessing_order": "We used the provided preprocessed data by fMRIPprep 1.1.4 (Esteban, Markiewicz, et al. (2018); Esteban, Blair, et al. (2018); RRID:SCR_016216), which is based on Nipype 1.1.1 (Gorgolewski et al. (2011); Gorgolewski et al. (2018); RRID:SCR_002502) and we additionally conducted a spatial smoothing using the provided preprocessed data set and SPM12. Here, we attach the preprocessing steps described in the provided data set. \nAnatomical data preprocessing\nThe T1-weighted (T1w) image was corrected for intensity non-uniformity (INU) using N4BiasFieldCorrection (Tustison et al. 2010, ANTs 2.2.0), and used as T1w-reference throughout the workflow. The T1w-reference was then skull-stripped using antsBrainExtraction.sh (ANTs 2.2.0), using OASIS as target template. Brain surfaces we
 # ...
 
-python narps_open/data/description -t 2T6S -d general --json
+narps_description -t 2T6S -d general --json
 # {
 #    "teamID": "2T6S",
 #    "NV_collection_link": "https://neurovault.org/collections/4881/",
@@ -53,7 +56,7 @@ python narps_open/data/description -t 2T6S -d general --json
 #    "general_comments": "NA"
 # }
 
-python narps_open/data/description -t 2T6S --md
+narps_description -t 2T6S --md
 # # NARPS team description : 2T6S
 # ## General
 # * `teamID` : 2T6S

@@ -46,8 +46,11 @@ report.markdown() # Returns a string containing the markdown
 
 You can also use the command-line tool as so.
 
+> [!TIP]
+> In the following examples, use `narps_open_status` or `python narps_open/utils/status.py` indifferently to launch the command line tool.
+
 ```bash
-python narps_open/utils/status -h
+narps_open_status -h
 # usage: status.py [-h] [--json | --md]
 # 
 # Get a work progress status report for pipelines.
@@ -57,7 +60,7 @@ python narps_open/utils/status -h
 #   --json      output the report as JSON
 #   --md        output the report as Markdown
 
-python narps_open/utils/status --json
+narps_open_status --json
 # {
 #     "08MQ": {
 #         "softwares": "FSL",
@@ -83,7 +86,7 @@ python narps_open/utils/status --json
 #     },
 # ...
 
-python narps_open/utils/status --md
+narps_open_status --md
 # ...
 # | team_id | status | main software | fmriprep used ? | related issues | related pull requests | excluded from NARPS analysis | reproducibility |
 # | --- |:---:| --- | --- | --- | --- | --- | --- |
