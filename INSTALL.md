@@ -66,6 +66,22 @@ Start a Docker container from the Docker image :
 docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype
 ```
 
+Optionally edit the configuration file `narps_open/utils/default_config.toml` so that the refered paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
+```toml
+# default_config.toml
+# ...
+
+[directories]
+dataset = "/home/neuro/code/data/original/ds001734/"
+reproduced_results = "/home/neuro/code/data/reproduced/"
+narps_results = "/home/neuro/code/data/results/"
+
+# ...
+```
+
+> [!NOTE]  
+> Further information about configuration files can be found on the page [docs/configuration.md](docs/configuration.md).
+
 Install NARPS Open Pipelines inside the container :
 
 ```bash
