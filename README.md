@@ -1,4 +1,4 @@
-# The NARPS Open Pipelines project
+# NARPS Open Pipelines
 
 <p align="center">
 	<img src="assets/images/project_illustration.png"/> 
@@ -15,26 +15,27 @@
         <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
 </p>
 
-## Project presentation
-
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS study (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
-We base our reproductions on the [original descriptions provided by the teams](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx) and test the quality of the reproductions by comparing our results with the original results published on NeuroVault.
+We base our reproductions on the original descriptions provided by the teams and test the quality of the reproductions by comparing our results with the original results published on NeuroVault.
 
-:vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance.
+Find more information about the NARPS study [here](docs/narps.md).
+
+:vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance !
 
 ## Contributing
 
-NARPS open pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproduce the different teams’ analysis. 
+There are many ways you can contribute 🤗 :wave: Any help is welcome ! 
 
-There are many ways you can contribute 🤗 :wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
+NARPS Open Pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproducing the different teams’ analyses. Nevertheless knowing Python or Nipype is not required to take part in the project.
 
-### Installation
+Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
-To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
+## Using the codebase
 
-## Getting started
-If you are interested in using the codebase to run the pipelines, see the [user documentation (work-in-progress)].
+To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md).
+
+If you are interested in using the codebase, see the user documentation in [docs](/docs/) (work-in-progress).
 
 ## References
 
@@ -52,7 +53,8 @@ This project is supported by Région Bretagne (Boost MIND) and by Inria (Explora
 This project is developed in the Empenn team by Boris Clenet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
 
 In addition, this project was presented and received contributions during the following events:
- - OHBM Brainhack 2022 (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
- - e-ReproNim FENS NENS Cluster Brainhack (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
- - OHBM Brainhack 2023 (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
- - ORIGAMI lab hackathon (Sept 2023): 
+ - [OHBM Brainhack 2022](https://ohbm.github.io/hackathon2022/) (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
+ - [e-ReproNim FENS NENS Cluster Brainhack](https://repro.school/2023-e-repronim-brainhack/) (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
+ - [OHBM Brainhack 2023](https://ohbm.github.io/hackathon2023/) (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
+ - [ORIGAMI lab](https://neurodatascience.github.io/) hackathon (September 2023): 
+ - [Brainhack Marseille 2023](https://brainhack-marseille.github.io/) (December 2023): 

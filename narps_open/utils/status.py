@@ -22,7 +22,6 @@ def get_opened_issues():
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines'
     response = get(request_url, timeout = 2)
     response.raise_for_status()
-    nb_issues = response.json()['open_issues']
 
     # Get all opened issues
     request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
@@ -185,11 +184,14 @@ class PipelineStatusReport():
                 reproducibility_ranking += ':star:'
             for _ in range(4-team_values['reproducibility']):
                 reproducibility_ranking += ':black_small_square:'
-            output_markdown += f'| {reproducibility_ranking}<br />{team_values["reproducibility_comment"]} |\n'
+            output_markdown += f'| {reproducibility_ranking}<br />'
+            output_markdown += f'{team_values["reproducibility_comment"]} |\n'
 
         return output_markdown
 
-if __name__ == '__main__':
+def main():
+    """ Entry-point for the command line tool narps_open_status """
+
     # Parse arguments
     parser = ArgumentParser(description='Get a work progress status report for pipelines.')
     formats = parser.add_mutually_exclusive_group(required = False)
@@ -204,3 +206,6 @@ if __name__ == '__main__':
         print(report.markdown())
     else:
         print(report)
+
+if __name__ == '__main__':
+    main()
