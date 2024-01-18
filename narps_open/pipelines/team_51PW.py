@@ -339,7 +339,7 @@ class PipelineTeam51PW(Pipeline):
             (information_source, select_confounds, [
                 ('subject_id', 'subject_id'), ('run_id', 'run_id')
                 ]),
-            (select_files, subject_information, [('event', 'event_file')]),
+            (select_files, subject_information, [('events', 'event_file')]),
             (select_files, select_confounds, [('confounds', 'in_file')]),
             (select_files, exclude_time_points, [('func', 'in_file')]),
             (exclude_time_points, specify_model, [('roi_file', 'functional_runs')]),
