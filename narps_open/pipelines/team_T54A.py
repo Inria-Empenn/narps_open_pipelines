@@ -186,7 +186,7 @@ class PipelineTeamT54A(Pipeline):
 
         # BET Node - Skullstripping data
         skull_stripping_func = Node(BET(), name = 'skull_stripping_func')
-        skull_stripping_func.inputs.frac = 0.1
+        skull_stripping_func.inputs.frac = 0.3
         skull_stripping_func.inputs.functional = True
         skull_stripping_func.inputs.mask = True
 
