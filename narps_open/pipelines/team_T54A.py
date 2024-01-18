@@ -53,15 +53,15 @@ class PipelineTeamT54A(Pipeline):
         from nipype.interfaces.base import Bunch
 
         condition_names = ['trial', 'gain', 'loss', 'difficulty', 'response', 'missed']
-        onset = {}
-        duration = {}
+        onsets = {}
+        durations = {}
         amplitude = {}
 
         for condition in condition_names:
             # Create dictionary items with empty lists
-            onset.update({condition : []})
-            duration.update({condition : []})
-            amplitude.update({condition : []})
+            onsets.update({condition : []})
+            durations.update({condition : []})
+            amplitudes.update({condition : []})
 
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
@@ -70,34 +70,38 @@ class PipelineTeamT54A(Pipeline):
                 info = line.strip().split()
 
                 if info[5] != 'NoResp':
-                    onset['trial'].append(float(info[0]))
-                    duration['trial'].append(float(info[4]))
-                    amplitude['trial'].append(float(1))
-                    onset['gain'].append(float(info[0]))
-                    duration['gain'].append(float(info[4]))
-                    amplitude['gain'].append(float(info[2]))
-                    onset['loss'].append(float(info[0]))
-                    duration['loss'].append(float(info[4]))
-                    amplitude['loss'].append(float(info[3]))
-                    onset['difficulty'].append(float(info[0]))
-                    duration['difficulty'].append(float(info[4]))
-                    amplitude['difficulty'].append(
+                    onsets['trial'].append(float(info[0]))
+                    durations['trial'].append(float(info[4]))
+                    amplitudes['trial'].append(float(1))
+                    onsets['gain'].append(float(info[0]))
+                    durations['gain'].append(float(info[4]))
+                    amplitudes['gain'].append(float(info[2]))
+                    onsets['loss'].append(float(info[0]))
+                    durations['loss'].append(float(info[4]))
+                    amplitudes['loss'].append(float(info[3]))
+                    onsets['difficulty'].append(float(info[0]))
+                    durations['difficulty'].append(float(info[4]))
+                    amplitudes['difficulty'].append(
                         abs(0.5 * float(info[2]) - float(info[3]))
                         )
-                    onset['response'].append(float(info[0]) + float(info[4]))
-                    duration['response'].append(float(0))
-                    amplitude['response'].append(float(1))
+                    onsets['response'].append(float(info[0]) + float(info[4]))
+                    durations['response'].append(0.0)
+                    amplitudes['response'].append(1.0)
                 else:
-                    onset['missed'].append(float(info[0]))
-                    duration['missed'].append(float(0))
-                    amplitude['missed'].append(float(1))
+                    onsets['missed'].append(float(info[0]))
+                    durations['missed'].append(0.0)
+                    amplitudes['missed'].append(1.0)
+
+        # Check if there where missed trials for this run
+        if not onsets['missed']:
+            condition_names.remove('missed')
 
         return [
             Bunch(
                 conditions = condition_names,
-                onsets = [onset[k] for k in condition_names],
-                durations = [duration[k] for k in condition_names],
-                amplitudes = [amplitude[k] for k in condition_names],
+                onsets = [onsets[k] for k in condition_names],
+                durations = [durations[k] for k in condition_names],
+                amplitudes = [amplitudes[k] for k in condition_names],
                 regressor_names = None,
                 regressors = None)
             ]
