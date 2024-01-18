@@ -33,6 +33,14 @@ def remove_test_dir():
     yield # test runs here
     rmtree(TEMPORARY_DIR, ignore_errors = True)
 
+def compare_float_2d_arrays(array_1, array_2):
+    """ Assert array_1 and array_2 are close enough """
+
+    assert len(array_1) == len(array_2)
+    for reference_array, test_array in zip(array_1, array_2):
+        assert len(reference_array) == len(test_array)
+        assert isclose(reference_array, test_array).all()
+
 class TestPipelinesTeamT54A:
     """ A class that contains all the unit tests for the PipelineTeamT54A class."""
 
@@ -88,53 +96,72 @@ class TestPipelinesTeamT54A:
     def test_subject_information():
         """ Test the get_subject_information method """
 
-        event_file_path = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        # Get test files
+        test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        test_file_2 = join(Configuration()['directories']['test_data'],
+            'pipelines', 'events_resp.tsv')
 
-        information = PipelineTeamT54A.get_subject_information(event_file_path)[0]
+        # Prepare several scenarii
+        info_missed = PipelineTeamT54A.get_subject_information(test_file)
+        info_ok = PipelineTeamT54A.get_subject_information(test_file_2)
 
-        assert isinstance(information, Bunch)
-        assert information.conditions == [
-            'trial',
-            'gain',
-            'loss',
-            'difficulty',
-            'response',
-            'missed'
-            ]
-
-        reference_amplitudes = [
-            [1.0, 1.0, 1.0, 1.0],
-            [14.0, 34.0, 10.0, 16.0],
-            [6.0, 14.0, 15.0, 17.0],
-            [1.0, 3.0, 10.0, 9.0],
-            [1.0, 1.0, 1.0, 1.0],
-            [1.0]
-        ]
-        for reference_array, test_array in zip(reference_amplitudes, information.amplitudes):
-            assert isclose(reference_array, test_array).all()
-
-        reference_durations = [
-            [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288],
-            [0.0, 0.0, 0.0, 0.0],
-            [0.0]
-        ]
-        for reference_array, test_array in zip(reference_durations, information.durations):
-            assert isclose(reference_array, test_array).all()
-
-        reference_onsets = [
+        # Compare bunches to expected
+        bunch = info_missed[0]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'gain', 'loss', 'difficulty', 'response', 'missed']
+        compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [6.459, 14.123, 29.615, 38.723],
             [19.535]
-        ]
-        for reference_array, test_array in zip(reference_onsets, information.onsets):
-            assert isclose(reference_array, test_array).all()
+            ])
+        compare_float_2d_arrays(bunch.durations, [
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0]
+            ])
+        compare_float_2d_arrays(bunch.amplitudes, [
+            [1.0, 1.0, 1.0, 1.0],
+            [14.0, 34.0, 10.0, 16.0],
+            [6.0, 14.0, 15.0, 17.0],
+            [1.0, 3.0, 10.0, 9.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0]
+            ])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
+
+        bunch = info_ok[0]
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['trial', 'gain', 'loss', 'difficulty', 'response']
+        compare_float_2d_arrays(bunch.onsets, [
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [6.459, 14.123, 29.615, 38.723]
+            ])
+        compare_float_2d_arrays(bunch.durations, [
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [2.388, 2.289, 2.08, 2.288],
+            [0.0, 0.0, 0.0, 0.0]
+            ])
+        compare_float_2d_arrays(bunch.amplitudes, [
+            [1.0, 1.0, 1.0, 1.0],
+            [14.0, 34.0, 10.0, 16.0],
+            [6.0, 14.0, 15.0, 17.0],
+            [1.0, 3.0, 10.0, 9.0],
+            [1.0, 1.0, 1.0, 1.0]
+            ])
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
 
     @staticmethod
     @mark.unit_test

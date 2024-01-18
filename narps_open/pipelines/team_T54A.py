@@ -55,7 +55,7 @@ class PipelineTeamT54A(Pipeline):
         condition_names = ['trial', 'gain', 'loss', 'difficulty', 'response', 'missed']
         onsets = {}
         durations = {}
-        amplitude = {}
+        amplitudes = {}
 
         for condition in condition_names:
             # Create dictionary items with empty lists
@@ -72,7 +72,7 @@ class PipelineTeamT54A(Pipeline):
                 if info[5] != 'NoResp':
                     onsets['trial'].append(float(info[0]))
                     durations['trial'].append(float(info[4]))
-                    amplitudes['trial'].append(float(1))
+                    amplitudes['trial'].append(1.0)
                     onsets['gain'].append(float(info[0]))
                     durations['gain'].append(float(info[4]))
                     amplitudes['gain'].append(float(info[2]))
@@ -258,9 +258,7 @@ class PipelineTeamT54A(Pipeline):
                 ('ev_files', 'ev_files'),
                 ('fsf_files', 'fsf_file')]),
             (smoothing_func, model_estimate, [('out_file', 'in_file')]),
-            (model_generation, model_estimate, [
-                ('con_file', 'tcon_file'),
-                ('design_file', 'design_file')]),
+            (model_generation, model_estimate, [('design_file', 'design_file')]),
             (smoothing_func, remove_smoothed_files, [('out_file', 'file_name')]),
             (model_estimate, remove_smoothed_files, [('results_dir', '_')]),
             (model_estimate, data_sink, [('results_dir', 'run_level_analysis.@results')]),
