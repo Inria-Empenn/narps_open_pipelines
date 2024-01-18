@@ -265,7 +265,7 @@ class PipelineTeam51PW(Pipeline):
             # Functional MRI - from the preprocessing
             'func' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_{run_id}_subject_id_{subject_id}',
-                ''
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_maths_smooth.nii.gz'
                 ),
             # Events file - from the original dataset
             'events' : join('sub-{subject_id}', 'func',
