@@ -323,7 +323,7 @@ class PipelineTeam51PW(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name = 'model_estimate')
-        model_estimate.inputs.fit_armodel = True
+        #model_estimate.inputs.fit_armodel = True
         #The noise level was set to the default 0.66.
         #The AR(1) parameter was fixed to 0.34.
 
