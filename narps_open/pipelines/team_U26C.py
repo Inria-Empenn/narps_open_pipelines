@@ -167,7 +167,7 @@ class PipelineTeamU26C(Pipeline):
         Returns:
             - subject_level_analysis : nipype.WorkFlow
         """
-        # Identitiy interface Node - to iterate over subject_id and run
+        # Identity interface Node - to iterate over subject_id and run
         infosource = Node(interface=IdentityInterface(fields=['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
