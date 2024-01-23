@@ -237,8 +237,8 @@ class PipelineTeamU26C(Pipeline):
             )
         subject_level_analysis.connect([
             (infosource, selectderivs, [('subject_id', 'subject_id')]),
-            (infosource, getsubinforuns, [('events', 'event_files')]),
             (infosource, confounds, [('subject_id', 'subject_id')]),
+            (selectderivs, getsubinforuns, [('events', 'event_files')]),
             (selectderivs, gunzip, [('func', 'in_file')]),
             (selectderivs, confounds, [('confounds', 'filepath')]),
             (gunzip, smooth, [('out_file', 'in_files')]),
