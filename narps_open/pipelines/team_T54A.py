@@ -258,7 +258,9 @@ class PipelineTeamT54A(Pipeline):
                 ('ev_files', 'ev_files'),
                 ('fsf_files', 'fsf_file')]),
             (smoothing_func, model_estimate, [('out_file', 'in_file')]),
-            (model_generation, model_estimate, [('design_file', 'design_file')]),
+            (model_generation, model_estimate, [
+                ('con_file', 'tcon_file'),
+                ('design_file', 'design_file')]),
             (smoothing_func, remove_smoothed_files, [('out_file', 'file_name')]),
             (model_estimate, remove_smoothed_files, [('results_dir', '_')]),
             (model_estimate, data_sink, [('results_dir', 'run_level_analysis.@results')]),
