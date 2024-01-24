@@ -179,7 +179,7 @@ class PipelineTeamU26C(Pipeline):
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
             'events': join('sub-{subject_id}', 'func',
-               '{subject_id}_task-MGT_run-*_events.tsv')
+               'sub-{subject_id}_task-MGT_run-*_events.tsv')
         }        
         selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
         selectderivs.inputs.base_directory = self.directories.dataset_dir
