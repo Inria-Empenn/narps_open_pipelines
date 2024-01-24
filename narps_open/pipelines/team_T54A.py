@@ -7,17 +7,18 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     BET, IsotropicSmooth, Level1Design, FEATModel, L2Model, Merge, FLAMEO,
     FILMGLS, Randomise, MultipleRegressDesign, FSLCommand
     )
 from nipype.algorithms.modelgen import SpecifyModel
+from nipype.interfaces.fsl.maths import MultiImageMaths
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
-from narps_open.data.participants import get_group 
+from narps_open.data.participants import get_group
 from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
 
 # Setup FSL
@@ -120,7 +121,7 @@ class PipelineTeamT54A(Pipeline):
         - parameters_file : paths to new files containing only desired parameters.
         """
         from os import makedirs
-        from os.path import join, isdir
+        from os.path import join
 
         from pandas import read_csv, DataFrame
         from numpy import array, transpose
@@ -360,7 +361,7 @@ class PipelineTeamT54A(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'run_level_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
                 'varcope{contrast_id}.nii.gz'),
-            'mask': join(self.directories.output_dir,
+            'masks': join(self.directories.output_dir,
                 'run_level_analysis', '_run_id_*_subject_id_{subject_id}',
                 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
         }
@@ -385,6 +386,16 @@ class PipelineTeamT54A(Pipeline):
         merge_varcopes = Node(Merge(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
+        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
+        split_masks = Node(Split(), name = 'split_masks')
+        split_masks.inputs.splits = [1, len(self.run_list) - 1]
+        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
+
+        # MultiImageMaths Node - Create a subject mask by
+        #   computing the intersection of all run masks.
+        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
+        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.run_list) - 1)
+
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'flame1'
@@ -399,13 +410,17 @@ class PipelineTeamT54A(Pipeline):
                 ('contrast_id', 'contrast_id')]),
             (select_files, merge_copes, [('cope', 'in_files')]),
             (select_files, merge_varcopes, [('varcope', 'in_files')]),
-            (select_files, estimate_model, [('mask', 'mask_file')]),
+            (select_files, split_masks, [('masks', 'inlist')]),
+            (split_masks, mask_intersection, [('out1', 'in_file')]),
+            (split_masks, mask_intersection, [('out2', 'operand_files')]),
+            (mask_intersection, estimate_model, [('out_file', 'mask_file')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
             (generate_model, estimate_model, [
                 ('design_mat', 'design_file'),
                 ('design_con', 't_con_file'),
                 ('design_grp', 'cov_split_file')]),
+            (mask_intersection, data_sink, [('out_file', 'subject_level_analysis.@mask')]),
             (estimate_model, data_sink, [
                 ('zstats', 'subject_level_analysis.@stats'),
                 ('tstats', 'subject_level_analysis.@tstats'),
