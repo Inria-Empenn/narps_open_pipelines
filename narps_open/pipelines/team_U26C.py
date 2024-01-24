@@ -182,6 +182,7 @@ class PipelineTeamU26C(Pipeline):
                '{subject_id}_task-MGT_run-*_events.tsv')
         }        
         selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
+        selectderivs.inputs.base_directory = self.directories.dataset_dir
         selectderivs.inputs.sort_filelist = True
 
         # Gunzip - gunzip files because SPM do not use .nii.gz files
