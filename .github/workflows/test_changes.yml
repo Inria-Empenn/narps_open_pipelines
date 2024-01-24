@@ -58,5 +58,5 @@ jobs:
     - name: Execute tests with pytest
       run: |
         if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
-          pytest -s -q ${{ needs.identify-tests.outputs.tests }}
+          pytest -s -q ${{ needs.identify-tests.outputs.tests }} -m "not pipeline_test"
         fi
