@@ -40,18 +40,18 @@ datalad get data/original/ds001734/derivatives/fmriprep/sub-00[1-4] -J 12
 
 ## 4 - Set up the environment
 
-[Install Docker](https://docs.docker.com/engine/install/) then pull the Docker image :
+[Install Docker](https://docs.docker.com/engine/install/) then pull the nipype Docker image :
 
 ```bash
-docker pull elodiegermani/open_pipeline:latest
+docker pull nipype/nipype
 ```
 
 Once it's done you can check the image is available on your system :
 
 ```bash
 docker images
-   REPOSITORY                               TAG       IMAGE ID        CREATED         SIZE
-   docker.io/elodiegermani/open_pipeline    latest    0f3c74d28406    9 months ago    22.7 GB
+   REPOSITORY                 TAG       IMAGE ID        CREATED         SIZE
+   docker.io/nipype/nipype    latest    0f3c74d28406    9 months ago    22.7 GB
 ```
 
 > [!NOTE]  
@@ -63,7 +63,7 @@ Start a Docker container from the Docker image :
 
 ```bash
 # Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
-docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ elodiegermani/open_pipeline
+docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype
 ```
 
 Install NARPS Open Pipelines inside the container :

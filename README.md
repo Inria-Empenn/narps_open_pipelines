@@ -17,9 +17,11 @@
 
 **The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS study (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
-We base our reproductions on the [original descriptions provided by the teams](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx) and test the quality of the reproductions by comparing our results with the original results published on NeuroVault.
+We base our reproductions on the original descriptions provided by the teams and test the quality of the reproductions by comparing our results with the original results published on NeuroVault.
 
-:vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance.
+Find more information about the NARPS study [here](docs/narps.md).
+
+:vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance !
 
 ## Contributing
 
