@@ -72,6 +72,15 @@ from narps_open.core.common import remove_file
 remove_file('/path/to/the/image.nii.gz')
 ```
 
+* `remove_directory` remove a directory when it is not needed anymore (to save disk space)
+
+```python
+from narps_open.core.common import remove_directory
+
+# Remove the directory /path/to/
+remove_directory('/path/to/')
+```
+
 * `elements_in_string` : return the first input parameter if it contains one element of second parameter (None otherwise).
 
 ```python
