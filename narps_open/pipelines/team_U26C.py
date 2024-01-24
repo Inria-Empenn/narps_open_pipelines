@@ -174,11 +174,11 @@ class PipelineTeamU26C(Pipeline):
 
         # Select files from derivatives
         templates = {
-            'func': join('derivatives', 'fmriprep', '{subject_id}', 'func',
+            'func': join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'),
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
-            'events': join('derivatives', 'fmriprep',
+            'events': join('sub-{subject_id}', 'func',
                '{subject_id}_task-MGT_run-*_events.tsv')
         }        
         selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
