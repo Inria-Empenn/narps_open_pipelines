@@ -96,7 +96,7 @@ class PipelineRunner():
             - group_level_only: bool (False by default), run the group level workflows only
         """
         # Set global nipype config for pipeline execution
-        config.update_config(dict(execution = {'stop_on_first_crash': False}))
+        config.update_config(dict(execution = {'stop_on_first_crash': 'True'}))
 
         # Disclaimer
         print('Starting pipeline for team: '+
