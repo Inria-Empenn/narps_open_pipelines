@@ -11,13 +11,12 @@ Usage:
     pytest -q test_nodes.py -k <selected_test>
 """
 
-from pytest import mark, raises
+from pytest import mark
 
 from nipype import Node
 from nipype.interfaces.utility import Select, Function
 
-import narps_open.core.nodes as nd
-from narps_open.core.common import remove_directory, remove_file
+from narps_open.core import nodes
 
 class TestNodeCreator:
     """ A class that contains all the unit tests for the NodeCreator class."""
@@ -28,8 +27,12 @@ class TestNodeCreator:
         """ Test the create_node method """
 
         # Define another child for NodeCreator
-        class ValidNC(nd.NodeCreator):
+        class ValidNC(nodes.NodeCreator):
+            """ A valid implementation of a NodeCreator """
+
+            @staticmethod
             def create_node(name: str) -> Node:
+                """ Return a Node, as expected """
                 return Node(Select(), name = name)
 
         # Test it can be instantiated
@@ -46,7 +49,7 @@ class TestRemoveDirectoryNodeCreator:
     def test_create_node():
         """ Test the create_node method """
 
-        test_node = nd.RemoveDirectoryNodeCreator.create_node('node_name')
+        test_node = nodes.RemoveDirectoryNodeCreator.create_node('node_name')
         assert isinstance(test_node, Node)
         assert isinstance(test_node.interface, Function)
         assert test_node.name == 'node_name'
@@ -59,7 +62,7 @@ class TestRemoveFileNodeCreator:
     def test_create_node():
         """ Test the create_node method """
 
-        test_node = nd.RemoveFileNodeCreator.create_node('node_name')
+        test_node = nodes.RemoveFileNodeCreator.create_node('node_name')
         assert isinstance(test_node, Node)
         assert isinstance(test_node.interface, Function)
         assert test_node.name == 'node_name'
