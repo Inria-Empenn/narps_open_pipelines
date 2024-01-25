@@ -124,3 +124,46 @@ This module contains a set of functions dedicated to computations on images.
 # Get dimensions of voxels along x, y, and z in mm (returns e.g.: [1.0, 1.0, 1.0]).
 get_voxel_dimensions('/path/to/the/image.nii.gz')
 ```
+
+## narps_open.core.nodes
+
+This module contains a set of node creators inheriting form the `narps_open.core.nodes.NodeCreator` abstract class.
+These are responsible for creating nipype `Node` objects (for now, only based on the `Function` interface, with functions defined in the `narps_open.core.common` module) to be used inside pipeline code. This allows to factorize code, hence making code simpler to read inside pipeline definition.
+
+Here is an example how to use the node creators :
+
+```python
+from narps_open.core.nodes import RemoveDirectoryNodeCreator, RemoveFileNodeCreator
+
+# Create a Node to remove a directory
+remove_smoothed = RemoveDirectoryNodeCreator.create_node('remove_smoothed')
+remove_smoothed.inputs.directory_name = 'my_directory'
+
+# Create a Node to remove a file
+remove_gunzip = RemoveFileNodeCreator.create_node('remove_gunzip')
+remove_gunzip.inputs.file_name = 'my_file'
+```
+
+For your information, this is how an equivalent code would look like without node creators.
+
+```python
+from nipype import Node
+from nipype.interfaces.utility import Function
+from narps_open.core.common import remove_directory, remove_file
+
+# Create a Node to remove a directory
+remove_smoothed = Node(Function(
+    function = remove_directory,
+    input_names = ['_', 'directory_name'],
+    output_names = []
+    ), name = 'remove_smoothed')
+remove_smoothed.inputs.directory_name = 'my_directory'
+
+# Create a Node to remove a file
+remove_gunzip = Node(Function(
+    function = remove_file,
+    input_names = ['_', 'file_name'],
+    output_names = []
+    ), name = 'remove_gunzip')
+remove_gunzip.inputs.file_name = 'my_file'
+```
