@@ -20,7 +20,7 @@ from nipype.algorithms.misc import Gunzip
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
+from narps_open.core.nodes import RemoveDirectoryNodeCreator
 
 class PipelineTeamU26C(Pipeline):
     """ A class that defines the pipeline of team U26C. """
@@ -167,6 +167,9 @@ class PipelineTeamU26C(Pipeline):
         Returns:
             - subject_level_analysis : nipype.WorkFlow
         """
+        # Define the workflow's working directory
+        working_dir = join(self.directories.working_dir, 'subject_level_analysis')
+
         # Identity interface Node - to iterate over subject_id and run
         infosource = Node(interface=IdentityInterface(fields=['subject_id']),
             name = 'infosource')
@@ -188,10 +191,18 @@ class PipelineTeamU26C(Pipeline):
         # Gunzip - gunzip files because SPM do not use .nii.gz files
         gunzip = MapNode(Gunzip(), name='gunzip', iterfield=['in_file'])
 
+        # Remove Node - Remove gunzip files once they are no longer needed
+        remove_gunzip = RemoveDirectoryNodeCreator.create_node('remove_gunzip')
+        remove_gunzip.inputs.directory_name = join(working_dir, gunzip.name)
+
         # Smooth warped functionals.
         smooth = Node(Smooth(), name = 'smooth')
         smooth.inputs.fwhm = self.fwhm
         smooth.overwrite = False
+
+        # Remove Node - Remove smoothed files once they are no longer needed
+        remove_smooth = RemoveDirectoryNodeCreator.create_node('remove_smooth')
+        remove_smooth.inputs.directory_name = join(working_dir, smooth.name)
 
         # Function node get_subject_information - get subject specific condition information
         getsubinforuns = Node(Function(
@@ -243,9 +254,11 @@ class PipelineTeamU26C(Pipeline):
             (selectderivs, gunzip, [('func', 'in_file')]),
             (selectderivs, confounds, [('confounds', 'filepath')]),
             (gunzip, smooth, [('out_file', 'in_files')]),
+            (smooth, remove_gunzip, [('smoothed_files', '_')]),
             (getsubinforuns, modelspec, [('subject_info', 'subject_info')]),
             (confounds, modelspec, [('confounds_file', 'realignment_parameters')]),
             (smooth, modelspec, [('smoothed_files', 'functional_runs')]),
+            (modelspec, remove_smooth, [('session_info', '_')]),
             (modelspec, level1design, [('session_info', 'session_info')]),
             (level1design, level1estimate, [('spm_mat_file', 'spm_mat_file')]),
             (level1estimate, contrast_estimate,[
