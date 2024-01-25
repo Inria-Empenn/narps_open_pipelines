@@ -263,16 +263,18 @@ class PipelineTeamU26C(Pipeline):
 
             # Remove Node - Remove gunzip files once they are no longer needed
             remove_gunzip = RemoveDirectoryNodeCreator.create_node('remove_gunzip')
-            remove_gunzip.inputs.directory_name = join(working_dir, gunzip.name)
+            gunzip_dir = lambda s : join(working_dir, f'_subject_id_{s}', gunzip.name)
 
             # Remove Node - Remove smoothed files once they are no longer needed
             remove_smooth = RemoveDirectoryNodeCreator.create_node('remove_smooth')
-            remove_smooth.inputs.directory_name = join(working_dir, smooth.name)
+            smooth_dir = lambda s : join(working_dir, f'_subject_id_{s}', smooth.name)
 
             # Add connections
             subject_level_analysis.connect([
                 (smooth, remove_gunzip, [('smoothed_files', '_')]),
-                (modelspec, remove_smooth, [('session_info', '_')])
+                (infosource, remove_gunzip, [(('subject_id', gunzip_dir), 'directory_name')]),
+                (modelspec, remove_smooth, [('session_info', '_')]),
+                (infosource, remove_smooth, [(('subject_id', smooth_dir), 'directory_name')])
                 ])
 
         return subject_level_analysis
