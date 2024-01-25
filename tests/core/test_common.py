@@ -87,8 +87,6 @@ class TestCoreCommon:
 
         # Check file is removed
         assert not exists(test_dir_path)
-<<<<<<< HEAD
-=======
 
     @staticmethod
     @mark.unit_test
@@ -116,7 +114,6 @@ class TestCoreCommon:
 
         # Check file is removed
         assert not exists(dir_path)
->>>>>>> runner
 
     @staticmethod
     @mark.unit_test

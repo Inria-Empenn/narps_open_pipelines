@@ -20,7 +20,7 @@ from nipype.algorithms.misc import Gunzip
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.nodes import RemoveDirectoryNodeCreator
+from narps_open.core.nodes import RemoveParentDirectoryNodeCreator
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeamU26C(Pipeline):
@@ -259,17 +259,17 @@ class PipelineTeamU26C(Pipeline):
         if Configuration()['pipelines']['remove_unused_data']:
 
             # Remove Node - Remove gunzip files once they are no longer needed
-            remove_gunzip = RemoveDirectoryNodeCreator.create_node('remove_gunzip')
+            remove_gunzip = RemoveParentDirectoryNodeCreator.create_node('remove_gunzip')
 
             # Remove Node - Remove smoothed files once they are no longer needed
-            remove_smooth = RemoveDirectoryNodeCreator.create_node('remove_smooth')
+            remove_smooth = RemoveParentDirectoryNodeCreator.create_node('remove_smooth')
 
             # Add connections
             subject_level_analysis.connect([
                 (smooth, remove_gunzip, [('smoothed_files', '_')]),
-                (gunzip, remove_gunzip, [('out_file', 'directory_name')]),
+                (gunzip, remove_gunzip, [('out_file', 'file_name')]),
                 (modelspec, remove_smooth, [('session_info', '_')]),
-                (smooth, remove_smooth, [('smoothed_files', 'directory_name')])
+                (smooth, remove_smooth, [('smoothed_files', 'file_name')])
                 ])
 
         return subject_level_analysis
