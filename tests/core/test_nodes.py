@@ -41,6 +41,19 @@ class TestNodeCreator:
         assert isinstance(test_node.interface, Select)
         assert test_node.name == 'node_name'
 
+class TestRemoveParentDirectoryNodeCreator:
+    """ A class that contains all the unit tests for the RemoveParentDirectoryNodeCreator class."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_create_node():
+        """ Test the create_node method """
+
+        test_node = nodes.RemoveParentDirectoryNodeCreator.create_node('node_name')
+        assert isinstance(test_node, Node)
+        assert isinstance(test_node.interface, Function)
+        assert test_node.name == 'node_name'
+
 class TestRemoveDirectoryNodeCreator:
     """ A class that contains all the unit tests for the RemoveDirectoryNodeCreator class."""
 
