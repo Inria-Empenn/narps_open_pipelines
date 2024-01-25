@@ -27,26 +27,13 @@ class TestNodeCreator:
     def test_create_node():
         """ Test the create_node method """
 
-        # It is not possible to create an instance of a NodeCreator
-        with raises(Exception):
-            nd.NodeCreator().create_node('node_name')
-
-        # Define a child for NodeCreator
-        class ErrorNC(nd.NodeCreator):
-            def random_method(self):
-                pass
-
-        # Test it cannot be instanciated
-        with raises(Exception):
-            ErrorNC().create_node('node_name')
-
         # Define another child for NodeCreator
         class ValidNC(nd.NodeCreator):
-            def create_node(self, name: str) -> Node:
+            def create_node(name: str) -> Node:
                 return Node(Select(), name = name)
 
-        # Test it can be instanciated
-        test_node = ValidNC().create_node('node_name')
+        # Test it can be instantiated
+        test_node = ValidNC.create_node('node_name')
         assert isinstance(test_node, Node)
         assert isinstance(test_node.interface, Select)
         assert test_node.name == 'node_name'
@@ -59,7 +46,7 @@ class TestRemoveDirectoryNodeCreator:
     def test_create_node():
         """ Test the create_node method """
 
-        test_node = nd.RemoveDirectoryNodeCreator().create_node('node_name')
+        test_node = nd.RemoveDirectoryNodeCreator.create_node('node_name')
         assert isinstance(test_node, Node)
         assert isinstance(test_node.interface, Function)
         assert test_node.name == 'node_name'
@@ -72,7 +59,7 @@ class TestRemoveFileNodeCreator:
     def test_create_node():
         """ Test the create_node method """
 
-        test_node = nd.RemoveFileNodeCreator().create_node('node_name')
+        test_node = nd.RemoveFileNodeCreator.create_node('node_name')
         assert isinstance(test_node, Node)
         assert isinstance(test_node.interface, Function)
         assert test_node.name == 'node_name'

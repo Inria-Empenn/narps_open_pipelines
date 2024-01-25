@@ -13,8 +13,9 @@ from narps_open.core.common import remove_directory, remove_file
 class NodeCreator(ABC):
     """ An abstract class to shape what node creators must provide """
 
+    @staticmethod
     @abstractmethod
-    def create_node(self, name: str) -> Node:
+    def create_node(name: str) -> Node:
         """ Return a new Node (the interface of the Node is defined by specialized classes)
             Arguments:
                 name, str : the name of the node
@@ -23,7 +24,8 @@ class NodeCreator(ABC):
 class RemoveDirectoryNodeCreator(NodeCreator):
     """ A node creator that provides an interface allowing to remove a directory """
 
-    def create_node(self, name: str) -> Node:
+    @staticmethod
+    def create_node(name: str) -> Node:
         return Node(Function(
             function = remove_directory,
             input_names = ['_', 'directory_name'],
@@ -33,7 +35,8 @@ class RemoveDirectoryNodeCreator(NodeCreator):
 class RemoveFileNodeCreator(NodeCreator):
     """ A node creator that provides an interface allowing to remove a file """
 
-    def create_node(self, name: str) -> Node:
+    @staticmethod
+    def create_node(name: str) -> Node:
         return Node(Function(
             function = remove_file,
             input_names = ['_', 'file_name'],
