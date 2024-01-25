@@ -258,23 +258,18 @@ class PipelineTeamU26C(Pipeline):
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
 
-            # Workflow's working directory
-            working_dir = join(subject_level_analysis.base_dir, subject_level_analysis.name)
-
             # Remove Node - Remove gunzip files once they are no longer needed
             remove_gunzip = RemoveDirectoryNodeCreator.create_node('remove_gunzip')
-            gunzip_dir = lambda s : join(working_dir, f'_subject_id_{s}', gunzip.name)
 
             # Remove Node - Remove smoothed files once they are no longer needed
             remove_smooth = RemoveDirectoryNodeCreator.create_node('remove_smooth')
-            smooth_dir = lambda s : join(working_dir, f'_subject_id_{s}', smooth.name)
 
             # Add connections
             subject_level_analysis.connect([
                 (smooth, remove_gunzip, [('smoothed_files', '_')]),
-                (infosource, remove_gunzip, [(('subject_id', gunzip_dir), 'directory_name')]),
+                (gunzip, remove_gunzip, [('out_file', 'directory_name')]),
                 (modelspec, remove_smooth, [('session_info', '_')]),
-                (infosource, remove_smooth, [(('subject_id', smooth_dir), 'directory_name')])
+                (smooth, remove_smooth, [('smoothed_files', 'directory_name')])
                 ])
 
         return subject_level_analysis
