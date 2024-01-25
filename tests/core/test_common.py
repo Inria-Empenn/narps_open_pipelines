@@ -87,6 +87,36 @@ class TestCoreCommon:
 
         # Check file is removed
         assert not exists(test_dir_path)
+<<<<<<< HEAD
+=======
+
+    @staticmethod
+    @mark.unit_test
+    def test_remove_parent_directory(remove_test_dir):
+        """ Test the remove_parent_directory function """
+
+        # Create a single inside dir tree
+        dir_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2'))
+        makedirs(dir_path)
+        file_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2', 'file1.txt'))
+        Path(file_path).touch()
+
+        # Check file exist
+        assert exists(file_path)
+
+        # Create a Nipype Node using remove_files
+        test_remove_dir_node = Node(Function(
+            function = co.remove_parent_directory,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'test_remove_dir_node')
+        test_remove_dir_node.inputs._ = ''
+        test_remove_dir_node.inputs.file_name = file_path
+        test_remove_dir_node.run()
+
+        # Check file is removed
+        assert not exists(dir_path)
+>>>>>>> runner
 
     @staticmethod
     @mark.unit_test

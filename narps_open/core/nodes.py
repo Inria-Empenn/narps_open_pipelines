@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from nipype import Node
 from nipype.interfaces.utility import Function
 
-from narps_open.core.common import remove_directory, remove_file
+from narps_open.core.common import remove_directory, remove_parent_directory, remove_file
 
 class NodeCreator(ABC):
     """ An abstract class to shape what node creators must provide """
@@ -21,6 +21,19 @@ class NodeCreator(ABC):
                 name, str : the name of the node
         """
 
+class RemoveParentDirectoryNodeCreator(NodeCreator):
+    """ A node creator that provides an interface allowing to remove a directory,
+        given one of its child's file name.
+    """
+
+    @staticmethod
+    def create_node(name: str) -> Node:
+        return Node(Function(
+            function = remove_parent_directory,
+            input_names = ['_', 'directory_name'],
+            output_names = []
+            ), name = name)
+
 class RemoveDirectoryNodeCreator(NodeCreator):
     """ A node creator that provides an interface allowing to remove a directory """
 
@@ -28,7 +41,7 @@ class RemoveDirectoryNodeCreator(NodeCreator):
     def create_node(name: str) -> Node:
         return Node(Function(
             function = remove_directory,
-            input_names = ['_', 'directory_name'],
+            input_names = ['_', 'file_name'],
             output_names = []
             ), name = name)
 
