@@ -8,7 +8,7 @@ from importlib import import_module
 from random import choices
 from argparse import ArgumentParser
 
-from nipype import Workflow
+from nipype import Workflow, config
 
 from narps_open.pipelines import Pipeline, implemented_pipelines
 from narps_open.data.participants import (
@@ -17,6 +17,7 @@ from narps_open.data.participants import (
     get_participants_subset
     )
 from narps_open.utils.configuration import Configuration
+from narps_open.pipelines import get_implemented_pipelines
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -95,6 +96,10 @@ class PipelineRunner():
                 (= preprocessing + run level + subject_level)
             - group_level_only: bool (False by default), run the group level workflows only
         """
+        # Set global nipype config for pipeline execution
+        config.update_config(dict(execution = {'stop_on_first_crash': 'True'}))
+
+        # Disclaimer
         print('Starting pipeline for team: '+
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
@@ -126,7 +131,7 @@ class PipelineRunner():
                         raise AttributeError('Workflow must be of type nipype.Workflow')
 
                     if nb_procs > 1:
-                        sub_workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
+                        sub_workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
                     else:
                         sub_workflow.run()
             else:
@@ -134,7 +139,7 @@ class PipelineRunner():
                     raise AttributeError('Workflow must be of type nipype.Workflow')
 
                 if nb_procs > 1:
-                    workflow.run('MultiProc', plugin_args={'n_procs': nb_procs})
+                    workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
                 else:
                     workflow.run()
 
@@ -158,7 +163,7 @@ def main():
     # Parse arguments
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
     parser.add_argument('-t', '--team', type=str, required=True,
-        help='the team ID')
+        help='the team ID', choices=get_implemented_pipelines())
     subjects = parser.add_mutually_exclusive_group(required=True)
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
         help='a list of subjects to be selected')
