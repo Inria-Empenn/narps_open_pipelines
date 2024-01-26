@@ -20,7 +20,7 @@ from nipype.algorithms.misc import Gunzip
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.nodes import RemoveParentDirectoryNodeCreator
+from narps_open.core.interfaces import InterfaceFactory
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeamU26C(Pipeline):
@@ -259,10 +259,18 @@ class PipelineTeamU26C(Pipeline):
         if Configuration()['pipelines']['remove_unused_data']:
 
             # Remove Node - Remove gunzip files once they are no longer needed
-            remove_gunzip = RemoveParentDirectoryNodeCreator.create_node('remove_gunzip')
+            remove_gunzip = MapNode(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_gunzip',
+                iterfield = ['file_name']
+                )
 
             # Remove Node - Remove smoothed files once they are no longer needed
-            remove_smooth = RemoveParentDirectoryNodeCreator.create_node('remove_smooth')
+            remove_smooth = MapNode(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_smooth',
+                iterfield = ['file_name']
+                )
 
             # Add connections
             subject_level_analysis.connect([
