@@ -414,7 +414,7 @@ class PipelineTeamU26C(Pipeline):
         # Create the group level workflow
         group_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_nsub_{nb_subjects}')
+            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
         group_level_analysis.connect([
             (infosource, selectderivs, [('contrast_id', 'contrast_id')]),
             (selectderivs, get_contrasts, [('contrasts', 'input_str')]),
@@ -436,13 +436,13 @@ class PipelineTeamU26C(Pipeline):
                 ('spmT_images', 'stat_image')
                 ]),
             (level2estimate, data_sink, [
-                ('mask_image', f'group_level_analysis_{method}_nsub_{nb_subjects}.@mask')]),
+                ('mask_image', f'{group_level_analysis.name}.@mask')]),
             (level2conestimate, data_sink, [
-                ('spm_mat_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@spm_mat'),
-                ('spmT_images', f'group_level_analysis_{method}_nsub_{nb_subjects}.@T'),
-                ('con_images', f'group_level_analysis_{method}_nsub_{nb_subjects}.@con')]),
+                ('spm_mat_file', f'{group_level_analysis.name}.@spm_mat'),
+                ('spmT_images', f'{group_level_analysis.name}.@T'),
+                ('con_images', f'{group_level_analysis.name}.@con')]),
             (threshold, data_sink, [
-                ('thresholded_map', f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh')])
+                ('thresholded_map', f'{group_level_analysis.name}.@thresh')])
             ])
 
         return group_level_analysis
@@ -579,13 +579,13 @@ class PipelineTeamU26C(Pipeline):
                 ('spmT_images', 'stat_image')
                 ]),
             (level2estimate, data_sink, [
-                ('mask_image', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@mask')]),
+                ('mask_image', f'{group_level_analysis.name}.@mask')]),
             (level2conestimate, data_sink, [
-                ('spm_mat_file', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@spm_mat'),
-                ('spmT_images', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@T'),
-                ('con_images', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@con')]),
+                ('spm_mat_file', f'{group_level_analysis.name}.@spm_mat'),
+                ('spmT_images', f'{group_level_analysis.name}.@T'),
+                ('con_images', f'{group_level_analysis.name}.@con')]),
             (threshold, data_sink, [
-                ('thresholded_map', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@thresh')])
+                ('thresholded_map', f'{group_level_analysis.name}.@thresh')])
             ])
 
         return group_level_analysis
