@@ -17,6 +17,7 @@ from narps_open.data.participants import (
     get_participants_subset
     )
 from narps_open.utils.configuration import Configuration
+from narps_open.pipelines import get_implemented_pipelines
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -162,7 +163,7 @@ def main():
     # Parse arguments
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
     parser.add_argument('-t', '--team', type=str, required=True,
-        help='the team ID')
+        help='the team ID', choices=get_implemented_pipelines())
     subjects = parser.add_mutually_exclusive_group(required=True)
     subjects.add_argument('-s', '--subjects', nargs='+', type=str, action='extend',
         help='a list of subjects to be selected')

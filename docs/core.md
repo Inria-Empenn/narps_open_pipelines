@@ -124,7 +124,6 @@ This module contains a set of functions dedicated to computations on images.
 # Get dimensions of voxels along x, y, and z in mm (returns e.g.: [1.0, 1.0, 1.0]).
 get_voxel_dimensions('/path/to/the/image.nii.gz')
 ```
-
 ## narps_open.core.interfaces
 
 This module contains a set of interface creators inheriting form the `narps_open.core.interfaces.InterfaceCreator` abstract class.
