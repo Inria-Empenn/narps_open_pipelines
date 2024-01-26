@@ -128,21 +128,22 @@ get_voxel_dimensions('/path/to/the/image.nii.gz')
 ## narps_open.core.interfaces
 
 This module contains a set of interface creators inheriting form the `narps_open.core.interfaces.InterfaceCreator` abstract class.
-These are responsible for creating nipype `Interface` objects (for now, only `Function` interfaces are used, with functions defined in the `narps_open.core.common` module) to be used inside pipeline code. This allows to factorize code, hence making it simpler to read inside pipeline definition.
+These are responsible for creating nipype `Interface` objects (for now, only `Function` interfaces are used, with functions defined in the `narps_open.core.common` module) to be used inside pipeline code.
+The module also provide an `InterfaceFactory` to easily create the available interface, without knowing which creator is responsible for that.
+
+The overall allows to factorize code, hence making it simpler to read inside pipeline definition.
 
 Here is an example how to use the interface creators :
 
 ```python
-from narps_open.core.interfaces import (
-    RemoveDirectoryInterfaceCreator, RemoveFileInterfaceCreator
-    )
+from narps_open.core.interfaces import InterfaceFactory
 
 # Create a Node to remove a directory
-remove_smoothed = Node(RemoveDirectoryInterfaceCreator.create(), name = 'remove_smoothed')
+remove_smoothed = Node(InterfaceFactory.create('remove_directory'), name = 'remove_smoothed')
 remove_smoothed.inputs.directory_name = 'my_directory'
 
 # Create a Node to remove a file
-remove_gunzip = Node(RemoveDirectoryInterfaceCreator.create(), name = 'remove_gunzip')
+remove_gunzip = Node(InterfaceFactory.create('remove_file'), name = 'remove_gunzip')
 remove_gunzip.inputs.file_name = 'my_file'
 ```
 

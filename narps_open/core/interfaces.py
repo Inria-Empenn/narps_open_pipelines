@@ -52,3 +52,23 @@ class RemoveFileInterfaceCreator(InterfaceCreator):
             input_names = ['_', 'file_name'],
             output_names = []
             )
+
+class InterfaceFactory():
+    """ A class to generate interfaces from narps_open.core functions """
+
+    # A list of creators, one for each function
+    creators = {
+        'remove_directory' : RemoveDirectoryInterfaceCreator,
+        'remove_parent_directory' : RemoveParentDirectoryInterfaceCreator,
+        'remove_file' : RemoveFileInterfaceCreator
+    }
+
+    @classmethod
+    def create(cls, creator_name: str):
+        """ Return a new Function interface
+            Arguments :
+                creator_name, str : the key for the creator to be used
+        """
+        # Actually create the interface, using a creator
+        creator = cls.creators[creator_name]
+        return creator.create_interface()
