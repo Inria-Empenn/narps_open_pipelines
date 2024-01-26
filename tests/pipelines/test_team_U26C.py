@@ -61,10 +61,9 @@ class TestPipelinesTeamU26C:
         assert pipeline.get_run_level_analysis() is None
         assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
         group_level = pipeline.get_group_level_analysis()
-
-        """assert len(group_level) == 3
+        assert len(group_level) == 3
         for sub_workflow in group_level:
-            assert isinstance(sub_workflow, Workflow)"""
+            assert isinstance(sub_workflow, Workflow)
 
     @staticmethod
     @mark.unit_test
@@ -72,11 +71,11 @@ class TestPipelinesTeamU26C:
         """ Test the expected outputs of a PipelineTeamU26C object """
         pipeline = PipelineTeamU26C()
         # 1 - 1 subject outputs
-        """pipeline.subject_list = ['001']
+        pipeline.subject_list = ['001']
         assert len(pipeline.get_preprocessing_outputs()) == 0
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 7
-        assert len(pipeline.get_group_level_outputs()) == 63
+        assert len(pipeline.get_group_level_outputs()) == 45
         assert len(pipeline.get_hypotheses_outputs()) == 18
 
         # 2 - 4 subjects outputs
@@ -84,8 +83,8 @@ class TestPipelinesTeamU26C:
         assert len(pipeline.get_preprocessing_outputs()) == 0
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 28
-        assert len(pipeline.get_group_level_outputs()) == 63
-        assert len(pipeline.get_hypotheses_outputs()) == 18"""
+        assert len(pipeline.get_group_level_outputs()) == 45
+        assert len(pipeline.get_hypotheses_outputs()) == 18
 
     @staticmethod
     @mark.unit_test
