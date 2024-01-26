@@ -16,10 +16,12 @@ from nipype.interfaces.fsl import (
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl.maths import MultiImageMaths
 
+from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
+from narps_open.core.common import list_intersection, elements_in_string, clean_list
+from narps_open.core.interfaces import InterfaceFactory
 
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
@@ -229,12 +231,6 @@ class PipelineTeamT54A(Pipeline):
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name = 'model_estimate')
 
-        # Function node remove_smoothed_files - remove output of the smooth node
-        remove_smoothed_files = Node(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name']),
-            name = 'remove_smoothed_files', iterfield = 'file_name')
-
         # Create l1 analysis workflow and connect its nodes
         run_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
@@ -262,14 +258,33 @@ class PipelineTeamT54A(Pipeline):
             (model_generation, model_estimate, [
                 ('con_file', 'tcon_file'),
                 ('design_file', 'design_file')]),
-            (smoothing_func, remove_smoothed_files, [('out_file', 'file_name')]),
-            (model_estimate, remove_smoothed_files, [('results_dir', '_')]),
             (model_estimate, data_sink, [('results_dir', 'run_level_analysis.@results')]),
             (model_generation, data_sink, [
                 ('design_file', 'run_level_analysis.@design_file'),
                 ('design_image', 'run_level_analysis.@design_img')]),
             (skull_stripping_func, data_sink, [('mask_file', 'run_level_analysis.@skullstriped')])
         ])
+
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Remove Node - Remove skullstriped func files once they are no longer needed
+            remove_skullstrip = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_skullstrip')
+
+            # Remove Node - Remove smoothed files once they are no longer needed
+            remove_smooth = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_smooth')
+
+            # Add connections
+            run_level_analysis.connect([
+                (data_sink, remove_skullstrip, [('out_file', '_')]),
+                (skull_stripping_func, remove_skullstrip, [('out_file', 'file_name')]),
+                (model_estimate, remove_smooth, [('results_dir', '_')]),
+                (smoothing_func, remove_smooth, [('out_file', 'file_name')])
+                ])
 
         return run_level_analysis
 
