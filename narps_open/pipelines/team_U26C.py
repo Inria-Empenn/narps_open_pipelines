@@ -21,6 +21,7 @@ from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.core.interfaces import InterfaceFactory
+from narps_open.core.common import list_intersection, elements_in_string, clean_list
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeamU26C(Pipeline):
@@ -30,6 +31,7 @@ class PipelineTeamU26C(Pipeline):
         super().__init__()
         self.fwhm = 5.0
         self.team_id = 'U26C'
+        self.contrast_list = ['0001', '0002', '0003']
 
         gamble = [f'gamble_run{r}' for r in range(1, len(self.run_list) + 1)]
         gain = [f'gamble_run{r}xgain_run{r}^1' for r in range(1, len(self.run_list) + 1)]
@@ -75,7 +77,7 @@ class PipelineTeamU26C(Pipeline):
             trial_key = f'gamble_run{run_id + 1}'
             gain_key = f'gain_run{run_id + 1}'
             loss_key = f'loss_run{run_id + 1}'
-            
+
             onsets.update({trial_key: []})
             durations.update({trial_key: []})
             weights_gain.update({gain_key: []})
@@ -83,7 +85,7 @@ class PipelineTeamU26C(Pipeline):
 
             with open(event_file, 'rt') as file:
                 next(file)  # skip the header
-                
+
                 for line in file:
                     info = line.strip().split()
                     onsets[trial_key].append(float(info[0]))
@@ -169,7 +171,8 @@ class PipelineTeamU26C(Pipeline):
             - subject_level_analysis : nipype.WorkFlow
         """
         # Identity interface Node - to iterate over subject_id and run
-        infosource = Node(interface=IdentityInterface(fields=['subject_id']),
+        infosource = Node(
+            IdentityInterface(fields = ['subject_id']),
             name = 'infosource')
         infosource.iterables = [('subject_id', self.subject_list)]
 
@@ -181,10 +184,14 @@ class PipelineTeamU26C(Pipeline):
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
             'events': join('sub-{subject_id}', 'func',
                'sub-{subject_id}_task-MGT_run-*_events.tsv')
-        }        
+        }
         selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
         selectderivs.inputs.base_directory = self.directories.dataset_dir
         selectderivs.inputs.sort_filelist = True
+
+        # DataSink - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
 
         # Gunzip - gunzip files because SPM do not use .nii.gz files
         gunzip = MapNode(Gunzip(), name='gunzip', iterfield=['in_file'])
@@ -252,7 +259,11 @@ class PipelineTeamU26C(Pipeline):
             (level1estimate, contrast_estimate,[
                 ('spm_mat_file', 'spm_mat_file'),
                 ('beta_images', 'beta_images'),
-                ('residual_image', 'residual_image')])
+                ('residual_image', 'residual_image')]),
+            (contrast_estimate, data_sink, [
+                ('con_images', f'{subject_level_analysis.name}.@con_images'),
+                ('spmT_images', f'{subject_level_analysis.name}.@spmT_images'),
+                ('spm_mat_file', f'{subject_level_analysis.name}.@spm_mat_file')])
             ])
 
         # Remove large files, if requested
@@ -325,17 +336,244 @@ class PipelineTeamU26C(Pipeline):
             - a list of nipype.WorkFlow
         """
 
-    def get_group_level_analysis_sub_workflow(self, method):
+        return [
+            self.get_group_level_analysis_single_group('equalRange'),
+            self.get_group_level_analysis_single_group('equalIndifference'),
+            self.get_group_level_analysis_group_comparison()
+        ]
+
+    def get_group_level_analysis_single_group(self, method):
         """
-        Return a workflow for the group level analysis.
+        Return a workflow for the group level analysis in the single group case.
 
         Parameters:
-            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
+            - method: one of 'equalRange', 'equalIndifference'
 
         Returns:
             - group_level_analysis: nipype.WorkFlow
         """
+        # Compute the number of participants used to do the analysis
+        nb_subjects = len(self.subject_list)
 
+        # Infosource - a function free node to iterate over the list of subject names
+        infosource = Node(IdentityInterface(fields=['contrast_id']),
+                          name = 'infosource')
+        infosource.iterables = [('contrast_id', self.contrast_list)]
+
+        # Select files from subject level analysis
+        templates = {
+            'contrasts': join(self.directories.output_dir,
+                'subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
+            'mask': '/data/pt_nmc002/other/narps/derivatives/fmriprep/gr_mask_tmax.nii'
+            }
+        selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
+        selectderivs.inputs.sort_filelist = True
+        selectderivs.inputs.base_directory = self.directories.dataset_dir
+
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+
+        # Function Node get_group_subjects
+        #   Get subjects in the group and in the subject_list
+        get_group_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_group_subjects'
+        )
+        get_group_subjects.inputs.list_1 = get_group(method)
+        get_group_subjects.inputs.list_2 = self.subject_list
+
+        # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
+        #   If not complete, subject id '001' in search patterns
+        #   would match all contrast files with 'con_0001.nii'.
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+
+        # Function Node elements_in_string
+        #   Get contrast files for required subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_contrasts', iterfield = 'input_str'
+        )
+
+        # One Sample T-Test Design - creates one sample T-Test Design
+        onesamplettestdes = Node(OneSampleTTestDesign(), name = 'onesampttestdes')
+
+        # EstimateModel - estimate the parameters of the model
+        # Even for second level it should be 'Classical': 1.
+        level2estimate = Node(EstimateModel(), name = 'level2estimate')
+        level2estimate.inputs.estimation_method = {'Classical': 1}
+
+        # EstimateContrast - estimates simple group contrast
+        level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
+        level2conestimate.inputs.group_contrast = True
+        level2conestimate.inputs.contrasts = [['Group', 'T', ['mean'], [1]]]
+
+        # Create the group level workflow
+        group_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'group_level_analysis_nsub_{nb_subjects}')
+        group_level_analysis.connect([
+            (infosource, selectderivs, [('contrast_id', 'contrast_id')]),
+            (selectderivs, get_contrasts, [('contrasts', 'input_str')]),
+            (get_group_subjects, get_contrasts, [
+                (('out_list', complete_subject_ids), 'elements')
+                ]),
+            (get_contrasts, onesamplettestdes, [
+                (('out_list', clean_list), 'in_files')
+                ]),
+            (selectderivs, onesamplettestdes, [('mask', 'explicit_mask_file')]),
+            (onesamplettestdes, level2estimate, [('spm_mat_file', 'spm_mat_file')]),
+            (level2estimate, level2conestimate, [
+                ('spm_mat_file', 'spm_mat_file'),
+                ('beta_images', 'beta_images'),
+                ('residual_image', 'residual_image')
+                ]),
+            (level2estimate, data_sink, [
+                ('mask_image', f'group_level_analysis_{method}_nsub_{nb_subjects}.@mask')]),
+            (level2conestimate, data_sink, [
+                ('spm_mat_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@spm_mat'),
+                ('spmT_images', f'group_level_analysis_{method}_nsub_{nb_subjects}.@T'),
+                ('con_images', f'group_level_analysis_{method}_nsub_{nb_subjects}.@con')])
+            ])
+
+        return group_level_analysis
+
+    def get_group_level_analysis_group_comparison(self):
+        """
+        Return a workflow for the group level analysis in the group comparison case.
+
+        Returns:
+            - group_level_analysis: nipype.WorkFlow
+        """
+        # Compute the number of participants used to do the analysis
+        nb_subjects = len(self.subject_list)
+
+        # Infosource - a function free node to iterate over the list of subject names
+        infosource = Node(IdentityInterface(fields=['contrast_id']),
+                          name = 'infosource')
+        infosource.iterables = [('contrast_id', self.contrast_list)]
+
+        # Select files from subject level analysis
+        templates = {
+            'contrasts': join(self.directories.output_dir,
+                'subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
+            'mask': '/data/pt_nmc002/other/narps/derivatives/fmriprep/gr_mask_tmax.nii'
+            }
+        selectderivs = Node(SelectFiles(templates), name = 'selectderivs')
+        selectderivs.inputs.sort_filelist = True
+        selectderivs.inputs.base_directory = self.directories.dataset_dir
+
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+
+        # Function Node get_group_subjects
+        #   Get subjects in the group and in the subject_list
+        get_equal_indifference_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_group_subjects'
+        )
+        get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+        get_equal_indifference_subjects.inputs.list_2 = self.subject_list
+
+        # Function Node get_group_subjects
+        #   Get subjects in the group and in the subject_list
+        get_equal_range_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_group_subjects'
+        )
+        get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+        get_equal_range_subjects.inputs.list_2 = self.subject_list
+
+        # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
+        #   If not complete, subject id '001' in search patterns
+        #   would match all contrast files with 'con_0001.nii'.
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+
+        # Function Node elements_in_string
+        #   Get contrast files for required subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_equal_indifference_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_indifference_contrasts', iterfield = 'input_str'
+        )
+        get_equal_range_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_range_contrasts', iterfield = 'input_str'
+        )
+
+        # Two Sample T-Test Design
+        twosampttest = Node(TwoSampleTTestDesign(), name = 'twosampttest')
+
+        # EstimateModel - estimate the parameters of the model
+        # Even for second level it should be 'Classical': 1.
+        level2estimate = Node(EstimateModel(), name = 'level2estimate')
+        level2estimate.inputs.estimation_method = {'Classical': 1}
+
+        # EstimateContrast - estimates simple group contrast
+        level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
+        level2conestimate.inputs.group_contrast = True
+        level2conestimate.inputs.contrasts = [
+            ['Eq range vs Eq indiff in loss', 'T', ['mean'], [1, -1]]
+        ]
+
+        # Create the group level workflow
+        group_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'group_level_analysis_groupComp_nsub_{nb_subjects}')
+        group_level_analysis.connect([
+            (infosource, selectderivs, [('contrast_id', 'contrast_id')]),
+            (selectderivs, get_equal_range_contrasts, [('contrasts', 'input_str')]),
+            (selectderivs, get_equal_indifference_contrasts, [('contrasts', 'input_str')]),
+            (get_equal_range_subjects, get_equal_range_contrasts, [
+                (('out_list', complete_subject_ids), 'elements')
+                ]),
+            (get_equal_indifference_subjects, get_equal_indifference_contrasts, [
+                (('out_list', complete_subject_ids), 'elements')
+                ]),
+            (get_equal_range_contrasts, twosampttest, [
+                (('out_list', clean_list), 'group1_files')
+                ]),
+            (get_equal_indifference_contrasts, twosampttest, [
+                (('out_list', clean_list), 'group2_files')
+                ]),
+            (selectderivs, twosampttest, [('mask', 'explicit_mask_file')]),
+            (twosampttest, level2estimate, [('spm_mat_file', 'spm_mat_file')]),
+            (level2estimate, level2conestimate, [
+                ('spm_mat_file', 'spm_mat_file'),
+                ('beta_images', 'beta_images'),
+                ('residual_image', 'residual_image')
+                ]),
+            (level2estimate, data_sink, [
+                ('mask_image', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@mask')]),
+            (level2conestimate, data_sink, [
+                ('spm_mat_file', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@spm_mat'),
+                ('spmT_images', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@T'),
+                ('con_images', f'group_level_analysis_groupComp_nsub_{nb_subjects}.@con')])
+            ])
+
+        return group_level_analysis
     def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
 
