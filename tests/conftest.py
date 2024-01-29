@@ -44,8 +44,11 @@ def test_pipeline_execution(
         - keep intermediate levels : boolean in PipelineRunner
     """
     # A list of number of subject to iterate over
-    nb_subjects_subgroup = Configuration()['testing']['pipelines']['nb_subjects_per_group']
-    nb_subjects_list = [s for s in range(nb_subjects_subgroup, nb_subjects, nb_subjects_subgroup)]
+    nb_subjects_list = list(range(
+        Configuration()['testing']['pipelines']['nb_subjects_per_group'],
+        nb_subjects,
+        Configuration()['testing']['pipelines']['nb_subjects_per_group'])
+        )
     nb_subjects_list.append(nb_subjects)
 
     # Initialize the pipeline
