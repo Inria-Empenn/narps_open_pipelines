@@ -55,13 +55,13 @@ def test_pipeline_execution(
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
 
-    # Run as long as there are missing files after first level (with a max number of trials)
-    # TODO : this is a workaround
-    for _ in range(Configuration()['runner']['nb_trials']):
+    # Run first level by (small) sub-groups of subjects
+    for subjects in nb_subjects_list:
+        runner.nb_subjects = subjects
 
-        for nb_subjects in nb_subjects_list:
-
-            runner.nb_subjects = nb_subjects
+        # Run as long as there are missing files after first level (with a max number of trials)
+        # TODO : this is a workaround
+        for _ in range(Configuration()['runner']['nb_trials']):
 
             # Get missing subjects
             missing_subjects = set()
