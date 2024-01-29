@@ -128,6 +128,21 @@ class PipelineTeam51PW(Pipeline):
             (smoothing, data_sink, [('smoothed_file', 'preprocessing.@output_image')])
             ])
 
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Remove Node - Remove smoothed files once they are no longer needed
+            remove_smooth = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_smooth'
+                )
+
+            # Add connections
+            preprocessing.connect([
+                (data_sink, remove_smooth, [('out_file', '_')]),
+                (smoothing, remove_smooth, [('smoothed_file', 'file_name')])
+                ])
+
         return preprocessing
 
     def get_preprocessing_outputs(self):
@@ -358,6 +373,30 @@ class PipelineTeam51PW(Pipeline):
                 ('design_file', 'run_level_analysis.@design_file'),
                 ('design_image', 'run_level_analysis.@design_img')]),
             ])
+
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Remove Node - Remove smoothed files once they are no longer needed
+            remove_smooth = MapNode(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_smooth',
+                iterfield = ['file_name']
+                )
+
+            # Remove Node - Remove roi files once they are no longer needed
+            remove_roi = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_roi'
+                )
+
+            # Add connections
+            subject_level_analysis.connect([
+                (exclude_time_points, remove_smooth, [('roi_file', '_')]),
+                (select_files, remove_smooth, [('func', 'file_name')]),
+                (model_estimate, remove_roi, [('results_dir', '_')]),
+                (exclude_time_points, remove_roi, [('roi_file', 'file_name')])
+                ])
 
         return run_level_analysis
 
