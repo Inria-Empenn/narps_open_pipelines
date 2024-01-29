@@ -43,9 +43,13 @@ def test_pipeline_execution(
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
         - keep intermediate levels : boolean in PipelineRunner
     """
+    # A list of number of subject to iterate over
+    nb_subjects_subgroup = Configuration()['testing']['pipelines']['nb_subjects_per_group']
+    nb_subjects_list = [s for s in range(nb_subjects_subgroup, nb_subjects, nb_subjects_subgroup)]
+    nb_subjects_list.append(nb_subjects)
+
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
-    runner.nb_subjects = nb_subjects
     runner.pipeline.directories.dataset_dir = Configuration()['directories']['dataset']
     runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
@@ -55,23 +59,27 @@ def test_pipeline_execution(
     # TODO : this is a workaround
     for _ in range(Configuration()['runner']['nb_trials']):
 
-        # Get missing subjects
-        missing_subjects = set()
-        for file in runner.get_missing_first_level_outputs():
-            subject_id = get_subject_id(file)
-            if subject_id is not None:
-                missing_subjects.add(subject_id)
+        for nb_subjects in nb_subjects_list:
 
-        # Leave if no missing subjects
-        if not missing_subjects:
-            break
+            runner.nb_subjects = nb_subjects
 
-        # Start pipeline
-        runner.subjects = missing_subjects
-        try: # This avoids errors in the workflow to make the test fail
-            runner.start(True, False)
-        except(RuntimeError) as err:
-            print('RuntimeError: ', err)
+            # Get missing subjects
+            missing_subjects = set()
+            for file in runner.get_missing_first_level_outputs():
+                subject_id = get_subject_id(file)
+                if subject_id is not None:
+                    missing_subjects.add(subject_id)
+
+            # Leave if no missing subjects
+            if not missing_subjects:
+                break
+
+            # Start pipeline
+            runner.subjects = missing_subjects
+            try: # This avoids errors in the workflow to make the test fail
+                runner.start(True, False)
+            except(RuntimeError) as err:
+                print('RuntimeError: ', err)
 
     # Check missing files for the last time
     missing_files = runner.get_missing_first_level_outputs()
