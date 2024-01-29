@@ -10,5 +10,8 @@ narps_results = "data/results/"
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
 
+[pipelines]
+remove_unused_data = true # set to true to activate remove nodes of pipelines
+
 [results]
 neurovault_naming = true # true if results files are saved using the neurovault naming, false if they use naming of narps

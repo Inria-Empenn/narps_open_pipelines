@@ -9,7 +9,7 @@ In the following, read the instruction sections where the badge corresponding to
 ## 1 - Choose a pipeline
 `🧠 fMRI soft` `🐍 Python`
 
-Not sure which pipeline to start with :thinking:? The [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) provides the progress status for each pipeline. You can pick any pipeline that is not fully reproduced, i.e.: not started :red_circle: or in progress :orange_circle: .
+Not sure which pipeline to start with :thinking:? The [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) provides the progress status for each pipeline. You can pick a pipeline that is not fully reproduced, i.e.: not started :red_circle: or in progress :orange_circle: . Also have a look to the [pipeline reproduction management page](https://github.com/orgs/Inria-Empenn/projects/1/views/1) in order to get in touch with contributors working on the same pipeline.
 
 > [!NOTE]
 > Need more information to make a decision? The `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md) provides easy access to all the info we have on each pipeline.
