@@ -295,30 +295,6 @@ class PipelineTeamT54A(Pipeline):
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
             'file' : [
-                join('results', 'dof'),
-                join('results', 'logfile'),
-                join('results', 'pe10.nii.gz'),
-                join('results', 'pe11.nii.gz'),
-                join('results', 'pe12.nii.gz'),
-                join('results', 'pe13.nii.gz'),
-                join('results', 'pe14.nii.gz'),
-                join('results', 'pe15.nii.gz'),
-                join('results', 'pe16.nii.gz'),
-                join('results', 'pe17.nii.gz'),
-                join('results', 'pe1.nii.gz'),
-                join('results', 'pe2.nii.gz'),
-                join('results', 'pe3.nii.gz'),
-                join('results', 'pe4.nii.gz'),
-                join('results', 'pe5.nii.gz'),
-                join('results', 'pe6.nii.gz'),
-                join('results', 'pe7.nii.gz'),
-                join('results', 'pe8.nii.gz'),
-                join('results', 'pe9.nii.gz'),
-                join('results', 'res4d.nii.gz'),
-                join('results', 'sigmasquareds.nii.gz'),
-                join('results', 'threshac1.nii.gz'),
-                'run0.mat',
-                'run0.png',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
             ]
         }
@@ -450,7 +426,9 @@ class PipelineTeamT54A(Pipeline):
         parameters = {
             'contrast_id' : self.contrast_list,
             'subject_id' : self.subject_list,
-            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz']
+            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz',
+            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
+            ]
         }
         parameter_sets = product(*parameters.values())
         template = join(
@@ -546,9 +524,9 @@ class PipelineTeamT54A(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_*',
                 'varcope1.nii.gz'),
-            'mask': join(self.directories.output_dir,
-                'run_level_analysis', '_run_id_*_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
+            'masks': join(self.directories.output_dir,
+                'subject_level_analysis', '_contrast_id_1_subject_id_*',
+                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
@@ -589,6 +567,16 @@ class PipelineTeamT54A(Pipeline):
         merge_varcopes = Node(Merge(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
 
+        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
+        split_masks = Node(Split(), name = 'split_masks')
+        split_masks.inputs.splits = [1, len(self.subject_list) - 1]
+        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
+
+        # MultiImageMaths Node - Create a subject mask by
+        #   computing the intersection of all run masks.
+        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
+        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.subject_list) - 1)
+
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
 
@@ -617,8 +605,11 @@ class PipelineTeamT54A(Pipeline):
             (select_files, get_varcopes, [('varcope', 'input_str')]),
             (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
             (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
-            (select_files, estimate_model, [('mask', 'mask_file')]),
-            (select_files, randomise, [('mask', 'mask')]),
+            (select_files, split_masks, [('masks', 'inlist')]),
+            (split_masks, mask_intersection, [('out1', 'in_file')]),
+            (split_masks, mask_intersection, [('out2', 'operand_files')]),
+            (mask_intersection, estimate_model, [('out_file', 'mask_file')]),
+            (mask_intersection, randomise, [('out_file', 'mask')]),
             (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
             (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
             (specify_model, estimate_model, [
