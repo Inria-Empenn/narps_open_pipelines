@@ -287,7 +287,7 @@ class PipelineTeamU26C(Pipeline):
             subject_level_analysis.connect([
                 (smooth, remove_gunzip, [('smoothed_files', '_')]),
                 (gunzip, remove_gunzip, [('out_file', 'file_name')]),
-                (modelspec, remove_smooth, [('session_info', '_')]),
+                (data_sink, remove_smooth, [('out_file', '_')]),
                 (smooth, remove_smooth, [('smoothed_files', 'file_name')])
                 ])
 
