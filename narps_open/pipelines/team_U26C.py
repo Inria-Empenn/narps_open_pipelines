@@ -298,14 +298,14 @@ class PipelineTeamU26C(Pipeline):
 
         templates = [join(
             self.directories.output_dir,
-            'subject_level_analysis_loss', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            'subject_level_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
         templates += [join(
             self.directories.output_dir,
-            'subject_level_analysis_loss', '_subject_id_{subject_id}', 'SPM.mat')]
+            'subject_level_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
         templates += [join(
             self.directories.output_dir,
-            'subject_level_analysis_loss', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            'subject_level_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
 
         # Format with subject_ids
