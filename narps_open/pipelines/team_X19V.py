@@ -4,17 +4,18 @@
 """ Write the work of NARPS team X19V using Nipype """
 
 from os.path import join
+from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
-    Info, ImageMaths, IsotropicSmooth, Threshold, Level1Design, FEATModel,
-    L2Model, Merge, FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign,
-    Cluster, BET, SmoothEstimate
+    IsotropicSmooth, Level1Design, FEATModel,
+    L2Model, Merge, FLAMEO, FILMGLS, MultipleRegressDesign,
+    Cluster, BET, SmoothEstimate, FSLCommand
     )
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.algorithms.misc import Gunzip
+from nipype.interfaces.fsl.maths import MultiImageMaths
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import Pipeline
@@ -75,18 +76,18 @@ class PipelineTeamX19V(Pipeline):
             for line in file:
                 info = line.strip().split()
 
-                onset['gain'].append(float(info[0]))
-                duration['gain'].append(4.0)
-                amplitude['gain'].append(float(info[2]))
-                onset['loss'].append(float(info[0]))
-                duration['loss'].append(4.0)
-                amplitude['loss'].append(float(info[3]))
-                onset['trial'].append(float(info[0]))
-                duration['trial'].append(4.0)
-                amplitude['trial'].append(1.0)
+                onsets['gain'].append(float(info[0]))
+                durations['gain'].append(4.0)
+                amplitudes['gain'].append(float(info[2]))
+                onsets['loss'].append(float(info[0]))
+                durations['loss'].append(4.0)
+                amplitudes['loss'].append(float(info[3]))
+                onsets['trial'].append(float(info[0]))
+                durations['trial'].append(4.0)
+                amplitudes['trial'].append(1.0)
 
-        amplitude['gain'] = amplitude['gain'] - mean(amplitude['gain'])
-        amplitude['loss'] = amplitude['loss'] - mean(amplitude['loss'])
+        amplitudes['gain'] = amplitudes['gain'] - mean(amplitudes['gain'])
+        amplitudes['loss'] = amplitudes['loss'] - mean(amplitudes['loss'])
 
         return [
             Bunch(
@@ -146,8 +147,8 @@ class PipelineTeamX19V(Pipeline):
             fields = ['subject_id', 'run_id']),
             name = 'information_source')
         information_source.iterables = [
-            ('subject_id', subject_list),
-            ('run_id', run_list)
+            ('subject_id', self.subject_list),
+            ('run_id', self.run_list)
             ]
 
         # SelectFiles - to select necessary files
@@ -159,13 +160,13 @@ class PipelineTeamX19V(Pipeline):
             'param' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv')
         }
-        select_files = Node(SelectFiles(template), name = 'select_files')
+        select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted directory
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        
+
         # BET Node - Skullstripping data
         skull_stripping_func = Node(BET(), name = 'skull_stripping_func')
         skull_stripping_func.inputs.frac = 0.1
@@ -178,7 +179,7 @@ class PipelineTeamX19V(Pipeline):
 
         # Get Subject Info - get subject specific condition information
         subject_information = Node(Function(
-            function = get_subject_information,
+            function = self.get_subject_information,
             input_names = ['event_file'],
             output_names = ['subject_info']
             ), name = 'subject_information')
@@ -191,9 +192,9 @@ class PipelineTeamX19V(Pipeline):
 
         # Function Node get_parameters_file - Get files with movement parameters
         parameters = Node(Function(
-            function = get_parameters_file,
+            function = self.get_parameters_file,
             input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
-            output_names = ['parameters_file']), 
+            output_names = ['parameters_file']),
              name = 'parameters')
         parameters.inputs.working_dir = self.directories.working_dir
 
@@ -273,14 +274,12 @@ class PipelineTeamX19V(Pipeline):
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
-            'file' : [
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
-            ]
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
+            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}',
+            'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
             )
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
@@ -336,7 +335,7 @@ class PipelineTeamX19V(Pipeline):
                 'run_level_analysis', '_run_id_*_subject_id_{subject_id}',
                 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
         }
-        select_files = Node(SelectFiles(template), name = 'select_files')
+        select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory= self.directories.results_dir
 
         # DataSink Node - store the wanted results in the wanted directory
@@ -396,7 +395,7 @@ class PipelineTeamX19V(Pipeline):
                 ('copes', 'subject_level_analysis.@copes'),
                 ('var_copes', 'subject_level_analysis.@varcopes')])])
 
-    return subject_level_analysis
+        return subject_level_analysis
 
     def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
@@ -576,67 +575,229 @@ class PipelineTeamX19V(Pipeline):
         cluster.inputs.out_threshold_file = True
         cluster.inputs.out_pval_file = True
         cluster.inputs.pthreshold = 0.05
-    
 
-    regs = Node(Function(input_names = ['equalRange_id', 'equalIndifference_id', 'method', 'subject_list'],
-                                        output_names = ['regressors'],
-                                        function = get_regs), name = 'regs')
-    regs.inputs.method = method
-    regs.inputs.subject_list = subject_list
-    
-    
+        # Compute the number of participants used to do the analysis
+        nb_subjects = len(self.subject_list)
 
+        # Declare the workflow
         group_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_{method}_nsub_{n_sub}')
-        
+            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
         group_level_analysis.connect([
             (information_source, select_files, [('contrast_id', 'contrast_id')]),
-            (information_source, subgroups_contrasts, [('subject_list', 'subject_ids')]),
-            (select_files, subgroups_contrasts, [
-                ('cope', 'copes'), ('varcope', 'varcopes'),
-                ('participants', 'participants_file')]),
-            (select_files, flame_3rdlevel, [('mask', 'mask_file')]),
-            (select_files, smoothness_estimate, [('mask', 'mask_file')]),
-            (subgroups_contrasts, regs, [
-                ('equalRange_id', 'equalRange_id'),
-                ('equalIndifference_id', 'equalIndifference_id')]),
-            (regs, specifymodel_3rdlevel, [('regressors', 'regressors')])
+            (select_files, get_copes, [('cope', 'input_str')]),
+            (select_files, get_varcopes, [('varcope', 'input_str')]),
+            (get_copes, merge_copes, [(('out_list', clean_list), 'in_files')]),
+            (get_varcopes, merge_varcopes,[(('out_list', clean_list), 'in_files')]),
+            (select_files, split_masks, [('masks', 'inlist')]),
+            (split_masks, mask_intersection, [('out1', 'in_file')]),
+            (split_masks, mask_intersection, [('out2', 'operand_files')]),
+            (mask_intersection, estimate_model, [('out_file', 'mask_file')]),
+            (mask_intersection, smoothness_estimate, [('out_file', 'mask_file')]),
+            (merge_copes, estimate_model, [('merged_file', 'cope_file')]),
+            (merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
+            (specify_model, estimate_model, [
+                ('design_mat', 'design_file'),
+                ('design_con', 't_con_file'),
+                ('design_grp', 'cov_split_file')
+                ]),
+            (estimate_model, cluster, [('zstats', 'in_file'), ('copes', 'cope_file')]),
+            (estimate_model, smoothness_estimate, [('zstats', 'zstat_file')]),
+            (smoothness_estimate, cluster, [('dlh', 'dlh'), ('volume', 'volume')]),
+            (estimate_model, data_sink, [
+                ('zstats', f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats'),
+                ('tstats', f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
+                ]),
+            (cluster, data_sink, [
+                ('threshold_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh'),
+                ('pval_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@pval')])
             ])
 
         if method in ('equalIndifference', 'equalRange'):
-            specifymodel_3rdlevel.inputs.contrasts = [["group_mean", "T", ["group_mean"], [1]], ["group_mean_neg", "T", ["group_mean"], [-1]]]
-            
-            if method == 'equalIndifference':
-                group_level_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, 
-                                     [('copes_equalIndifference', 'in_files')]), 
-                                    (subgroups_contrasts, merge_varcopes_3rdlevel, 
-                                     [('varcopes_equalIndifference', 'in_files')])])
-            elif method == 'equalRange':
-                group_level_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, [('copes_equalRange', 'in_files')]),
-                                    (subgroups_contrasts, merge_varcopes_3rdlevel, [('varcopes_equalRange', 'in_files')])])
-                
-        elif method == "groupComp":
-            specifymodel_3rdlevel.inputs.contrasts = [["equalRange_sup", "T", ["equalRange", "equalIndifference"],
-                                                       [1, -1]]]
-            
-            group_level_analysis.connect([(subgroups_contrasts, merge_copes_3rdlevel, [('copes_global', 'in_files')]),
-                                (subgroups_contrasts, merge_varcopes_3rdlevel, [('varcopes_global', 'in_files')])])
-        
-        group_level_analysis.connect([(merge_copes_3rdlevel, flame_3rdlevel, [('merged_file', 'cope_file')]),
-                             (merge_varcopes_3rdlevel, flame_3rdlevel, [('merged_file', 'var_cope_file')]),
-                            (specifymodel_3rdlevel, flame_3rdlevel, [('design_mat', 'design_file'),
-                                                               ('design_con', 't_con_file'), 
-                                                               ('design_grp', 'cov_split_file')]),
-                            (flame_3rdlevel, cluster, [('zstats', 'in_file'), ('copes', 'cope_file')]),
-                            (flame_3rdlevel, smoothness_estimate, [('zstats', 'zstat_file')]),
-                            (smoothness_estimate, cluster, [('dlh', 'dlh'), ('volume', 'volume')]),
-                            (flame_3rdlevel, datasink_3rdlevel, [('zstats', 
-                                                             f"group_level_analysis_{method}_nsub_{n_sub}.@zstats"), 
-                                                                ('tstats', 
-                                                             f"group_level_analysis_{method}_nsub_{n_sub}.@tstats")]), 
-                            (cluster, datasink_3rdlevel, [('threshold_file', f"group_level_analysis_{method}_nsub_{n_sub}.@thresh"),
-                                                         ('pval_file', f"group_level_analysis_{method}_nsub_{n_sub}.@pval")])])
-        
+            # Setup a one sample t-test
+            specify_model.inputs.contrasts = [
+                ['group_mean', 'T', ['group_mean'], [1]],
+                ['group_mean_neg', 'T', ['group_mean'], [-1]]
+                ]
+
+            # Function Node get_group_subjects - Get subjects in the group and in the subject_list
+            get_group_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_group_subjects'
+            )
+            get_group_subjects.inputs.list_1 = get_group(method)
+            get_group_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_one_sample_t_test_regressors
+            #   Get regressors in the equalRange and equalIndifference method case
+            regressors_one_sample = Node(
+                Function(
+                    function = self.get_one_sample_t_test_regressors,
+                    input_names = ['subject_list'],
+                    output_names = ['regressors']
+                ),
+                name = 'regressors_one_sample',
+            )
+
+            # Add missing connections
+            group_level_analysis.connect([
+                (get_group_subjects, get_copes, [('out_list', 'elements')]),
+                (get_group_subjects, get_varcopes, [('out_list', 'elements')]),
+                (get_group_subjects, regressors_one_sample, [('out_list', 'subject_list')]),
+                (regressors_one_sample, specify_model, [('regressors', 'regressors')])
+            ])
+
+        elif method == 'groupComp':
+
+            # Select copes and varcopes corresponding to the selected subjects
+            #   Indeed the SelectFiles node asks for all (*) subjects available
+            get_copes.inputs.elements = self.subject_list
+            get_varcopes.inputs.elements = self.subject_list
+
+            # Setup a two sample t-test
+            specify_model.inputs.contrasts = [
+                ['equalRange_sup', 'T', ['equalRange', 'equalIndifference'], [1, -1]]
+            ]
+
+            # Function Node get_equal_range_subjects
+            #   Get subjects in the equalRange group and in the subject_list
+            get_equal_range_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_equal_range_subjects'
+            )
+            get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+            get_equal_range_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_equal_indifference_subjects
+            #   Get subjects in the equalIndifference group and in the subject_list
+            get_equal_indifference_subjects = Node(Function(
+                function = list_intersection,
+                input_names = ['list_1', 'list_2'],
+                output_names = ['out_list']
+                ),
+                name = 'get_equal_indifference_subjects'
+            )
+            get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+            get_equal_indifference_subjects.inputs.list_2 = self.subject_list
+
+            # Function Node get_two_sample_t_test_regressors
+            #   Get regressors in the groupComp method case
+            regressors_two_sample = Node(
+                Function(
+                    function = self.get_two_sample_t_test_regressors,
+                    input_names = [
+                        'equal_range_ids',
+                        'equal_indifference_ids',
+                        'subject_list',
+                    ],
+                    output_names = ['regressors', 'groups']
+                ),
+                name = 'regressors_two_sample',
+            )
+            regressors_two_sample.inputs.subject_list = self.subject_list
+
+            # Add missing connections
+            group_level_analysis.connect([
+                (get_equal_range_subjects, regressors_two_sample, [
+                    ('out_list', 'equal_range_ids')
+                    ]),
+                (get_equal_indifference_subjects, regressors_two_sample, [
+                    ('out_list', 'equal_indifference_ids')
+                    ]),
+                (regressors_two_sample, specify_model, [
+                    ('regressors', 'regressors'),
+                    ('groups', 'groups')])
+            ])
+
         return group_level_analysis
 
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                # TODO : add thresold_file and pval_file
+                'tstat1.nii.gz',
+                'tstat2.nii.gz',
+                'zstat1.nii.gz',
+                'zstat2.nii.gz'
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        files = [
+            # TODO : add thresold_file and pval_file
+            'zstat1.nii.gz',
+            'tstat1.nii.gz'
+            ]
+
+        return_list += [join(
+            self.directories.output_dir,
+            f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
+            '_contrast_id_2', f'{file}') for file in files]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+
+        nb_sub = len(self.subject_list)
+        files = [
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
