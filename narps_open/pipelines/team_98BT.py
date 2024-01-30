@@ -6,7 +6,7 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode, JoinNode
-from nipype.interfaces.utility import IdentityInterface, Function, Rename
+from nipype.interfaces.utility import IdentityInterface, Function, Rename, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
 from nipype.interfaces.spm import (
@@ -15,6 +15,7 @@ from nipype.interfaces.spm import (
     TwoSampleTTestDesign, RealignUnwarp, NewSegment, SliceTiming,
     DARTELNorm2MNI, FieldMap, Threshold
     )
+from nipype.interfaces.spm.base import Info as SPMInfo
 from nipype.interfaces.fsl import ExtractROI
 from nipype.algorithms.modelgen import SpecifySPMModel
 from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
@@ -22,7 +23,10 @@ from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
-from narps_open.core.common import remove_file, list_intersection, elements_in_string, clean_list
+from narps_open.core.common import (
+    remove_parent_directory, list_intersection, elements_in_string, clean_list
+    )
+from narps_open.utils.configuration import Configuration
 
 class PipelineTeam98BT(Pipeline):
     """ A class that defines the pipeline of team 98BT. """
@@ -82,34 +86,49 @@ class PipelineTeam98BT(Pipeline):
             joinsource = 'information_source',
             joinfield = 'structural_files')
 
-        rename_dartel = MapNode(Rename(),
+        rename_dartel = MapNode(Rename(format_string = 'subject_id_%(subject_id)s_struct'),
             iterfield = ['in_file', 'subject_id'],
             name = 'rename_dartel')
-        rename_dartel.inputs.format_string = 'subject_id_%(subject_id)s_struct'
         rename_dartel.inputs.subject_id = self.subject_list
         rename_dartel.inputs.keep_ext = True
 
-        dartel_workflow = create_DARTEL_template(name = 'dartel_workflow')
-        dartel_workflow.inputs.inputspec.template_prefix = 'template'
+        dartel_sub_workflow = create_DARTEL_template(name = 'dartel_sub_workflow')
+        dartel_sub_workflow.inputs.inputspec.template_prefix = 'template'
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Create dartel workflow and connect its nodes
-        dartel = Workflow(base_dir = self.directories.working_dir, name = 'dartel')
-        dartel.connect([
+        dartel_workflow = Workflow(base_dir = self.directories.working_dir, name = 'dartel_workflow')
+        dartel_workflow.connect([
             (information_source, select_files, [('subject_id', 'subject_id')]),
             (select_files, gunzip_anat, [('anat', 'in_file')]),
             (gunzip_anat, dartel_input, [('out_file', 'structural_files')]),
             (dartel_input, rename_dartel, [('structural_files', 'in_file')]),
-            (rename_dartel, dartel_workflow, [('out_file', 'inputspec.structural_files')]),
-            (dartel_workflow, data_sink, [
+            (rename_dartel, dartel_sub_workflow, [('out_file', 'inputspec.structural_files')]),
+            (dartel_sub_workflow, data_sink, [
                 ('outputspec.template_file', 'dartel_template.@template_file'),
                 ('outputspec.flow_fields', 'dartel_template.@flow_fields')])
             ])
 
-        return dartel
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Function Nodes remove_parent_directory - Remove gunziped files
+            remove_gunzip = Node(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_gunzip')
+
+            # Add connections
+            dartel_workflow.connect([
+                (gunzip_anat, remove_gunzip, [('out_file', 'file_name')]),
+                (data_sink, remove_gunzip, [('out_file', '_')])
+            ])
+
+        return dartel_workflow
 
     def get_fieldmap_info(fieldmap_info_file, magnitude):
         """
@@ -186,17 +205,20 @@ class PipelineTeam98BT(Pipeline):
         fieldmap.inputs.blip_direction = -1
         fieldmap.inputs.total_readout_time = TaskInformation()['TotalReadoutTime']
 
+        # Get SPM Tissue Probability Maps file
+        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
+
         # Segmentation Node - SPM Segment function via custom scripts (defaults left in place)
         segmentation = Node(NewSegment(), name = 'segmentation')
         segmentation.inputs.write_deformation_fields = [True, True]
-        segmentation.channel_info = (0.0001, 60, (True, True))
-        segmentation.tissues = [
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 1), 1, (True,False), (True, False)],
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 2), 1, (True,False), (True, False)],
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 3), 2, (True,False), (False, False)],
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 4), 3, (True,False), (False, False)],
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 5), 4, (True,False), (False, False)],
-            [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 6), 2, (False,False), (False, False)]
+        segmentation.inputs.channel_info = (0.0001, 60, (True, True))
+        segmentation.inputs.tissues = [
+            [(spm_tissues_file, 1), 1, (True,False), (True, False)],
+            [(spm_tissues_file, 2), 1, (True,False), (True, False)],
+            [(spm_tissues_file, 3), 2, (True,False), (False, False)],
+            [(spm_tissues_file, 4), 3, (True,False), (False, False)],
+            [(spm_tissues_file, 5), 4, (True,False), (False, False)],
+            [(spm_tissues_file, 6), 2, (False,False), (False, False)]
         ]
 
         # Slice timing - SPM slice time correction with default parameters
@@ -230,28 +252,14 @@ class PipelineTeam98BT(Pipeline):
         dartel_norm_anat.inputs.fwhm = self.fwhm
         dartel_norm_anat.inputs.voxel_size = (1, 1, 1)
 
-        # Merge Node - Merge file names to be removed after datasink node is performed
-        merge_removable_files = Node(Merge(5), name = 'merge_removable_files')
-        merge_removable_files.inputs.ravel_inputs = True
-
-        # Function Nodes remove_files - Remove sizeable files once they aren't needed
-        remove_temporary_files = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_temporary_files', iterfield = 'file_name')
-
         # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(DataSink(), name='data_sink')
+        data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Create preprocessing workflow and connect its nodes
         preprocessing =  Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.connect([
             (information_source, select_files, [
-                ('subject_id', 'subject_id'),
-                ('run_id', 'run_id')]),
-            (information_source, remove_temporary_files, [
                 ('subject_id', 'subject_id'),
                 ('run_id', 'run_id')]),
             (select_files, gunzip_anat, [('anat', 'in_file')]),
@@ -269,7 +277,6 @@ class PipelineTeam98BT(Pipeline):
             (gunzip_anat, segmentation, [('out_file', 'channel_files')]),
             (gunzip_func, slice_timing, [('out_file', 'in_files')]),
             (slice_timing, motion_correction, [('timecorrected_files', 'in_files')]),
-            (motion_correction, remove_temporary_files, [('realigned_unwarped_files', '_')]),
             (motion_correction, coregistration, [('realigned_unwarped_files', 'apply_to_files')]),
             (gunzip_anat, coregistration, [('out_file', 'target')]),
             (motion_correction, extract_first, [('realigned_unwarped_files', 'in_file')]),
@@ -288,16 +295,32 @@ class PipelineTeam98BT(Pipeline):
                 ('realigned_unwarped_files', 'preprocessing.@motion_corrected'),
                 ('realignment_parameters', 'preprocessing.@param')]),
             (segmentation, data_sink, [('normalized_class_images', 'preprocessing.@seg')]),
-
-            # Remove files
-            (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
-            (gunzip_phasediff, merge_removable_files, [('out_file', 'in2')]),
-            (gunzip_magnitude, merge_removable_files, [('out_file', 'in3')]),
-            (fieldmap, merge_removable_files, [('vdm', 'in4')]),
-            (slice_timing, merge_removable_files, [('timecorrected_files', 'in5')]),
-            (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
-            (data_sink, remove_after_datasink, [('out_file', '_')])
         ])
+
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Merge Node - Merge file names to be removed after datasink node is performed
+            merge_removable_files = Node(Merge(5), name = 'merge_removable_files')
+            merge_removable_files.inputs.ravel_inputs = True
+
+            # Function Nodes remove_files - Remove sizeable files once they aren't needed
+            remove_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_after_datasink', iterfield = 'file_name')
+
+            # Add connections
+            preprocessing.connect([
+                (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
+                (gunzip_phasediff, merge_removable_files, [('out_file', 'in2')]),
+                (gunzip_magnitude, merge_removable_files, [('out_file', 'in3')]),
+                (fieldmap, merge_removable_files, [('vdm', 'in4')]),
+                (slice_timing, merge_removable_files, [('timecorrected_files', 'in5')]),
+                (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
+                (data_sink, remove_after_datasink, [('out_file', '_')])
+            ])
 
         return preprocessing
 
