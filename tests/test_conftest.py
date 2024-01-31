@@ -17,7 +17,7 @@ from shutil import rmtree
 
 from datetime import datetime
 
-from pytest import mark, helpers, fixture
+from pytest import mark, helpers, fixture, raises
 
 from nipype import Node, Workflow
 from nipype.interfaces.utility import Function
@@ -238,6 +238,49 @@ class MockupResultsCollection():
 
 class TestConftest:
     """ A class that contains all the unit tests for the conftest module."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_test_outputs(set_test_directory):
+        """ Test the test_pipeline_outputs helper """
+
+        # Test pipeline
+        pipeline = MockupPipeline()
+        pipeline.subject_list = ['001', '002']
+        
+        # Wrong length for nb_of_outputs
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [1,2,3])
+
+        # Wrong number of outputs
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [0, 2, 2, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 0, 2, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 0, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 0, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 20, 0])
+
+        # Right number of outputs
+        helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 20, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : 'not_fo\rmatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : '{not_formatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : '{not_formatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
 
     @staticmethod
     @mark.unit_test
