@@ -28,6 +28,8 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     remove_file, list_intersection, elements_in_string, clean_list
     )
+from narps_open.core.interfaces import InterfaceFactory
+from narps_open.utils.configuration import Configuration
 
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
@@ -391,7 +393,7 @@ class PipelineTeam51PW(Pipeline):
                 )
 
             # Add connections
-            subject_level_analysis.connect([
+            run_level_analysis.connect([
                 (exclude_time_points, remove_smooth, [('roi_file', '_')]),
                 (select_files, remove_smooth, [('func', 'file_name')]),
                 (model_estimate, remove_roi, [('results_dir', '_')]),
