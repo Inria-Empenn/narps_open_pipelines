@@ -77,19 +77,11 @@ class TestPipelinesTeamT54A:
         pipeline = PipelineTeamT54A()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 9*4*1
-        assert len(pipeline.get_subject_level_outputs()) == 5*2*1
-        assert len(pipeline.get_group_level_outputs()) == 8*2*2 + 4
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 9*4*1, 5*2*1, 8*2*2 + 4, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 9*4*4
-        assert len(pipeline.get_subject_level_outputs()) == 5*2*4
-        assert len(pipeline.get_group_level_outputs()) == 8*2*2 + 4
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 9*4*4, 5*2*4, 8*2*2 + 4, 18])
 
     @staticmethod
     @mark.unit_test

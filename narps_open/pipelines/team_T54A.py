@@ -291,38 +291,33 @@ class PipelineTeamT54A(Pipeline):
     def get_run_level_outputs(self):
         """ Return the names of the files the run level analysis is supposed to generate. """
 
+        return_list = []
+        output_dir = join(self.directories.output_dir, 'run_level_analysis',
+            '_run_id_{run_id}_subject_id_{subject_id}')
+
+        # Handle results dir
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
-            'file' : [
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz'
-            ]
+            'contrast_id' : self.contrast_list
         }
         parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
-            )
+        templates = [
+            join(output_dir, 'results', 'cope{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'tstat{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'varcope{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'zstat{contrast_id}.nii.gz')
+            ]
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+            for parameter_values in parameter_sets for template in templates]
 
+        # Handle mask file
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
-            'contrast_id' : self.contrast_list,
-            'file' : [
-                join('results', 'cope{contrast_id}.nii.gz'),
-                join('results', 'tstat{contrast_id}.nii.gz'),
-                join('results', 'varcope{contrast_id}.nii.gz'),
-                join('results', 'zstat{contrast_id}.nii.gz'),
-            ]
         }
         parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
-            )
-
+        template = join(output_dir, 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
@@ -426,18 +421,20 @@ class PipelineTeamT54A(Pipeline):
         parameters = {
             'contrast_id' : self.contrast_list,
             'subject_id' : self.subject_list,
-            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
-            ]
         }
         parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
-            )
+        output_dir = join(self.directories.output_dir, 'subject_level_analysis',
+            '_contrast_id_{contrast_id}_subject_id_{subject_id}')            
+        templates = [
+            join(output_dir, 'cope1.nii.gz'),
+            join(output_dir, 'tstat1.nii.gz'),
+            join(output_dir, 'varcope1.nii.gz'),
+            join(output_dir, 'zstat1.nii.gz'),
+            join(output_dir, 'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
+            ]
 
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+            for parameter_values in parameter_sets for template in templates]
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
