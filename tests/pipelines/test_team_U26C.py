@@ -72,19 +72,11 @@ class TestPipelinesTeamU26C:
         pipeline = PipelineTeamU26C()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 7
-        assert len(pipeline.get_group_level_outputs()) == 45
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 7, 45, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 28
-        assert len(pipeline.get_group_level_outputs()) == 45
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 28, 45, 18])
 
     @staticmethod
     @mark.unit_test
