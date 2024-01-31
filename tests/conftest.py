@@ -11,7 +11,9 @@ from os.path import join, isfile
 from shutil import rmtree
 
 from pytest import helpers
+from pathvalidate import is_valid_filepath
 
+from narps_open.pipelines import Pipeline
 from narps_open.runner import PipelineRunner
 from narps_open.utils import get_subject_id
 from narps_open.utils.correlation import get_correlation_coefficient
@@ -20,6 +22,30 @@ from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
+
+@helpers.register
+def test_pipeline_outputs(pipeline: Pipeline, number_of_outputs: list):
+    """ Test the outputs of a Pipeline.
+        Arguments:
+        - pipeline, Pipeline: the pipeline to test
+        - number_of_outputs, list: a list containing the expected number of outputs for each
+          stage of the pipeline (preprocessing, run_level, subject_level, group_level, hypotheses)
+
+        Return: True if the outputs are in sufficient number and each ones name is valid,
+          False otherwise.
+    """
+    assert len(number_of_outputs) == 5
+    for outputs, number in zip([
+        pipeline.get_preprocessing_outputs(),
+        pipeline.get_run_level_outputs(),
+        pipeline.get_subject_level_outputs(),
+        pipeline.get_group_level_outputs(),
+        pipeline.get_hypotheses_outputs()], number_of_outputs):
+
+        assert len(outputs) == number
+        for output in outputs:
+            assert is_valid_filepath(output, platform = 'auto')
+            assert not any(c in output for c in ['{', '}'])
 
 @helpers.register
 def test_pipeline_execution(
