@@ -148,7 +148,7 @@ class PipelineTeam51PW(Pipeline):
             # Add connections
             preprocessing.connect([
                 (data_sink, remove_intensity_normalization, [('out_file', '_')]),
-                (intensity_normalization, remove_intensity_normalization, [('out_file', 'file_name')])
+                (intensity_normalization, remove_intensity_normalization, [('out_file', 'file_name')]),
                 (data_sink, remove_smooth, [('out_file', '_')]),
                 (smoothing, remove_smooth, [('smoothed_file', 'file_name')]),
                 ])

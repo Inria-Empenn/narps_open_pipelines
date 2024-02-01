@@ -56,19 +56,11 @@ class TestPipelinesTeam51PW:
         pipeline = PipelineTeam51PW()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 1*4
-        assert len(pipeline.get_run_level_outputs()) == 8+4*2*4
-        assert len(pipeline.get_subject_level_outputs()) == 4*2
-        assert len(pipeline.get_group_level_outputs()) == 0
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [1*4, 4 + 4*2*4, 4*2, 0, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 4*1*4
-        assert len(pipeline.get_run_level_outputs()) == (8+4*2*4)*4
-        assert len(pipeline.get_subject_level_outputs()) == 4*2*4
-        assert len(pipeline.get_group_level_outputs()) == 0
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [4*1*4, (4 + 4*2*4)*4, 4*2*4, 0, 18])
 
     @staticmethod
     @mark.unit_test
@@ -112,7 +104,7 @@ class TestPipelinesTeam51PW:
     @mark.unit_test
     def test_confounds():
         """ Test the get_confounds method """
-        
+
         # in_file, subject_id, run_id, working_dir
         out_filename = PipelineTeam51PW.get_confounds(join(
             Configuration()['directories']['test_data'], 'pipelines','confounds.tsv'),
