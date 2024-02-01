@@ -262,7 +262,7 @@ class PipelineTeamX19V(Pipeline):
             run_level_analysis.connect([
                 (data_sink, remove_skullstrip, [('out_file', '_')]),
                 (skull_stripping_func, remove_skullstrip, [('out_file', 'file_name')]),
-                (data_sink, remove_smooth, [('results_dir', '_')]),
+                (data_sink, remove_smooth, [('out_file', '_')]),
                 (smoothing_func, remove_smooth, [('out_file', 'file_name')])
                 ])
 
