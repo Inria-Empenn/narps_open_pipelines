@@ -430,16 +430,6 @@ class PipelineTeam51PW(Pipeline):
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets for template in templates]
 
-        # Handle mask file
-        parameters = {
-            'run_id' : self.run_list,
-            'subject_id' : self.subject_list,
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(output_dir, 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz')
-        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
-
         return return_list
 
     def get_subject_level_analysis(self):
@@ -463,6 +453,7 @@ class PipelineTeam51PW(Pipeline):
             'masks' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
                 'sub-{subject_id}_task-MGT_run-*_bold_brain_mask_flirt_wtsimt.nii.gz')
+                # 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_maths_smooth.nii.gz'
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -539,9 +530,16 @@ class PipelineTeam51PW(Pipeline):
             self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
             )
-
-        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        # Handle mask file
+        template = join(self.directories.output_dir,
+            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
+            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz') # TODO check actual file name
+        return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
