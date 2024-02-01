@@ -99,18 +99,18 @@ class PipelineTeamX19V(Pipeline):
                 regressors = None)
             ]
 
-    def get_parameters_file(filepath, subject_id, run_id, working_dir):
+    def get_confounds_file(filepath, subject_id, run_id, working_dir):
         """
-        Create a tsv file with only desired parameters per subject per run.
+        Create a tsv file with only desired confounds per subject per run.
 
         Parameters :
-        - filepath : path to the subject parameters file (i.e. one per run)
+        - filepath : path to the subject confounds file (i.e. one per run)
         - subject_id : subject for whom the 1st level analysis is made
         - run_id: run for which the 1st level analysis is made
         - working_dir: str, name of the directory for intermediate results
 
         Return :
-        - parameters_file : paths to new files containing only desired parameters.
+        - confounds_file : paths to new files containing only desired confounds.
         """
         from os import makedirs
         from os.path import join
@@ -122,18 +122,18 @@ class PipelineTeamX19V(Pipeline):
         temp_list = array([
             data_frame['X'], data_frame['Y'], data_frame['Z'],
             data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
-        retained_parameters = DataFrame(transpose(temp_list))
+        retained_confounds = DataFrame(transpose(temp_list))
 
-        parameters_file = join(working_dir, 'parameters_file',
-            f'parameters_file_sub-{subject_id}_run-{run_id}.tsv')
+        confounds_file = join(working_dir, 'confounds_files',
+            f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
 
-        makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
+        makedirs(join(working_dir, 'confounds_files'), exist_ok = True)
 
-        with open(parameters_file, 'w') as writer:
-            writer.write(retained_parameters.to_csv(
+        with open(confounds_file, 'w') as writer:
+            writer.write(retained_confounds.to_csv(
                 sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-        return parameters_file
+        return confounds_file
 
     def get_run_level_analysis(self):
         """
@@ -190,13 +190,13 @@ class PipelineTeamX19V(Pipeline):
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
 
-        # Function Node get_parameters_file - Get files with movement parameters
-        parameters = Node(Function(
-            function = self.get_parameters_file,
+        # Function Node get_confounds_file - Get files with movement confounds
+        confounds = Node(Function(
+            function = self.get_confounds_file,
             input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
-            output_names = ['parameters_file']),
-             name = 'parameters')
-        parameters.inputs.working_dir = self.directories.working_dir
+            output_names = ['confounds_file']),
+             name = 'confounds')
+        confounds.inputs.working_dir = self.directories.working_dir
 
         # Level1Design Node - Generate files for run level computation
         model_design = Node(Level1Design(), name = 'model_design')
@@ -221,13 +221,13 @@ class PipelineTeamX19V(Pipeline):
                 ('subject_id', 'subject_id'),
                 ('run_id', 'run_id')]),
             (select_files, subject_information, [('event', 'event_file')]),
-            (select_files, parameters, [('param', 'filepath')]),
-            (information_source, parameters, [
+            (select_files, confounds, [('param', 'filepath')]),
+            (information_source, confounds, [
                 ('subject_id', 'subject_id'),
                 ('run_id', 'run_id')]),
             (select_files, skull_stripping_func, [('func', 'in_file')]),
             (skull_stripping_func, smoothing_func, [('out_file', 'in_file')]),
-            (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
+            (confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
             (smoothing_func, specify_model, [('out_file', 'functional_runs')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
@@ -288,21 +288,18 @@ class PipelineTeamX19V(Pipeline):
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
             'contrast_id' : self.contrast_list,
-            'file' : [
-                join('results', 'cope{contrast_id}.nii.gz'),
-                join('results', 'tstat{contrast_id}.nii.gz'),
-                join('results', 'varcope{contrast_id}.nii.gz'),
-                join('results', 'zstat{contrast_id}.nii.gz'),
-            ]
         }
         parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
-            )
-
+        output_dir = join(self.directories.output_dir,
+            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}')
+        templates = [
+                join(output_dir, 'results', 'cope{contrast_id}.nii.gz'),
+                join(output_dir, 'results', 'tstat{contrast_id}.nii.gz'),
+                join(output_dir, 'results', 'varcope{contrast_id}.nii.gz'),
+                join(output_dir, 'results', 'zstat{contrast_id}.nii.gz')
+            ]
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+            for parameter_values in parameter_sets for template in templates]
 
         return return_list
 
@@ -403,18 +400,30 @@ class PipelineTeamX19V(Pipeline):
         parameters = {
             'contrast_id' : self.contrast_list,
             'subject_id' : self.subject_list,
-            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
-            ]
+            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz']
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
             )
-
-        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        parameters = {
+            'contrast_id' : self.contrast_list,
+            'subject_id' : self.subject_list,
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
+            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
+            )
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
@@ -730,13 +739,12 @@ class PipelineTeamX19V(Pipeline):
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
                 'zstat2.nii.gz'
-                ],
-            'nb_subjects' : [str(len(self.subject_list))]
+                ]
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            'group_level_analysis_{method}_nsub_'+f'{len(self.subject_list)}',
             '_contrast_id_{contrast_id}',
             '{file}'
             )
@@ -754,7 +762,7 @@ class PipelineTeamX19V(Pipeline):
         return_list += [join(
             self.directories.output_dir,
             f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
-            '_contrast_id_2', f'{file}') for file in files]
+            '_contrast_id_2', file) for file in files] # TODO contrast ID 2 only ????
 
         return return_list
 
