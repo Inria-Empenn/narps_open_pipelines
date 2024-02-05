@@ -58,7 +58,7 @@ class TestPipelinesTeamX19V:
 
         # 2 - check workflows
         assert pipeline.get_preprocessing() is None
-        assert pipeline.get_run_level_analysis() is None
+        assert isinstance(pipeline.get_run_level_analysis(), Workflow)
         assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
         group_level = pipeline.get_group_level_analysis()
         assert len(group_level) == 3
