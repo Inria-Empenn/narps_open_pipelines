@@ -734,7 +734,10 @@ class PipelineTeamX19V(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                # TODO : add thresold_file and pval_file
+                '_cluster0/zstat1_pval.nii.gz ',
+                '_cluster0/zstat1_threshold.nii.gz',
+                '_cluster1/zstat2_pval.nii.gz',
+                '_cluster1/zstat2_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
@@ -748,21 +751,28 @@ class PipelineTeamX19V(Pipeline):
             '_contrast_id_{contrast_id}',
             '{file}'
             )
-
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
         # Handle groupComp
-        files = [
-            # TODO : add thresold_file and pval_file
-            'zstat1.nii.gz',
-            'tstat1.nii.gz'
-            ]
-
-        return_list += [join(
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'file': [
+                '_cluster0/zstat1_pval.nii.gz ',
+                '_cluster0/zstat1_threshold.nii.gz',
+                'tstat1.nii.gz',
+                'zstat1.nii.gz'
+                ]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
             self.directories.output_dir,
             f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
-            '_contrast_id_2', file) for file in files] # TODO contrast ID 2 only ????
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
         return return_list
 
@@ -772,39 +782,39 @@ class PipelineTeamX19V(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),# TODO : add thresold_file
+                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz')
         ]
