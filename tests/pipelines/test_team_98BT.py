@@ -11,10 +11,25 @@ Usage:
     pytest -q test_team_98BT.py -k <selected_test>
 """
 
-from pytest import helpers, mark
-from nipype import Workflow
+from os.path import join
 
+from pytest import helpers, mark, fixture
+from nipype import Workflow
+from nipype.interfaces.base import Bunch
+
+from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_98BT import PipelineTeam98BT
+
+TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_98BT')
+
+@fixture
+def remove_test_dir():
+    """ A fixture to remove temporary directory created by tests """
+
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
+    mkdir(TEMPORARY_DIR)
+    yield # test runs here
+    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeam98BT:
     """ A class that contains all the unit tests for the PipelineTeam98BT class."""
@@ -58,7 +73,7 @@ class TestPipelinesTeam98BT:
         helpers.test_pipeline_outputs(pipeline, [0,0,36,84,18])
 
     @staticmethod
-    @mark.pipeline_test
+    @mark.unit_test
     def test_fieldmap_info():
         """ Test the get_fieldmap_info method """
 
@@ -67,28 +82,68 @@ class TestPipelinesTeam98BT:
         filedmap_file_2 = join(
             Configuration()['directories']['test_data'], 'pipelines', 'phasediff_2.json')
 
-        pipeline = PipelineTeam98BT()
-        test_result = pipeline.get_fieldmap_info(filedmap_file_1, ['magnitude_1', 'magnitude_2'])
-        assert test_result[0] == [0.0, 0.0]
-        assert test_result[1] == 'magnitude_2'
-        test_result = pipeline.get_fieldmap_info(filedmap_file_2, ['magnitude_1', 'magnitude_2'])
-        assert test_result[0] == [0.0, 0.0]
+        test_result = PipelineTeam98BT.get_fieldmap_info(
+            filedmap_file_1, ['magnitude_1', 'magnitude_2'])
+        assert test_result[0] == (0.00492, 0.00738)
         assert test_result[1] == 'magnitude_1'
+        test_result = PipelineTeam98BT.get_fieldmap_info(
+            filedmap_file_2, ['magnitude_1', 'magnitude_2'])
+        assert test_result[0] == (0.00492, 0.00738)
+        assert test_result[1] == 'magnitude_2'
 
     @staticmethod
-    @mark.pipeline_test
-    def test_fieldmap_info():
-        """ Test the get_fieldmap_info method """
-
-    @staticmethod
-    @mark.pipeline_test
-    def test_parameters_files():
+    @mark.unit_test
+    def test_parameters_files(remove_test_dir):
         """ Test the get_parameters_files method """
+        """
+        parameters_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
+        reference_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'team_98BT', 'parameters.tsv')
+
+        # Get new parameters file
+        PipelineTeam98BT.get_parameters_file(
+            parameters_file, wc2_file, motion_corrected_files, 'sid', TEMPORARY_DIR)
+
+        # Check parameters file was created
+        created_parameters_file = join(
+            TEMPORARY_DIR, 'parameters_files', 'parameters_file_sub-sid.tsv')
+        assert exists(created_parameters_file)
+
+        # Check contents
+        assert cmp(reference_file, created_confounds_file)
+        """
 
     @staticmethod
-    @mark.pipeline_test
+    @mark.unit_test
     def test_subject_information():
         """ Test the get_subject_information method """
+
+        # Get test files
+        test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+
+        bunch = PipelineTeam98BT.get_subject_information(test_file)
+
+        # Compare bunches to expected
+        assert isinstance(bunch, Bunch)
+        assert bunch.conditions == ['gamble']
+        helpers.compare_float_2d_arrays(bunch.onsets, [
+            [4.071, 11.834, 19.535, 27.535, 36.435]])
+        helpers.compare_float_2d_arrays(bunch.durations, [
+            [4.0, 4.0, 4.0, 4.0, 4.0]])
+        assert bunch.amplitudes == None
+        assert bunch.tmod == None
+        assert bunch.regressor_names == None
+        assert bunch.regressors == None
+        pmod = bunch.pmod[0]
+        assert isinstance(pmod, Bunch)
+        assert pmod.name == ['gain', 'loss', 'answer']
+        assert pmod.poly == [1, 1, 1]
+        helpers.compare_float_2d_arrays(pmod.param, [
+            [14.0, 34.0, 38.0, 10.0, 16.0],
+            [6.0, 14.0, 19.0, 15.0, 17.0],
+            [1, 1, 0, 0, 0]
+            ])
 
     @staticmethod
     @mark.pipeline_test

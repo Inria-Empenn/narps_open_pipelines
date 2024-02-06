@@ -419,8 +419,8 @@ class PipelineTeam98BT(Pipeline):
         condition_names = ['gamble']
 
         # Create empty lists
-        onset = []
-        duration = []
+        onsets = []
+        durations = []
         weights_gain = []
         weights_loss = []
         answers = []
@@ -444,8 +444,8 @@ class PipelineTeam98BT(Pipeline):
         # Create Bunch
         return Bunch(
             conditions = ['gamble'],
-            onsets = onsets,
-            durations = durations,
+            onsets = [onsets],
+            durations = [durations],
             amplitudes = None,
             tmod = None,
             pmod = [

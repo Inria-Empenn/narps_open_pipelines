@@ -241,6 +241,30 @@ class TestConftest:
 
     @staticmethod
     @mark.unit_test
+    def test_compare_float_2d_arrays():
+        """ Test the compare_float_2d_arrays helper """
+
+        array_1 = [[5.0, 0.0], [1.0, 2.0]]
+        array_2 = [[5.0, 0.0], [1.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[6.0, 0.0], [1.0]]
+        array_2 = [[6.0, 0.0], [1.0, 2.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[7.10001, 0.0], [1.0, 2.0]]
+        array_2 = [[7.10001, 0.0], [1.0, 2.00003]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[10.0000200, 15.10], [1.0, 2.0]]
+        array_2 = [[10.00002, 15.10000], [1.0, 2.000003]]
+        helpers.compare_float_2d_arrays(array_1, array_2)
+
+    @staticmethod
+    @mark.unit_test
     def test_test_outputs(set_test_directory):
         """ Test the test_pipeline_outputs helper """
 
