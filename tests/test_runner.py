@@ -138,22 +138,24 @@ class MockupPipeline(Pipeline):
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
-    def __init__(self):
-        super().__init__()
-
     def get_preprocessing(self):
+        """ Return a preprocessing worflow with wrong type """
         return 'Wrong_workflow_type'
 
     def get_run_level_analysis(self):
+        """ Return a run level analysis worflow """
         return None
 
     def get_subject_level_analysis(self):
+        """ Return a subject level analysis worflow """
         return None
 
     def get_group_level_analysis(self):
+        """ Return a group level analysis worflow """
         return None
 
     def get_hypotheses_outputs(self):
+        """ Return hypotheses """
         return None
 
 class MockupWrongPipeline2(Pipeline):
@@ -163,18 +165,23 @@ class MockupWrongPipeline2(Pipeline):
         super().__init__()
 
     def get_preprocessing(self):
+        """ Return a preprocessing worflow list with wrong types inside """
         return ['Wrong_workflow_type', 'Wrong_workflow_type']
 
     def get_run_level_analysis(self):
+        """ Return a run level analysis worflow """
         return None
 
     def get_subject_level_analysis(self):
+        """ Return a subject level analysis worflow """
         return None
 
     def get_group_level_analysis(self):
+        """ Return a group level analysis worflow """
         return None
 
     def get_hypotheses_outputs(self):
+        """ Return hypotheses """
         return None
 
 class TestPipelineRunner:

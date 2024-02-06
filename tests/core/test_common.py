@@ -59,7 +59,7 @@ class TestCoreCommon:
 
         # Check file is removed
         assert not exists(test_file_path)
-    
+
     @staticmethod
     @mark.unit_test
     def test_remove_directory(remove_test_dir):
@@ -396,7 +396,7 @@ class TestCoreCommon:
 
         # Check file was created
         assert exists(out_file)
- 
+
         # Check file was created
         with open(out_file, 'r', encoding = 'utf-8') as file:
             for list_element, file_element in zip(out_list, file.read().split('\n')):
@@ -429,9 +429,8 @@ class TestCoreCommon:
 
         # Check file was created
         assert exists(out_file)
- 
+
         # Check file was created
         with open(out_file, 'r', encoding = 'utf-8') as file:
             for list_element, file_element in zip(out_list, file.read().split('\n')):
                 assert list_element == file_element
-

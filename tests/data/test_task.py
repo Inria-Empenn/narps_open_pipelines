@@ -15,7 +15,7 @@ from os.path import join
 from pytest import mark, fixture
 
 from narps_open.utils.configuration import Configuration
-import narps_open.data.task as task
+from narps_open.data import task
 
 @fixture(scope='function', autouse=True)
 def mock_task_data(mocker):
@@ -50,7 +50,7 @@ class TestTaskInformation:
     @mark.unit_test
     def test_derived():
         """ Test the derived values of a TaskInformation object """
-        
+
         task_info = task.TaskInformation()
         assert task_info['NumberOfSlices'] == 6
         assert task_info['AcquisitionTime'] == 1 / 6

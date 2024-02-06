@@ -52,19 +52,11 @@ class TestPipelinesTeamC88N:
         pipeline = PipelineTeamC88N()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 8
-        assert len(pipeline.get_group_level_outputs()) == 53
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 8, 53, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 32
-        assert len(pipeline.get_group_level_outputs()) == 53
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 32, 53, 18])
 
     @staticmethod
     @mark.unit_test
@@ -72,7 +64,8 @@ class TestPipelinesTeamC88N:
         """ Test the get_subject_information method """
 
         # Test with 'gain'
-        test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        test_event_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
         information = PipelineTeamC88N.get_subject_information(
             [test_event_file, test_event_file],
             'gain'
@@ -103,7 +96,8 @@ class TestPipelinesTeamC88N:
             assert isclose(reference_array, test_array).all()
 
         # Test with 'loss'
-        test_event_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
+        test_event_file = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
         information = PipelineTeamC88N.get_subject_information(
             [test_event_file, test_event_file],
             'loss'
