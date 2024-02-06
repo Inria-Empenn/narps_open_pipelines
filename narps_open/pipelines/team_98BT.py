@@ -344,12 +344,26 @@ class PipelineTeam98BT(Pipeline):
             f'u_rc1subject_id_{subject_id}_struct_template.nii')\
             for subject_id in self.subject_list]
 
-        # TODO : results from preprocessing
-        # ('normalized_files', 'preprocessing.@normalized_files')
-        # ('realigned_unwarped_files', 'preprocessing.@motion_corrected')
-        # ('realignment_parameters', 'preprocessing.@param')
-        # ('normalized_class_images', 'preprocessing.@seg')
-        return_list += []
+        # Outputs from preprocessing
+        parameters = {
+            'subject_id': self.subject_list,
+            'run_id': self.run_list,
+        }
+        parameter_sets = product(*parameters.values())
+        output_dir = join(
+            self.directories.output_dir,
+            'preprocessing',
+            '_run_id_{run_id}_subject_id_{subject_id}'
+        )
+        templates = [
+            'rp_asub-{subject_id}_task-MGT_run-{run_id}_bold.txt', # realignment parameters
+            'uasub-{subject_id}_task-MGT_run-{run_id}_bold.nii',
+            'swuasub-{subject_id}_task-MGT_run-{run_id}_bold.nii',
+            'wc2sub-{subject_id}_T1w.nii',
+            'wc1sub-{subject_id}_T1w.nii'
+        ]
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets for template in templates]
 
         return return_list
 
@@ -514,7 +528,7 @@ class PipelineTeam98BT(Pipeline):
         subject_information = MapNode(Function(
             function = self.get_subject_information),
             input_names = ['event_file'],
-            output_names = ['subject_information'],
+            output_names = ['subject_info'],
             name = 'subject_information', iterfield = 'event_file')
 
         # Get parameters
@@ -567,7 +581,7 @@ class PipelineTeam98BT(Pipeline):
                 ('param', 'parameters_files'),
                 ('wc2', 'wc2_file')]),
             (select_files, specify_model, [('func', 'functional_runs')]),
-            (subject_information, specify_model, [('subject_information', 'subject_info')]),
+            (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (parameters, specify_model, [
                 ('new_parameters_files', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
