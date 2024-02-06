@@ -142,19 +142,19 @@ class MockupWrongPipeline(Pipeline):
         super().__init__()
 
     def get_preprocessing(self):
-        """ Return a preprocessing worflow with wrong type """
+        """ Return a preprocessing workflow with wrong type """
         return 'Wrong_workflow_type'
 
     def get_run_level_analysis(self):
-        """ Return a run level analysis worflow """
+        """ Return a run level analysis workflow """
         return None
 
     def get_subject_level_analysis(self):
-        """ Return a subject level analysis worflow """
+        """ Return a subject level analysis workflow """
         return None
 
     def get_group_level_analysis(self):
-        """ Return a group level analysis worflow """
+        """ Return a group level analysis workflow """
         return None
 
     def get_hypotheses_outputs(self):
@@ -168,19 +168,19 @@ class MockupWrongPipeline2(Pipeline):
         super().__init__()
 
     def get_preprocessing(self):
-        """ Return a preprocessing worflow list with wrong types inside """
+        """ Return a preprocessing workflow list with wrong types inside """
         return ['Wrong_workflow_type', 'Wrong_workflow_type']
 
     def get_run_level_analysis(self):
-        """ Return a run level analysis worflow """
+        """ Return a run level analysis workflow """
         return None
 
     def get_subject_level_analysis(self):
-        """ Return a subject level analysis worflow """
+        """ Return a subject level analysis workflow """
         return None
 
     def get_group_level_analysis(self):
-        """ Return a group level analysis worflow """
+        """ Return a group level analysis workflow """
         return None
 
     def get_hypotheses_outputs(self):
