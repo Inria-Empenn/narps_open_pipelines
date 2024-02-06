@@ -194,7 +194,7 @@ class PipelineTeamU26C(Pipeline):
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Gunzip - gunzip files because SPM do not use .nii.gz files
-        gunzip = MapNode(Gunzip(), name='gunzip', iterfield=['in_file'])
+        gunzip = MapNode(Gunzip(), name = 'gunzip', iterfield=['in_file'])
 
         # Smooth warped functionals.
         smooth = Node(Smooth(), name = 'smooth')
@@ -401,7 +401,8 @@ class PipelineTeamU26C(Pipeline):
         # EstimateContrast - estimates simple group contrast
         level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
         level2conestimate.inputs.group_contrast = True
-        level2conestimate.inputs.contrasts = [['Group', 'T', ['mean'], [1]]]
+        level2conestimate.inputs.contrasts = [
+            ['Group', 'T', ['mean'], [1]], ['Group', 'T', ['mean'], [-1]]]
 
         # Threshold Node - Create thresholded maps
         threshold = Node(Threshold(), name = 'threshold')
@@ -409,7 +410,7 @@ class PipelineTeamU26C(Pipeline):
         threshold.inputs.height_threshold_type = 'p-value'
         threshold.inputs.force_activation = False
         threshold.inputs.height_threshold = 0.05
-        threshold.inputs.contrast_index = 1
+        threshold.inputs.contrast_index = [1, 2]
 
         # Create the group level workflow
         group_level_analysis = Workflow(
@@ -593,12 +594,14 @@ class PipelineTeamU26C(Pipeline):
     def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
 
+        # Handle equalRange and equalIndifference
         parameters = {
             'contrast_id': self.contrast_list,
-            'method': ['equalRange', 'equalIndifference', 'groupComp'],
+            'method': ['equalRange', 'equalIndifference'],
             'file': [
-                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
-                join('_threshold0', 'spmT_0001_thr.nii')
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
                 ],
             'nb_subjects' : [str(len(self.subject_list))]
         }
@@ -610,9 +613,30 @@ class PipelineTeamU26C(Pipeline):
             '_contrast_id_{contrast_id}',
             '{file}'
             )
-
-        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names. """
@@ -640,14 +664,14 @@ class PipelineTeamU26C(Pipeline):
                 '_contrast_id_0002', 'spmT_0001.nii'),
             # Hypothesis 5
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
+                '_contrast_id_0003', 'spmT_0002.nii'),
             # Hypothesis 6
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
+                '_contrast_id_0003', 'spmT_0002.nii'),
             # Hypothesis 7
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
