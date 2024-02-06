@@ -24,6 +24,7 @@ requires = [
 ]
 extras_require = {
     'tests': [
+        'pathvalidate',
         'pylint',
         'pytest',
         'pytest-cov',
