@@ -337,7 +337,21 @@ class PipelineTeam98BT(Pipeline):
 
     def get_preprocessing_outputs(self):
         """ Return the names of the files the preprocessing is supposed to generate. """
-        return [] # TODO
+
+        # Outputs from dartel workflow
+        return_list = [join(self.directories.output_dir, 'dartel_template', 'template_6.nii')]
+        return_list += [join(self.directories.output_dir, 'dartel_template',
+            f'u_rc1subject_id_{subject_id}_struct_template.nii')\
+            for subject_id in self.subject_list]
+
+        # TODO : results from preprocessing
+        # ('normalized_files', 'preprocessing.@normalized_files')
+        # ('realigned_unwarped_files', 'preprocessing.@motion_corrected')
+        # ('realignment_parameters', 'preprocessing.@param')
+        # ('normalized_class_images', 'preprocessing.@seg')
+        return_list += []
+
+        return return_list
 
     def get_run_level_analysis(self):
         """ No run level analysis has been done by team 98BT """
