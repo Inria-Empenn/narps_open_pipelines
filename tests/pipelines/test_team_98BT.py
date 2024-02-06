@@ -51,19 +51,44 @@ class TestPipelinesTeam98BT:
         pipeline = PipelineTeam98BT()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 9
-        assert len(pipeline.get_group_level_outputs()) == 84
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0,0,9,84,18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 36
-        assert len(pipeline.get_group_level_outputs()) == 84
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0,0,36,84,18])
+
+    @staticmethod
+    @mark.pipeline_test
+    def test_fieldmap_info():
+        """ Test the get_fieldmap_info method """
+
+        filedmap_file_1 = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'phasediff_1.json')
+        filedmap_file_2 = join(
+            Configuration()['directories']['test_data'], 'pipelines', 'phasediff_2.json')
+
+        pipeline = PipelineTeam98BT()
+        test_result = pipeline.get_fieldmap_info(filedmap_file_1, ['magnitude_1', 'magnitude_2'])
+        assert test_result[0] == [0.0, 0.0]
+        assert test_result[1] == 'magnitude_2'
+        test_result = pipeline.get_fieldmap_info(filedmap_file_2, ['magnitude_1', 'magnitude_2'])
+        assert test_result[0] == [0.0, 0.0]
+        assert test_result[1] == 'magnitude_1'
+
+    @staticmethod
+    @mark.pipeline_test
+    def test_fieldmap_info():
+        """ Test the get_fieldmap_info method """
+
+    @staticmethod
+    @mark.pipeline_test
+    def test_parameters_files():
+        """ Test the get_parameters_files method """
+
+    @staticmethod
+    @mark.pipeline_test
+    def test_subject_information():
+        """ Test the get_subject_information method """
 
     @staticmethod
     @mark.pipeline_test

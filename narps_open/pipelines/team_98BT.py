@@ -130,13 +130,13 @@ class PipelineTeam98BT(Pipeline):
 
         return dartel_workflow
 
-    def get_fieldmap_info(fieldmap_info_file, magnitude):
+    def get_fieldmap_info(fieldmap_info_file, magnitude_files):
         """
         Function to get information necessary to compute the fieldmap.
 
         Parameters:
             - fieldmap_info_file: str, file with fieldmap information
-            - magnitude: list of str, list of magnitude files
+            - magnitude_files: list of str, list of magnitude files
 
         Returns:
             - echo_times: tuple of floats, echo time obtained from fieldmap information file
@@ -151,9 +151,9 @@ class PipelineTeam98BT(Pipeline):
         long_echo_time = max(float(fieldmap_info['EchoTime1']), float(fieldmap_info['EchoTime2']))
 
         if short_echo_time == float(fieldmap_info['EchoTime1']):
-            magnitude_file = magnitude[0]
+            magnitude_file = magnitude_files[0]
         elif short_echo_time == float(fieldmap_info['EchoTime2']):
-            magnitude_file = magnitude[1]
+            magnitude_file = magnitude_files[1]
 
         return (short_echo_time, long_echo_time), magnitude_file
 
@@ -196,7 +196,7 @@ class PipelineTeam98BT(Pipeline):
         # Function Node get_fieldmap_info -
         fieldmap_info = Node(Function(
             function = self.get_fieldmap_info,
-            input_names = ['fieldmap_info', 'magnitude'],
+            input_names = ['fieldmap_info_file', 'magnitude_files'],
             output_names = ['echo_times', 'magnitude_file']),
             name = 'fieldmap_info')
 
@@ -266,8 +266,8 @@ class PipelineTeam98BT(Pipeline):
             (select_files, gunzip_func, [('func', 'in_file')]),
             (select_files, gunzip_phasediff, [('phasediff', 'in_file')]),
             (select_files, fieldmap_info, [
-                ('info_fmap', 'fieldmap_info'),
-                ('magnitude', 'magnitude')]),
+                ('info_fmap', 'fieldmap_info_file'),
+                ('magnitude', 'magnitude_files')]),
             (fieldmap_info, gunzip_magnitude, [('magnitude_file', 'in_file')]),
             (fieldmap_info, fieldmap, [('echo_times', 'echo_times')]),
             (gunzip_magnitude, fieldmap, [('out_file', 'magnitude_file')]),
