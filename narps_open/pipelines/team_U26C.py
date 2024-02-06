@@ -405,7 +405,8 @@ class PipelineTeamU26C(Pipeline):
             ['Group', 'T', ['mean'], [1]], ['Group', 'T', ['mean'], [-1]]]
 
         # Threshold Node - Create thresholded maps
-        threshold = Node(Threshold(), name = 'threshold')
+        threshold = MapNode(Threshold(), name = 'threshold',
+            iterfield = ['stat_image', 'contrast_index'])
         threshold.inputs.use_fwe_correction = True
         threshold.inputs.height_threshold_type = 'p-value'
         threshold.inputs.force_activation = False

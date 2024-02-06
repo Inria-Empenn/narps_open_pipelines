@@ -72,11 +72,11 @@ class TestPipelinesTeamU26C:
         pipeline = PipelineTeamU26C()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 0, 7, 45, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 7, 8*3*2 + 5*3, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 0, 28, 45, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 28, 8*3*2 + 5*3, 18])
 
     @staticmethod
     @mark.unit_test
