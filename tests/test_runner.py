@@ -138,6 +138,9 @@ class MockupPipeline(Pipeline):
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
+    def __init__(self):
+        super().__init__()
+
     def get_preprocessing(self):
         """ Return a preprocessing worflow with wrong type """
         return 'Wrong_workflow_type'

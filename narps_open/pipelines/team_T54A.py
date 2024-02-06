@@ -765,17 +765,22 @@ class PipelineTeamT54A(Pipeline):
             for parameter_values in parameter_sets]
 
         # Handle groupComp
-        files = [
-            'randomise_tfce_corrp_tstat1.nii.gz',
-            'randomise_tstat1.nii.gz',
-            'zstat1.nii.gz',
-            'tstat1.nii.gz'
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'file': [
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tstat1.nii.gz',
+                'zstat1.nii.gz',
+                'tstat1.nii.gz'
             ]
-
-        return_list += [join(
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
             self.directories.output_dir,
             f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
-            '_contrast_id_2', f'{file}') for file in files]
+            '_contrast_id_{contrast_id}', '{file}')
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
         return return_list
 

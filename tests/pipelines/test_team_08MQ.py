@@ -57,11 +57,11 @@ class TestPipelinesTeam08MQ:
         pipeline = PipelineTeam08MQ()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_ouputs(pipeline, [4*4, 8+4*3*4, 4*3, 0, 18])
+        helpers.test_pipeline_outputs(pipeline, [4*4, 8+4*3*4, 4*3, 8*2*3 + 4*3, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_ouputs(pipeline, [4*4*4, (8+4*3*4)*4, 4*3*4, 0, 18])
+        helpers.test_pipeline_outputs(pipeline, [4*4*4, (8+4*3*4)*4, 4*3*4,  8*2*3 + 4*3, 18])
 
     @staticmethod
     @mark.unit_test
