@@ -100,7 +100,8 @@ class PipelineTeam98BT(Pipeline):
         data_sink.inputs.base_directory = self.directories.output_dir
 
         # Create dartel workflow and connect its nodes
-        dartel_workflow = Workflow(base_dir = self.directories.working_dir, name = 'dartel_workflow')
+        dartel_workflow = Workflow(
+            base_dir = self.directories.working_dir, name = 'dartel_workflow')
         dartel_workflow.connect([
             (information_source, select_files, [('subject_id', 'subject_id')]),
             (select_files, gunzip_anat, [('anat', 'in_file')]),
@@ -182,7 +183,8 @@ class PipelineTeam98BT(Pipeline):
             'info_fmap' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.json'),
             'dartel_flow_field' : join(self.directories.output_dir, 'dartel_template',
                 'u_rc1subject_id_{subject_id}_struct_template.nii'),
-            'dartel_template' :join(self.directories.output_dir, 'dartel_template', 'template_6.nii')
+            'dartel_template' :join(
+                self.directories.output_dir, 'dartel_template', 'template_6.nii')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -356,11 +358,15 @@ class PipelineTeam98BT(Pipeline):
             '_run_id_{run_id}_subject_id_{subject_id}'
         )
         templates = [
-            'rp_asub-{subject_id}_task-MGT_run-{run_id}_bold.txt', # realignment parameters
-            'uasub-{subject_id}_task-MGT_run-{run_id}_bold.nii',
-            'swuasub-{subject_id}_task-MGT_run-{run_id}_bold.nii',
-            'wc2sub-{subject_id}_T1w.nii',
-            'wc1sub-{subject_id}_T1w.nii'
+            # Realignment parameters
+            join(output_dir, 'rp_asub-{subject_id}_task-MGT_run-{run_id}_bold.txt'),
+            # Realigned unwarped files
+            join(output_dir, 'uasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            # Normalized_files
+            join(output_dir, 'swuasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            # Normalized class images
+            join(output_dir, 'wc2sub-{subject_id}_T1w.nii'),
+            join(output_dir, 'wc1sub-{subject_id}_T1w.nii')
         ]
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets for template in templates]
@@ -371,7 +377,8 @@ class PipelineTeam98BT(Pipeline):
         """ No run level analysis has been done by team 98BT """
         return None
 
-    def get_parameters_files(parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
+    def get_parameters_files(
+        parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
         """
         Create new tsv files with only desired parameters per subject per run.
 
@@ -390,7 +397,7 @@ class PipelineTeam98BT(Pipeline):
         from nibabel import load
         from numpy import mean
         from pandas import read_table
-        from nilearn.image import iter_img, resample_to_img, resample_img
+        from nilearn.image import iter_img, resample_to_img
 
         from warnings import simplefilter
         # ignore all future warnings
@@ -414,7 +421,7 @@ class PipelineTeam98BT(Pipeline):
                 masked_slice = slice_data * wc2_mask
                 mean_wm[file_id].append(mean(masked_slice))
 
-        parameters_files = []
+        out_parameters_files = []
         for file_id, file in enumerate(sorted(parameters_files)):
             data_frame = read_table(file, sep = '  ', header = None)
             data_frame['Mean_WM'] = mean_wm[file_id]
@@ -428,9 +435,9 @@ class PipelineTeam98BT(Pipeline):
                 writer.write(data_frame.to_csv(
                     sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-            parameters_files.append(new_path)
+            out_parameters_files.append(new_path)
 
-        return parameters_files
+        return out_parameters_files
 
     def get_subject_information(event_file: str):
         """
@@ -443,8 +450,6 @@ class PipelineTeam98BT(Pipeline):
         - subject_info : Bunch corresponding to the event file
         """
         from nipype.interfaces.base import Bunch
-
-        condition_names = ['gamble']
 
         # Create empty lists
         onsets = []
@@ -526,9 +531,9 @@ class PipelineTeam98BT(Pipeline):
 
         # Get Subject Info - get subject specific condition information
         subject_information = MapNode(Function(
-            function = self.get_subject_information),
+            function = self.get_subject_information,
             input_names = ['event_file'],
-            output_names = ['subject_info'],
+            output_names = ['subject_info']),
             name = 'subject_information', iterfield = 'event_file')
 
         # Get parameters
