@@ -56,11 +56,11 @@ class TestPipelinesTeam51PW:
         pipeline = PipelineTeam51PW()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [1*4, 4 + 4*2*4, 4*2, 8*2*2 + 4*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [1*4, 4*2*4, 4*2 + 1*2, 8*2*2 + 4*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [4*1*4, (4 + 4*2*4)*4, 4*2*4, 8*2*2 + 4*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [4*1*4, 4*2*4*4, 4*2*4 + 1*2*4, 8*2*2 + 4*2, 18])
 
     @staticmethod
     @mark.unit_test

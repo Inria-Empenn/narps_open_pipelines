@@ -26,7 +26,7 @@ from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.core.common import (
-    remove_file, list_intersection, elements_in_string, clean_list
+    list_intersection, elements_in_string, clean_list
     )
 from narps_open.core.interfaces import InterfaceFactory
 from narps_open.utils.configuration import Configuration
@@ -148,7 +148,8 @@ class PipelineTeam51PW(Pipeline):
             # Add connections
             preprocessing.connect([
                 (data_sink, remove_intensity_normalization, [('out_file', '_')]),
-                (intensity_normalization, remove_intensity_normalization, [('out_file', 'file_name')]),
+                (intensity_normalization, remove_intensity_normalization, [
+                    ('out_file', 'file_name')]),
                 (data_sink, remove_smooth, [('out_file', '_')]),
                 (smoothing, remove_smooth, [('smoothed_file', 'file_name')]),
                 ])
@@ -308,7 +309,7 @@ class PipelineTeam51PW(Pipeline):
         # ExtractROI Node - Exclude the first 2 time points/scans for each run
         exclude_time_points = Node(ExtractROI(), name = 'exclude_time_points')
         exclude_time_points.inputs.t_min = 2
-        exclude_time_points.inputs.t_size = 451 # TODO nb_time_points - 2
+        exclude_time_points.inputs.t_size = 451 # number of time points - 2
 
         # Function Node get_subject_information - Get subject information from event files
         subject_information = Node(Function(
@@ -450,10 +451,9 @@ class PipelineTeam51PW(Pipeline):
                 '_run_id_*_subject_id_{subject_id}', 'results', 'cope{contrast_id}.nii.gz'),
             'varcopes' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz'),
-            'masks' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'sub-{subject_id}_task-MGT_run-*_bold_brain_mask_flirt_wtsimt.nii.gz')
-                # 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_maths_smooth.nii.gz'
+            'masks' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'
+                )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -534,10 +534,16 @@ class PipelineTeam51PW(Pipeline):
             for parameter_values in parameter_sets]
 
         # Handle mask file
+        parameters = {
+            'contrast_id' : self.contrast_list,
+            'subject_id' : self.subject_list
+        }
+        parameter_sets = product(*parameters.values())
         template = join(self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask.nii.gz') # TODO check actual file name
-        return_list += [template.format(subject_id = s) for s in self.subject_list]
+        'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
         return return_list
 
@@ -624,7 +630,7 @@ class PipelineTeam51PW(Pipeline):
                 '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
             'masks' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_brain_mask_flirt_wtsimt_maths.nii.gz')
+                'sub-*_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
