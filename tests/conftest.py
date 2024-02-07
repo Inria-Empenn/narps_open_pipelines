@@ -10,6 +10,7 @@ from os import remove
 from os.path import join, isfile
 from shutil import rmtree
 
+from numpy import isclose
 from pytest import helpers
 from pathvalidate import is_valid_filepath
 from numpy import isclose
