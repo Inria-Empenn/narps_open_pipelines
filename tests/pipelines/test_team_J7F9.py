@@ -15,7 +15,7 @@ from os.path import join, exists
 from shutil import rmtree
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
+from pytest import helpers, mark
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -23,15 +23,6 @@ from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_J7F9 import PipelineTeamJ7F9
 
 TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_J7F9')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeamJ7F9:
     """ A class that contains all the unit tests for the PipelineTeamJ7F9 class."""
@@ -188,6 +179,7 @@ class TestPipelinesTeamJ7F9:
 
     @staticmethod
     @mark.unit_test
+    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
     def test_confounds_file(remove_test_dir):
         """ Test the get_confounds_file method """
 

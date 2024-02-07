@@ -15,7 +15,7 @@ from os.path import join, exists
 from shutil import rmtree
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
+from pytest import helpers, mark
 from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
@@ -24,23 +24,6 @@ from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_X19V import PipelineTeamX19V
 
 TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_X19V')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    #rmtree(TEMPORARY_DIR, ignore_errors = True)
-
-def compare_float_2d_arrays(array_1, array_2):
-    """ Assert array_1 and array_2 are close enough """
-
-    assert len(array_1) == len(array_2)
-    for reference_array, test_array in zip(array_1, array_2):
-        assert len(reference_array) == len(test_array)
-        assert isclose(reference_array, test_array).all()
 
 class TestPipelinesTeamX19V:
     """ A class that contains all the unit tests for the PipelineTeamX19V class."""
@@ -95,23 +78,24 @@ class TestPipelinesTeamX19V:
         bunch = info_ok[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['trial', 'gain', 'loss']
-        compare_float_2d_arrays(bunch.onsets, [
+        helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 19.535, 27.535, 36.435],
             [4.071, 11.834, 19.535, 27.535, 36.435],
             [4.071, 11.834, 19.535, 27.535, 36.435]])
-        compare_float_2d_arrays(bunch.durations, [
+        helpers.compare_float_2d_arrays(bunch.durations, [
             [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0],
             [4.0, 4.0, 4.0, 4.0, 4.0]])
-        compare_float_2d_arrays(bunch.amplitudes, [
+        helpers.compare_float_2d_arrays(bunch.amplitudes, [
             [1.0, 1.0, 1.0, 1.0, 1.0],
             [-8.4, 11.6, 15.6, -12.4, -6.4],
             [-8.2, -0.2, 4.8, 0.8, 2.8]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test
+    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
     def test_confounds_file(remove_test_dir):
         """ Test the get_confounds_file method """
 

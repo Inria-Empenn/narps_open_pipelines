@@ -14,7 +14,7 @@ from os import mkdir
 from os.path import exists, join
 from shutil import rmtree
 
-from pytest import helpers, mark, fixture
+from pytest import helpers, mark
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -22,15 +22,6 @@ from narps_open.pipelines.team_T54A import PipelineTeamT54A
 from narps_open.utils.configuration import Configuration
 
 TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_T54A')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeamT54A:
     """ A class that contains all the unit tests for the PipelineTeamT54A class."""
@@ -148,6 +139,7 @@ class TestPipelinesTeamT54A:
 
     @staticmethod
     @mark.unit_test
+    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
     def test_parameters_file(remove_test_dir):
         """ Test the get_parameters_file method """
 
