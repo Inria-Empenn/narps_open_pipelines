@@ -386,23 +386,24 @@ class PipelineTeam08MQ(Pipeline):
         parameters = {
             'subject_id': self.subject_list,
             'run_id': self.run_list,
-            'file': [
-                'components_file.txt',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mask_flirt_wtsimt.nii.gz'
-            ]
         }
         parameter_sets = product(*parameters.values())
-        template = join(
+        output_dir = join(
             self.directories.output_dir,
             'preprocessing',
-            '_run_id_{run_id}_subject_id_{subject_id}',
-            '{file}'
-            )
+            '_run_id_{run_id}_subject_id_{subject_id}'
+        )
+        templates = [
+            join(output_dir, 'components_file.txt'),
+            join(output_dir, 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par'),
+            join(output_dir,
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'),
+            join(output_dir,
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mask_flirt_wtsimt.nii.gz')
+        ]
 
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+            for parameter_values in parameter_sets for template in templates]
 
     def get_subject_information(event_file):
         """
@@ -586,21 +587,20 @@ class PipelineTeam08MQ(Pipeline):
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
             'contrast_id' : self.contrast_list,
-            'file' : [
-                join('results', 'cope{contrast_id}.nii.gz'),
-                join('results', 'tstat{contrast_id}.nii.gz'),
-                join('results', 'varcope{contrast_id}.nii.gz'),
-                join('results', 'zstat{contrast_id}.nii.gz'),
-            ]
         }
         parameter_sets = product(*parameters.values())
-        template = join(
+        output_dir = join(
             self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
+            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}'
             )
-
+        templates = [
+            join(output_dir, 'results', 'cope{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'tstat{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'varcope{contrast_id}.nii.gz'),
+            join(output_dir, 'results', 'zstat{contrast_id}.nii.gz'),
+        ]
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+            for parameter_values in parameter_sets for template in templates]
 
         return return_list
 
@@ -1004,6 +1004,57 @@ class PipelineTeam08MQ(Pipeline):
             ])
 
         return group_level_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tfce_corrp_tstat2.nii.gz',
+                'randomise_tstat1.nii.gz',
+                'randomise_tstat2.nii.gz',
+                'tstat1.nii.gz',
+                'tstat2.nii.gz',
+                'zstat1.nii.gz',
+                'zstat2.nii.gz'
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'file': [
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tstat1.nii.gz',
+                'zstat1.nii.gz',
+                'tstat1.nii.gz'
+            ]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
+            '_contrast_id_{contrast_id}', '{file}')
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_hypotheses_outputs(self):
         """ Return the names of the files used by the team to answer the hypotheses of NARPS. """
