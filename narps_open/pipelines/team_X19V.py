@@ -1,3 +1,4 @@
+# pylint: skip-file
 from nipype.interfaces.fsl import (Info, ImageMaths, IsotropicSmooth, Threshold, Level1Design, FEATModel, 
                                    L2Model, Merge, FLAMEO, ContrastMgr, FILMGLS, MultipleRegressDesign, Cluster, BET, SmoothEstimate)
 from nipype.algorithms.modelgen import SpecifyModel

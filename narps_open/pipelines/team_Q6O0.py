@@ -468,11 +468,14 @@ class PipelineTeamQ6O0(Pipeline):
             )
 
         # Formatting templates and returning it as a list of files
-        output_files = [contrast_map_template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        output_files = [
+            contrast_map_template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
-        output_files += [mat_file_template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        output_files += [
+            mat_file_template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
-        output_files += [spmt_file_template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        output_files += [
+            spmt_file_template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
         return output_files
@@ -698,23 +701,41 @@ class PipelineTeamQ6O0(Pipeline):
         """ Return all hypotheses output file names. """
         nb_sub = len(self.subject_list)
         files = [
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_gain', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_gain', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_gain', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_gain', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_loss', 'spmT_0002.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_loss', 'spmT_0002.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}', '_model_type_loss', 'spmT_0001.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_equalRange_nsub_{nb_sub}', '_model_type_loss', 'spmT_0001.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
-            join(f'l2_analysis_groupComp_nsub_{nb_sub}', '_model_type_loss', 'spmT_0001.nii')
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_gain', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_gain', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_gain', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_gain', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_gain', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_loss', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_loss', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_loss', 'spmT_0002.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_model_type_loss', 'spmT_0001.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_model_type_loss', 'spmT_0001.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_model_type_loss', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_model_type_loss', 'spmT_0001.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]

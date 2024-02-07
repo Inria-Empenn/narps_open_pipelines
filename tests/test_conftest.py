@@ -25,17 +25,16 @@ from nipype.interfaces.utility import Function
 from narps_open.utils.configuration import Configuration
 from narps_open.runner import PipelineRunner
 from narps_open.pipelines import Pipeline
-from narps_open.data.results import ResultsCollection
 
 TEST_DIR = abspath(join(Configuration()['directories']['test_runs'], 'test_conftest'))
 
 @fixture
 def set_test_directory(scope = 'function'):
+    """ A fixture to remove temporary directory created by tests """
+
     rmtree(TEST_DIR, ignore_errors = True)
     makedirs(TEST_DIR, exist_ok = True)
-
     yield
-
     # Comment this line for debugging
     rmtree(TEST_DIR, ignore_errors = True)
 
@@ -234,10 +233,33 @@ class MockupResultsCollection():
 
     def download(self):
         """ Download the collection, file by file. """
-        pass
 
 class TestConftest:
     """ A class that contains all the unit tests for the conftest module."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_compare_float_2d_arrays():
+        """ Test the compare_float_2d_arrays helper """
+
+        array_1 = [[5.0, 0.0], [1.0, 2.0]]
+        array_2 = [[5.0, 0.0], [1.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[6.0, 0.0], [1.0]]
+        array_2 = [[6.0, 0.0], [1.0, 2.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[7.10001, 0.0], [1.0, 2.0]]
+        array_2 = [[7.10001, 0.0], [1.0, 2.00003]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[10.0000200, 15.10], [1.0, 2.0]]
+        array_2 = [[10.00002, 15.10000], [1.0, 2.000003]]
+        helpers.compare_float_2d_arrays(array_1, array_2)
 
     @staticmethod
     @mark.unit_test
@@ -247,7 +269,7 @@ class TestConftest:
         # Test pipeline
         pipeline = MockupPipeline()
         pipeline.subject_list = ['001', '002']
-        
+
         # Wrong length for nb_of_outputs
         with raises(AssertionError):
             helpers.test_pipeline_outputs(pipeline, [1,2,3])
@@ -347,21 +369,21 @@ class TestConftest:
         with open(join(TEST_DIR, 'test_conftest.txt'), 'r', encoding = 'utf-8') as file:
             assert file.readline() == '0\n'
             # First exec of preprocessing creates an exception (execution counter == 1)
-            assert file.readline() == f'TestConftest_preprocessing_workflow 4 1\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 1\n'
             # Relaunching the workflow
             # Preprocessing files won't be created(execution counter == 2)
-            assert file.readline() == f'TestConftest_preprocessing_workflow 4 2\n'
-            assert file.readline() == f'TestConftest_run_level_workflow 4 3\n'
-            assert file.readline() == f'TestConftest_subject_level_workflow 4 4\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 2\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 4 3\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 4 4\n'
             # Relaunching the workflow
             # Everything's fine
-            assert file.readline() == f'TestConftest_preprocessing_workflow 4 5\n'
-            assert file.readline() == f'TestConftest_run_level_workflow 4 6\n'
-            assert file.readline() == f'TestConftest_subject_level_workflow 4 7\n'
-            assert file.readline() == f'TestConftest_preprocessing_workflow 3 8\n'
-            assert file.readline() == f'TestConftest_run_level_workflow 3 9\n'
-            assert file.readline() == f'TestConftest_subject_level_workflow 3 10\n'
-            assert file.readline() == f'TestConftest_group_level_workflow 7 11'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 5\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 4 6\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 4 7\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 3 8\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 3 9\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 3 10\n'
+            assert file.readline() == 'TestConftest_group_level_workflow 7 11'
 
     @staticmethod
     @mark.unit_test
