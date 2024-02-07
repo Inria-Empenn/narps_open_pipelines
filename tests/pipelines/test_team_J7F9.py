@@ -10,9 +10,7 @@ Usage:
     pytest -q test_team_J7F9.py
     pytest -q test_team_J7F9.py -k <selected_test>
 """
-from os import mkdir
 from os.path import join, exists
-from shutil import rmtree
 from filecmp import cmp
 
 from pytest import helpers, mark

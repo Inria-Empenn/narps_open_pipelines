@@ -10,13 +10,10 @@ Usage:
     pytest -q test_team_U26C.py
     pytest -q test_team_U26C.py -k <selected_test>
 """
-from os import mkdir
 from os.path import join, exists
-from shutil import rmtree
 from filecmp import cmp
 
 from pytest import helpers, mark
-from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 

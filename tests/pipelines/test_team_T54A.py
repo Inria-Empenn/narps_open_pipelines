@@ -10,9 +10,7 @@ Usage:
     pytest -q test_team_T54A.py
     pytest -q test_team_T54A.py -k <selected_test>
 """
-from os import mkdir
 from os.path import exists, join
-from shutil import rmtree
 
 from pytest import helpers, mark
 from nipype import Workflow
