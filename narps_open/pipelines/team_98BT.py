@@ -380,13 +380,14 @@ class PipelineTeam98BT(Pipeline):
     def get_parameters_files(
         parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
         """
-        Create new tsv files with only desired parameters per subject per run.
+        Create new tsv files with only desired parameters per subject per run
+            (i.e. the mean signal in white matter).
 
         Parameters :
         - parameters_files : paths to subject parameters file (i.e. one per run)
-        - wc2_file : path to the wc2 file
-        - motion_corrected_files :
-        - subject_id : subject for whom the 1st level analysis is made
+        - wc2_file : paths to the segmented white matter file
+        - motion_corrected_files : paths to the motion corrected data
+        - subject_id : subject for whom the analysis is made
         - working_dir : directory where to store the parameters files
 
         Return :
@@ -399,28 +400,23 @@ class PipelineTeam98BT(Pipeline):
         from pandas import read_table
         from nilearn.image import iter_img, resample_to_img
 
-        from warnings import simplefilter
-        # ignore all future warnings
-        simplefilter(action = 'ignore', category = FutureWarning)
-        simplefilter(action = 'ignore', category = UserWarning)
-        simplefilter(action = 'ignore', category = RuntimeWarning)
-
         # Load wc2 file and create a mask out of it
         wc2 = load(wc2_file)
         wc2_mask = wc2.get_fdata() > 0.6
         wc2_mask = wc2_mask.astype(int)
 
+        # Compute the mean signal in white matter, for each slice of each run
         mean_wm = [[] for i in range(len(motion_corrected_files))]
         for file_id, file in enumerate(sorted(motion_corrected_files)):
             functional = load(file)
 
             for slices in iter_img(functional):
-                slice_img = resample_to_img(slices, wc2, interpolation='nearest', clip = True)
-
+                slice_img = resample_to_img(slices, wc2, interpolation = 'nearest', clip = True)
                 slice_data = slice_img.get_fdata()
                 masked_slice = slice_data * wc2_mask
                 mean_wm[file_id].append(mean(masked_slice))
 
+        # Create new parameter files
         out_parameters_files = []
         for file_id, file in enumerate(sorted(parameters_files)):
             data_frame = read_table(file, sep = '  ', header = None)
