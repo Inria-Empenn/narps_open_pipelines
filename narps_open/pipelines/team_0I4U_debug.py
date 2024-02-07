@@ -1,3 +1,4 @@
+# pylint: skip-file
 from nipype.interfaces.spm import (Coregister, Smooth, OneSampleTTestDesign, EstimateModel, EstimateContrast, 
                                    Level1Design, TwoSampleTTestDesign, RealignUnwarp, FieldMap, NewSegment, 
                                    Normalize12, Reslice)

@@ -10,6 +10,7 @@ from os import remove
 from os.path import join, isfile
 from shutil import rmtree
 
+from numpy import isclose
 from pytest import helpers
 from pathvalidate import is_valid_filepath
 
@@ -22,6 +23,15 @@ from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
+
+@helpers.register
+def compare_float_2d_arrays(array_1, array_2):
+    """ Assert array_1 and array_2 are close enough """
+
+    assert len(array_1) == len(array_2)
+    for reference_array, test_array in zip(array_1, array_2):
+        assert len(reference_array) == len(test_array)
+        assert isclose(reference_array, test_array).all()
 
 @helpers.register
 def test_pipeline_outputs(pipeline: Pipeline, number_of_outputs: list):

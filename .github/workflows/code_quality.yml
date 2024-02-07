@@ -46,7 +46,7 @@ jobs:
 
     - name: Analyse the code with pylint
       run: |
-        pylint --fail-under 8 --ignore-paths narps_open/pipelines/ narps_open > pylint_report_narps_open.txt
+        pylint --fail-under 8 narps_open > pylint_report_narps_open.txt
         pylint --fail-under 8 tests > pylint_report_tests.txt
 
     - name: Archive pylint results

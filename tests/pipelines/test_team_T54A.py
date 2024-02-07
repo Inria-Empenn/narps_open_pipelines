@@ -15,7 +15,6 @@ from os.path import exists, join
 from shutil import rmtree
 
 from pytest import helpers, mark, fixture
-from numpy import isclose
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -32,14 +31,6 @@ def remove_test_dir():
     mkdir(TEMPORARY_DIR)
     yield # test runs here
     rmtree(TEMPORARY_DIR, ignore_errors = True)
-
-def compare_float_2d_arrays(array_1, array_2):
-    """ Assert array_1 and array_2 are close enough """
-
-    assert len(array_1) == len(array_2)
-    for reference_array, test_array in zip(array_1, array_2):
-        assert len(reference_array) == len(test_array)
-        assert isclose(reference_array, test_array).all()
 
 class TestPipelinesTeamT54A:
     """ A class that contains all the unit tests for the PipelineTeamT54A class."""
@@ -77,11 +68,11 @@ class TestPipelinesTeamT54A:
         pipeline = PipelineTeamT54A()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 9*4*1, 5*2*1, 8*2*2 + 4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 9*4*1, 5*2*1, 8*2*2 + 4*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 9*4*4, 5*2*4, 8*2*2 + 4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 9*4*4, 5*2*4, 8*2*2 + 4*2, 18])
 
     @staticmethod
     @mark.unit_test
@@ -101,7 +92,7 @@ class TestPipelinesTeamT54A:
         bunch = info_missed[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['trial', 'gain', 'loss', 'difficulty', 'response', 'missed']
-        compare_float_2d_arrays(bunch.onsets, [
+        helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
@@ -109,7 +100,7 @@ class TestPipelinesTeamT54A:
             [6.459, 14.123, 29.615, 38.723],
             [19.535]
             ])
-        compare_float_2d_arrays(bunch.durations, [
+        helpers.compare_float_2d_arrays(bunch.durations, [
             [2.388, 2.289, 2.08, 2.288],
             [2.388, 2.289, 2.08, 2.288],
             [2.388, 2.289, 2.08, 2.288],
@@ -117,7 +108,7 @@ class TestPipelinesTeamT54A:
             [0.0, 0.0, 0.0, 0.0],
             [0.0]
             ])
-        compare_float_2d_arrays(bunch.amplitudes, [
+        helpers.compare_float_2d_arrays(bunch.amplitudes, [
             [1.0, 1.0, 1.0, 1.0],
             [14.0, 34.0, 10.0, 16.0],
             [6.0, 14.0, 15.0, 17.0],
@@ -125,35 +116,35 @@ class TestPipelinesTeamT54A:
             [1.0, 1.0, 1.0, 1.0],
             [1.0]
             ])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
         bunch = info_ok[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['trial', 'gain', 'loss', 'difficulty', 'response']
-        compare_float_2d_arrays(bunch.onsets, [
+        helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [4.071, 11.834, 27.535, 36.435],
             [6.459, 14.123, 29.615, 38.723]
             ])
-        compare_float_2d_arrays(bunch.durations, [
+        helpers.compare_float_2d_arrays(bunch.durations, [
             [2.388, 2.289, 2.08, 2.288],
             [2.388, 2.289, 2.08, 2.288],
             [2.388, 2.289, 2.08, 2.288],
             [2.388, 2.289, 2.08, 2.288],
             [0.0, 0.0, 0.0, 0.0]
             ])
-        compare_float_2d_arrays(bunch.amplitudes, [
+        helpers.compare_float_2d_arrays(bunch.amplitudes, [
             [1.0, 1.0, 1.0, 1.0],
             [14.0, 34.0, 10.0, 16.0],
             [6.0, 14.0, 15.0, 17.0],
             [1.0, 3.0, 10.0, 9.0],
             [1.0, 1.0, 1.0, 1.0]
             ])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test
@@ -195,10 +186,10 @@ class TestPipelinesTeamT54A:
             ['002', '004'], # equalIndifference group
             ['001', '002', '003', '004'] # all subjects
             )
-        assert regressors == dict(
-                equalRange = [1, 0, 1, 0],
-                equalIndifference = [0, 1, 0, 1]
-            )
+        assert regressors == {
+                'equalRange': [1, 0, 1, 0],
+                'equalIndifference': [0, 1, 0, 1]
+            }
         assert groups == [1, 2, 1, 2]
 
     @staticmethod
