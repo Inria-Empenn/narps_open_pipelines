@@ -377,21 +377,22 @@ class PipelineTeam98BT(Pipeline):
         """ No run level analysis has been done by team 98BT """
         return None
 
-    def get_parameters_files(
-        parameters_files, wc2_file, motion_corrected_files, subject_id, working_dir):
+    def get_parameters_file(
+        parameters_file: str, wc2_file: str, func_file: str, subject_id: str, run_id: str, working_dir: str):
         """
-        Create new tsv files with only desired parameters per subject per run
-            (i.e. the mean signal in white matter).
+        Create a new tsv file, by adding the mean signal in white matter to other parameters
+            in parameters_file.
 
         Parameters :
-        - parameters_files : paths to subject parameters file (i.e. one per run)
-        - wc2_file : paths to the segmented white matter file
-        - motion_corrected_files : paths to the motion corrected data
+        - parameters_file : path to subject parameters file (i.e. one per run)
+        - wc2_file : path to the segmented white matter file
+        - func_file : path to the functional data
+        - run_id : run for which the analysis is made
         - subject_id : subject for whom the analysis is made
-        - working_dir : directory where to store the parameters files
+        - working_dir : directory where to store the output files
 
         Return :
-        - parameters_file : paths to new files containing only desired parameters.
+        - path to new file containing only desired parameters.
         """
         from os import makedirs
         from os.path import join
@@ -405,35 +406,28 @@ class PipelineTeam98BT(Pipeline):
         wc2_mask = wc2.get_fdata() > 0.6
         wc2_mask = wc2_mask.astype(int)
 
-        # Compute the mean signal in white matter, for each slice of each run
-        mean_wm = [[] for i in range(len(motion_corrected_files))]
-        for file_id, file in enumerate(sorted(motion_corrected_files)):
-            functional = load(file)
+        # Compute the mean signal in white matter, for each slice of the functional data
+        mean_wm = []
+        for current_slice in iter_img(load(func_file)):
+            slice_data = resample_to_img(
+                current_slice, wc2, interpolation = 'nearest', clip = True).get_fdata()
+            # Append mean value of masked data
+            mean_wm.append(mean(slice_data * wc2_mask))
 
-            for slices in iter_img(functional):
-                slice_img = resample_to_img(slices, wc2, interpolation = 'nearest', clip = True)
-                slice_data = slice_img.get_fdata()
-                masked_slice = slice_data * wc2_mask
-                mean_wm[file_id].append(mean(masked_slice))
+        # Create new parameters file
+        data_frame = read_table(parameters_file, sep = '  ', header = None)
+        data_frame['Mean_WM'] = mean_wm
 
-        # Create new parameter files
-        out_parameters_files = []
-        for file_id, file in enumerate(sorted(parameters_files)):
-            data_frame = read_table(file, sep = '  ', header = None)
-            data_frame['Mean_WM'] = mean_wm[file_id]
+        new_parameters_file = join(working_dir, 'parameters_files',
+            f'parameters_file_sub-{subject_id}_run-{run_id}.tsv')
 
-            new_path = join(working_dir, 'parameters_file',
-                f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
+        makedirs(join(working_dir, 'parameters_files'), exist_ok = True)
 
-            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
+        with open(new_parameters_file, 'w') as writer:
+            writer.write(data_frame.to_csv(
+                sep = '\t', index = False, header = False, na_rep = '0.0'))
 
-            with open(new_path, 'w') as writer:
-                writer.write(data_frame.to_csv(
-                    sep = '\t', index = False, header = False, na_rep = '0.0'))
-
-            out_parameters_files.append(new_path)
-
-        return out_parameters_files
+        return new_parameters_file
 
     def get_subject_information(event_file: str):
         """
@@ -533,17 +527,20 @@ class PipelineTeam98BT(Pipeline):
             name = 'subject_information', iterfield = 'event_file')
 
         # Get parameters
-        parameters = Node(Function(
-            function = self.get_parameters_files,
+        parameters = MapNode(Function(
+            function = self.get_parameters_file,
             input_names = [
-                'parameters_files',
+                'parameters_file',
                 'wc2_file',
-                'motion_corrected_files',
+                'func_file',
                 'subject_id',
+                'run_id',
                 'working_dir'
                 ],
-            output_names = ['new_parameters_files']),
+            output_names = ['new_parameters_file']),
+            iterfield = ['parameters_file', 'func_file'],
             name = 'parameters')
+        parameters.inputs.run_id = self.run_list
         parameters.inputs.working_dir = self.directories.working_dir
 
         # SpecifyModel - Generates SPM-specific Model
@@ -578,13 +575,13 @@ class PipelineTeam98BT(Pipeline):
             (information_source, parameters, [('subject_id', 'subject_id')]),
             (select_files, subject_information, [('events', 'event_file')]),
             (select_files, parameters, [
-                ('motion_correction', 'motion_corrected_files'),
-                ('param', 'parameters_files'),
+                ('motion_correction', 'func_file'),
+                ('param', 'parameters_file'),
                 ('wc2', 'wc2_file')]),
             (select_files, specify_model, [('func', 'functional_runs')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
             (parameters, specify_model, [
-                ('new_parameters_files', 'realignment_parameters')]),
+                ('new_parameters_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
             (model_estimate, contrast_estimate, [

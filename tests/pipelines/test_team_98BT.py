@@ -11,8 +11,9 @@ Usage:
     pytest -q test_team_98BT.py -k <selected_test>
 """
 from os import mkdir
-from os.path import join
+from os.path import join, exists
 from shutil import rmtree
+from filecmp import cmp
 
 from pytest import helpers, mark, fixture
 from nipype import Workflow
@@ -30,7 +31,7 @@ def remove_test_dir():
     rmtree(TEMPORARY_DIR, ignore_errors = True)
     mkdir(TEMPORARY_DIR)
     yield # test runs here
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
+    #rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestPipelinesTeam98BT:
     """ A class that contains all the unit tests for the PipelineTeam98BT class."""
@@ -95,25 +96,34 @@ class TestPipelinesTeam98BT:
     @staticmethod
     @mark.unit_test
     def test_parameters_files(remove_test_dir):
-        """ Test the get_parameters_files method """
+        """ Test the get_parameters_files method
+            For this test, we created the two following files by downsampling output files
+                from the preprocessing pipeline :
+                - wc2sub-001_T1w-32.nii (white matter file)
+                - uasub-001_task-MGT_run-01_bold_resampled-32.nii (motion corrected file)
+            Voxel dimension was multiplied by 32, number of slices was reduced to 4.
         """
         parameters_file = join(
             Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
+        func_file = join(Configuration()['directories']['test_data'], 'pipelines',
+            'team_98BT', 'uasub-001_task-MGT_run-01_bold_resampled-32.nii')
+        wc2_file = join(Configuration()['directories']['test_data'], 'pipelines',
+            'team_98BT', 'wc2sub-001_T1w-32.nii')
         reference_file = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'team_98BT', 'parameters.tsv')
+            Configuration()['directories']['test_data'], 'pipelines',
+            'team_98BT', 'parameters_file.tsv')
 
         # Get new parameters file
         PipelineTeam98BT.get_parameters_file(
-            parameters_file, wc2_file, motion_corrected_files, 'sid', TEMPORARY_DIR)
+            parameters_file, wc2_file, func_file, 'sid', 'rid', TEMPORARY_DIR)
 
         # Check parameters file was created
         created_parameters_file = join(
-            TEMPORARY_DIR, 'parameters_files', 'parameters_file_sub-sid.tsv')
+            TEMPORARY_DIR, 'parameters_files', 'parameters_file_sub-sid_run-rid.tsv')
         assert exists(created_parameters_file)
 
         # Check contents
-        assert cmp(reference_file, created_confounds_file)
-        """
+        assert cmp(reference_file, created_parameters_file)
 
     @staticmethod
     @mark.unit_test
@@ -132,10 +142,10 @@ class TestPipelinesTeam98BT:
             [4.071, 11.834, 19.535, 27.535, 36.435]])
         helpers.compare_float_2d_arrays(bunch.durations, [
             [4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes == None
-        assert bunch.tmod == None
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.amplitudes is None
+        assert bunch.tmod is None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
         pmod = bunch.pmod[0]
         assert isinstance(pmod, Bunch)
         assert pmod.name == ['gain', 'loss', 'answer']
