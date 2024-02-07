@@ -401,6 +401,12 @@ class PipelineTeam98BT(Pipeline):
         from pandas import read_table
         from nilearn.image import iter_img, resample_to_img
 
+        # Ignore all future warnings
+        from warnings import simplefilter
+        simplefilter(action = 'ignore', category = FutureWarning)
+        simplefilter(action = 'ignore', category = UserWarning)
+        simplefilter(action = 'ignore', category = RuntimeWarning)
+
         # Load wc2 file and create a mask out of it
         wc2 = load(wc2_file)
         wc2_mask = wc2.get_fdata() > 0.6
@@ -429,12 +435,14 @@ class PipelineTeam98BT(Pipeline):
 
         return new_parameters_file
 
-    def get_subject_information(event_file: str):
+    def get_subject_information(event_file: str, short_run_id: int):
         """
         Create Bunch for specifySPMModel.
 
         Parameters :
         - event_file: str, events file for a run of a subject
+        - short_run_id: str, an identifier for the run corresponding to the event_file
+            must be '1' for the first run, '2' for the second run, etc.
 
         Returns :
         - subject_info : Bunch corresponding to the event file
@@ -466,14 +474,17 @@ class PipelineTeam98BT(Pipeline):
 
         # Create Bunch
         return Bunch(
-            conditions = ['gamble'],
+            conditions = [f'gamble_run{short_run_id}'],
             onsets = [onsets],
             durations = [durations],
             amplitudes = None,
             tmod = None,
             pmod = [
                 Bunch(
-                    name = ['gain', 'loss', 'answer'], # TODO : warning here : former names must be kept ?
+                    name = [
+                        f'gain_run{short_run_id}',
+                        f'loss_run{short_run_id}',
+                        f'answers_run{short_run_id}'],
                     poly = [1, 1, 1],
                     param = [weights_gain, weights_loss, answers]
                 )
@@ -522,9 +533,10 @@ class PipelineTeam98BT(Pipeline):
         # Get Subject Info - get subject specific condition information
         subject_information = MapNode(Function(
             function = self.get_subject_information,
-            input_names = ['event_file'],
+            input_names = ['event_file', 'short_run_id'],
             output_names = ['subject_info']),
-            name = 'subject_information', iterfield = 'event_file')
+            name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
+        subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
 
         # Get parameters
         parameters = MapNode(Function(

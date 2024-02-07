@@ -123,11 +123,11 @@ class TestPipelinesTeam98BT:
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
 
-        bunch = PipelineTeam98BT.get_subject_information(test_file)
+        bunch = PipelineTeam98BT.get_subject_information(test_file, 1)
 
         # Compare bunches to expected
         assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['gamble']
+        assert bunch.conditions == ['gamble_run1']
         helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 19.535, 27.535, 36.435]])
         helpers.compare_float_2d_arrays(bunch.durations, [
@@ -138,7 +138,7 @@ class TestPipelinesTeam98BT:
         assert bunch.regressors is None
         pmod = bunch.pmod[0]
         assert isinstance(pmod, Bunch)
-        assert pmod.name == ['gain', 'loss', 'answer']
+        assert pmod.name == ['gain_run1', 'loss_run1', 'answers_run1']
         assert pmod.poly == [1, 1, 1]
         helpers.compare_float_2d_arrays(pmod.param, [
             [14.0, 34.0, 38.0, 10.0, 16.0],
