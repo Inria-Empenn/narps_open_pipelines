@@ -7,16 +7,6 @@
 # version afni used by the reproducibility team :AFNI Version 23.0.02 Commodus
 # Last update: June 2023
 
-"""
-exemple run:
-In a terminal, path /home/jlefortb/narps_open_pipelines, run:
-/home/jlefortb/narps_open_pipelines/narps_open/pipelines/team_6VV2.firstlevel /home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/, sub-001, /home/jlefortb/narps_open_pipelines/data/original/ds001734/
-
-
-"""
-
-
-
 # Store arguments (directory where to store results, subjects list, directory where data are stored)
 set expdir="$1"
 set subject="$2"
