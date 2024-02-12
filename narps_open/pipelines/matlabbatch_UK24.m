@@ -33,6 +33,8 @@ matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {...
 matlabbatch{end+1}.spm.spatial.preproc.channel.vols = {...
     '/ABS_PATH/data/original/ds001734/sub-001/anat/sub-001_T1w.nii,1'}; % this is the coregistered ANAT
 
+% --> output ANAT_SEG_PARAM
+
 % 3 - Reslicing of coregistered T1w image and segmentations to the same 
 % voxel space of the reference (sbref) image
 
@@ -266,3 +268,25 @@ matlabbatch{end}.spm.stats.con.consess{1}.tcon.name = 'gain_param';
 matlabbatch{end}.spm.stats.con.consess{1}.tcon.weights = [0 1 1 0 0 0 0 0];
 matlabbatch{end}.spm.stats.con.consess{2}.tcon.name = 'loss_param';
 matlabbatch{end}.spm.stats.con.consess{2}.tcon.weights = [0 0 0 0 1 1 0 0];
+
+% --> Creates con001.nii and con002.nii
+
+% "preprocessing.inter_subject_reg": "Intersubject registration was 
+% conducted on contrast maps that were output from 1st level statistical 
+% analysis. SPM12's normalise (write) function was used to transform these 
+% contrast maps from native subject space into 2mm isotropic MNI space 
+% (using the MNI template supplied with SPM12). This function required a 
+% forward transformation field, which was output from SPM12's unified 
+% segmentation step as a field mapping between subject native space and MNI
+% space (see segmentation explanantion above). The normalise (write) 
+% process performed interpolation using a 4th degree B-spline. Further 
+% SPM12 defaults for normalise (write) and the unified segmentation step 
+% (including warping and regularisation parameters) were kept as is.",
+
+matlabbatch{end}.spm.spatial.normalise.write.subj.resample = ...
+    {'ABS_PATH/ANAT_SEG_PARAM'};
+matlabbatch{end+1}.spm.spatial.normalise.write.subj.resample = {
+    'ABS_PATH/con001.nii,1'
+    'ABS_PATH/con002.nii.nii,1'
+                                                            };
+% --> Creates wcon001.nii and wcon002.nii
