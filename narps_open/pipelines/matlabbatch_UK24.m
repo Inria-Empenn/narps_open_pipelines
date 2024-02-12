@@ -77,16 +77,14 @@ matlabbatch{end+1}.spm.spatial.realign.estwrite.data = {
     }
                                                     }';
 
-
 % 5 - Spatial smoothing of fMRI data.
-matlabbatch{end+1}.spm.spatial.smooth.data = {}; %{s + FUNC_RUN_1,....
-%                                                 s + FUNC_RUN_2,...
-%                                                 s + FUNC_RUN_3,...
-%                                                 s + FUNC_RUN_4}
+matlabbatch{end+1}.spm.spatial.smooth.data = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-01_sbref.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-02_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-03_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-04_bold.nii'
+};
 matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
-matlabbatch{end}.spm.spatial.smooth.dtype = 0;
-matlabbatch{end}.spm.spatial.smooth.im = 0;
-matlabbatch{end}.spm.spatial.smooth.prefix = 's';
 
 % 
 % % -----------
