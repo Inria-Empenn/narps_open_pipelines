@@ -1,6 +1,9 @@
 
 % first-level job ----
 
+% $ narps_description -t UK24 -d preprocessing --json
+
+
 clear matlabbatch;
 
 % We consider that anat and func data have been gunzipped first
@@ -78,6 +81,11 @@ matlabbatch{end+1}.spm.spatial.realign.estwrite.data = {
                                                     }';
 
 % 5 - Spatial smoothing of fMRI data.
+% "spatial_smoothing": "Spatial smoothing was conducted on realigned 
+% functional data using SPM12's standard smoothing function, which used a 
+% fixed Gaussian smoothing kernel with FWHM of 4mm (twice the voxel size). 
+% Smoothing was performed in the native functional space.",
+
 matlabbatch{end+1}.spm.spatial.smooth.data = {
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-01_sbref.nii'
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/rsub-001_task-MGT_run-02_bold.nii'
@@ -86,21 +94,104 @@ matlabbatch{end+1}.spm.spatial.smooth.data = {
 };
 matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
 
-% 
-% % -----------
-% matlabbatch{7}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 2)', substruct('.','val', '{}',{5}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{2}, '.','files'));
-% matlabbatch{7}.spm.spatial.smooth.fwhm = [5 5 5];
-% matlabbatch{7}.spm.spatial.smooth.dtype = 0;
-% matlabbatch{7}.spm.spatial.smooth.im = 0;
-% matlabbatch{7}.spm.spatial.smooth.prefix = 's';
-% matlabbatch{8}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 3)', substruct('.','val', '{}',{5}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{3}, '.','files'));
-% matlabbatch{8}.spm.spatial.smooth.fwhm = [5 5 5];
-% matlabbatch{8}.spm.spatial.smooth.dtype = 0;
-% matlabbatch{8}.spm.spatial.smooth.im = 0;
-% matlabbatch{8}.spm.spatial.smooth.prefix = 's';
-% 
-% 
-% % 6 - Calculation of several quality metrics based on preprocessed data, including framewise displacement derived from motion correction (realignment) parameters.\n7 - Generation of nuisance regressors for 1st level analysis, including motion scrubbing regressor defined using framewise displacement, and two tissue signal regressors (white matter and cerebrospinal fluid) derived from averaging the voxel values found within the segmentaed tissue maps.
+% 6 - Calculation of several quality metrics based on preprocessed data, 
+% including framewise displacement derived from motion correction 
+% (realignment) parameters.
+
+
+% 7 - Generation of nuisance regressors for 
+% 1st level analysis, including motion scrubbing regressor defined using 
+% framewise displacement, and two tissue signal regressors (white matter 
+% and cerebrospinal fluid) derived from averaging the voxel values found 
+% within the segmentaed tissue maps.
+
+% "independent_vars_first_level": "The GLM design matrix for the 1st level 
+% analysis consited of 17 explicitly specified regressors per run. Of these
+% regressors, the first 8 related to experimental conditions, whereas the 
+% remaining 9 were nuisance regressors (6 head motion parameter regressors,
+% 2 tissue signal regressors, and 1 scrubbing regressor), none of which 
+% were entered as interactions. 
+% For the experimental conditions, we are 
+% interested in the parametric effect of gain and of loss as related to a 
+% mixed gambles task. Trial data, indicating the amount of possible gain 
+% and the amount of possible loss, as well as trial timing, trial durations
+% and reaction times were supplied for each run per subject. From this data
+% a block-task regressor was derived respectively for all trials where the 
+% gamble could result in a possible gain, in a possible loss, and in a 
+% no-loss-nor-gain situation (i.e. 3 block-task regressors). In each case 
+% of the possible gain/loss regressors, 2 parametric modulation regressors 
+% were added: 1 to model the parametric size of the possible gain/loss, and
+% 1 to model the parametric size of the reaction time. In the case of the 
+% no-loss-nor-gain block-task regressor a single extra parametric 
+% modulation regressor was added to model the parametric size of the 
+% reaction time. 
+% All parametric modulation regressors were mean centered 
+% before adding them to the design matrix for the GLM analysis, which 
+% implicitly (in SPM12) orthogonalises all parametric modulators in a 
+% series with reference to the first one. No time-modulation of conditions 
+% was included.\n\nThe canonical HRF basis (default SPM12 option) was used 
+% for convolution of the 8 conditions. SPM12 automatically also included a 
+% constant regressor in the design matrix, and filtered the data and design 
+% matrix using a discrete cosine basis set with a specified cutoff 
+% frequency of 128 Hz (default). This accounted for slow drifts in the data
+% , and no explicit drift regressors were included in the design matrix."
+
+% Note: the covariates for tissue signal regressors and scrubbing regressor
+% not implemented yet
+
+% 8 regresseurs : gain, loss, no gain no loss, parametric gain, RT gain, parametric loss, RT loss, RT no gain no loss
+% gain: onset of gambles that led to gain, duration=
+
+matlabbatch{end+1}.spm.stats.fmri_spec.dir = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.timing.units = 'secs';
+matlabbatch{end}.spm.stats.fmri_spec.timing.RT = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.timing.fmri_t = 16;
+matlabbatch{end}.spm.stats.fmri_spec.timing.fmri_t0 = 8;
+matlabbatch{end}.spm.stats.fmri_spec.sess.scans = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).name = 'gain';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).onset = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).duration = 2;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).tmod = 0;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).name = 'money';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).param = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).poly = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).name = 'reaction_time';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).param = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).poly = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).orth = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).name = 'loss';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).onset = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).duration = 2;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).tmod = 0;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).name = 'money';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).param = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).poly = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).name = 'reaction_time';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).param = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).poly = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).orth = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).name = 'no_gain_no_loss';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).onset = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).duration = 2;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).tmod = 0;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.name = 'reaction_time';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.param = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.poly = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).orth = 1;
+matlabbatch{end}.spm.stats.fmri_spec.sess.multi = {''};
+matlabbatch{end}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});
+matlabbatch{end}.spm.stats.fmri_spec.sess.multi_reg = {''};
+matlabbatch{end}.spm.stats.fmri_spec.sess.hpf = 128;
+matlabbatch{end}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
+matlabbatch{end}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
+matlabbatch{end}.spm.stats.fmri_spec.volt = 1;
+matlabbatch{end}.spm.stats.fmri_spec.global = 'None';
+matlabbatch{end}.spm.stats.fmri_spec.mthresh = 0.8;
+matlabbatch{end}.spm.stats.fmri_spec.mask = {''};
+matlabbatch{end}.spm.stats.fmri_spec.cvi = 'AR(1)';
+
+
+
 % 
 % % TODO: ignored for now
 % 
