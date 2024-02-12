@@ -167,7 +167,7 @@ matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
 % Note: the covariates for tissue signal regressors and scrubbing regressor
 % not implemented yet
 
-% 8 regresseurs : gain, loss, no gain no loss, parametric gain, RT gain, parametric loss, RT loss, RT no gain no loss
+% 8 regresseurs : gain, gain_value, gain_RT, loss, loss_value, loss_RT, no gain no loss, RT no gain no loss
 % 9 nuisance : 6 head motion parameter regressors, 2 tissue signal regressors, and 1 scrubbing regressor
 
 matlabbatch{end+1}.spm.stats.fmri_spec.dir = '<UNDEFINED>';
@@ -227,3 +227,42 @@ matlabbatch{end}.spm.stats.fmri_spec.sess.multi_reg = {
         'ABS_PATH/reg_wm.txt'
         'ABS_PATH/reg_csf.txt'
                                                      };
+
+
+% "analysis.inference_contrast_effect": "For the experimental conditions, 
+% we are interested in the parametric effect of gain and of loss as related
+% to a mixed gambles task. Trial data, indicating the amount of possible 
+% gain and the amount of possible loss, as well as trial timing, trial 
+% durations and reaction times were supplied for each run per subject. From
+% this data a block-task regressor was derived respectively for all trials 
+% where the gamble could result in a possible gain, in a possible loss, and
+% in a no-loss-nor-gain situation (i.e. 3 block-task regressors). In each 
+% case of the possible gain/loss regressors, 2 parametric modulation 
+% regressors were added: 1 to model the parametric size of the possible 
+% gain/loss, and 1 to model the parametric size of the reaction time. In 
+% the case of the no-loss-nor-gain block-task regressor a single extra 
+% parametric modulation regressor was added to model the parametric size of
+% the reaction time. We hypothesized that when looking at the parametric 
+% effect of GAIN in the brain, we should be interested in the parametric 
+% modulators related to the 'possible gain' condition, i.e. the parametric 
+% size of the possible gain trials, and the parametric size of the reaction
+% time for said trials. Similarly, when looking at the parametric effect of
+% LOSS, we should be interested in the parametric modulators related to the
+% 'possible loss' condition, i.e. the parametric size of the possible loss 
+% trials, and the parametric size of the reaction time related to these 
+% trials. We thus had two contrasts for the 1st level analysis: the GAIN 
+% contrast which set the two GAIN parametric modulator regressors to 1 and 
+% all other GLM regressors to 0; and the LOSS contrast which set the two 
+% LOSS parametric modulator regressors to 1 and all other GLM regressors to
+% 0. For the 2nd level group analysis, where the effect of interest was a 
+% greater positive response to LOSS in one group vs another, our two-sample
+% t-test was run by setting the contrast [-1 1], assuming the first group 
+% was set as the equal indifference group and that the LOSS contrasts 
+% resulting from the 1st level analysis of all subjects were fed into this 
+% analysis.",
+
+matlabbatch{end+1}.spm.stats.con.spmmat = '<UNDEFINED>';
+matlabbatch{end}.spm.stats.con.consess{1}.tcon.name = 'gain_param';
+matlabbatch{end}.spm.stats.con.consess{1}.tcon.weights = [0 1 1 0 0 0 0 0];
+matlabbatch{end}.spm.stats.con.consess{2}.tcon.name = 'loss_param';
+matlabbatch{end}.spm.stats.con.consess{2}.tcon.weights = [0 0 0 0 1 1 0 0];
