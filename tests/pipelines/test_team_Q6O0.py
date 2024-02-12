@@ -47,19 +47,11 @@ class TestPipelinesTeamQ6O0:
         pipeline = PipelineTeamQ6O0()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 6
-        assert len(pipeline.get_group_level_outputs()) == 37
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 6, 37, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 24
-        assert len(pipeline.get_group_level_outputs()) == 37
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 24, 37, 18])
 
     @staticmethod
     @mark.pipeline_test

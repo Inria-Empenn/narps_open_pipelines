@@ -12,8 +12,7 @@ Usage:
 """
 
 from os.path import isdir, join
-from shutil import rmtree, move, copytree
-from time import sleep
+from shutil import rmtree, copytree
 
 from checksumdir import dirhash
 from pytest import mark
@@ -74,7 +73,8 @@ class TestResultsCollection:
 
         # Mock the results path
         results_directory = Configuration()['directories']['narps_results']
-        Configuration()['directories']['narps_results'] = Configuration()['directories']['test_runs']
+        Configuration()[
+            'directories']['narps_results'] = Configuration()['directories']['test_runs']
 
         # Init & download the collection
         collection = ResultsCollection('2T6S')
