@@ -17,15 +17,18 @@ requires = [
     'importlib_resources>=5.10.2,<5.11',
     'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
+    'nilearn>=0.10.0,<0.11',
     'nipype',
     'pandas'
 ]
 extras_require = {
     'tests': [
+        'pathvalidate',
         'pylint',
         'pytest',
         'pytest-cov',
         'pytest-helpers-namespace',
+        'pytest-mock',
         'checksumdir'
         ]
 }
@@ -58,7 +61,17 @@ setup(
     data_files = [
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/default_config.toml']),
         ('narps_open/utils/configuration', ['narps_open/utils/configuration/testing_config.toml']),
-        ('narps_open/utils/description', ['narps_open/utils/description/analysis_pipelines_derived_descriptions.tsv']),
-        ('narps_open/utils/description', ['narps_open/utils/description/analysis_pipelines_full_descriptions.tsv'])
-    ]
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_comments.tsv']),
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_derived_descriptions.tsv']),
+        ('narps_open/data/description', ['narps_open/data/description/analysis_pipelines_full_descriptions.tsv'])
+    ],
+    entry_points = {
+        'console_scripts': [
+            'narps_open_runner = narps_open.runner:main',
+            'narps_open_tester = narps_open.tester:main',
+            'narps_open_status = narps_open.utils.status:main',
+            'narps_description = narps_open.data.description.__main__:main',
+            'narps_results = narps_open.data.results.__main__:main'
+        ]
+    }
 )

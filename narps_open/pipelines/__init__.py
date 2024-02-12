@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 # List all the available pipelines and the corresponding class for each
 implemented_pipelines = {
-    '08MQ': None,
+    '08MQ': 'PipelineTeam08MQ',
     '0C7Q': None,
     '0ED6': None,
     '0H5E': None,
@@ -43,7 +43,7 @@ implemented_pipelines = {
     'B23O': None,
     'B5I6': None,
     'C22U': None,
-    'C88N': None,
+    'C88N': 'PipelineTeamC88N',
     'DC61': None,
     'E3B6': None,
     'E6R3': None,
@@ -51,7 +51,7 @@ implemented_pipelines = {
     'I52Y': None,
     'I9D6': None,
     'IZ20': None,
-    'J7F9': None,
+    'J7F9': 'PipelineTeamJ7F9',
     'K9P0': None,
     'L1A8': None,
     'L3V8': None,
@@ -62,19 +62,19 @@ implemented_pipelines = {
     'O6R6': None,
     'P5F3': None,
     'Q58J': None,
-    'Q6O0': None,
+    'Q6O0': 'PipelineTeamQ6O0',
     'R42Q': None,
     'R5K7': None,
     'R7D1': None,
     'R9K3': None,
     'SM54': None,
-    'T54A': None,
-    'U26C': None,
+    'T54A': 'PipelineTeamT54A',
+    'U26C': 'PipelineTeamU26C',
     'UI76': None,
     'UK24': None,
     'V55J': None,
     'VG39': None,
-    'X19V': None,
+    'X19V': 'PipelineTeamX19V',
     'X1Y5': None,
     'X1Z4': None,
     'XU70': None
@@ -266,19 +266,19 @@ class Pipeline(ABC):
 
     @abstractmethod
     def get_preprocessing(self):
-        """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
+        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
     @abstractmethod
     def get_run_level_analysis(self):
-        """ Return a Nipype worflow describing the run level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
 
     @abstractmethod
     def get_subject_level_analysis(self):
-        """ Return a Nipype worflow describing the subject level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
     @abstractmethod
     def get_group_level_analysis(self):
-        """ Return a Nipype worflow describing the group level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the group level analysis part of the pipeline """
 
     def get_preprocessing_outputs(self):
         """ Return the names of the files the preprocessing is supposed to generate. """
@@ -295,3 +295,27 @@ class Pipeline(ABC):
     def get_group_level_outputs(self):
         """ Return the names of the files the group level analysis is supposed to generate. """
         return []
+
+    @abstractmethod
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS.
+            Files must be in the following order:
+            hypo1_thresh.nii.gz
+            hypo1_unthresh.nii.gz
+            hypo2_thresh.nii.gz
+            hypo2_unthresh.nii.gz
+            hypo3_thresh.nii.gz
+            hypo3_unthresh.nii.gz
+            hypo4_thresh.nii.gz
+            hypo4_unthresh.nii.gz
+            hypo5_thresh.nii.gz
+            hypo5_unthresh.nii.gz
+            hypo6_thresh.nii.gz
+            hypo6_unthresh.nii.gz
+            hypo7_thresh.nii.gz
+            hypo7_unthresh.nii.gz
+            hypo8_thresh.nii.gz
+            hypo8_unthresh.nii.gz
+            hypo9_thresh.nii.gz
+            hypo9_unthresh.nii.gz
+        """

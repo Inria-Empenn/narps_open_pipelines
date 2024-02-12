@@ -43,6 +43,9 @@ class InheritingPipeline(Pipeline):
     def get_group_level_analysis(self):
         return 'c'
 
+    def get_hypotheses_outputs(self):
+        return ['h1', 'h2']
+
 class TestPipelineDirectories:
     """ A class that contains all the unit tests for the PipelineDirectories class."""
 
@@ -102,11 +105,11 @@ class TestPipelines:
         with raises(TypeError):
             pipeline = Pipeline()
 
-        # 2 - check the instanciation of an incomplete class inheriting from Pipeline
+        # 2 - check the instantiation of an incomplete class inheriting from Pipeline
         with raises(TypeError):
             pipeline = InheritingErrorPipeline()
 
-        # 3 - check the instanciation of a class inheriting from Pipeline
+        # 3 - check the instantiation of a class inheriting from Pipeline
         pipeline = InheritingPipeline()
 
         # 4 - check accessing the attributes of Pipeline through an inheriting class
@@ -123,6 +126,7 @@ class TestPipelines:
         assert pipeline.get_preprocessing() == 'a'
         assert pipeline.get_subject_level_analysis() == 'b'
         assert pipeline.get_group_level_analysis() == 'c'
+        assert pipeline.get_hypotheses_outputs()[0] == 'h1'
 
 class TestUtils:
     """ A class that contains all the unit tests for the utils in module pipelines."""
@@ -131,8 +135,8 @@ class TestUtils:
     @mark.unit_test
     def test_utils():
         """ Test the utils methods of PipelineRunner """
-        # 1 - Get number of not implemented pipelines
-        assert len(get_not_implemented_pipelines()) == 69
+        # 1 - Get not implemented pipelines
+        assert '1K0E' in get_not_implemented_pipelines()
 
-        # 2 - Get number of implemented pipelines
-        assert len(get_implemented_pipelines()) == 1
+        # 2 - Get implemented pipelines
+        assert '2T6S' in get_implemented_pipelines()

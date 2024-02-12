@@ -1,27 +1,39 @@
 # :microscope: How to test NARPS open pipelines ?
 
-:mega: This file descripes the test suite and features for the project.
+:mega: This file describes the test suite and features for the project.
 
-## Dependancies
+## Test dependencies
 
-Use [*pylint*](http://pylint.pycqa.org/en/latest/) to run static code analysis.
+Before using the test suite, make sure you installed all the dependencies, after step 5 of the [installation process](docs/install.md), run this command:
+```bash
+pip install .[tests]
+```
+
+## Static analysis
+
+We use [*pylint*](http://pylint.pycqa.org/en/latest/) to run static code analysis.
 
 > Pylint is a tool that checks for errors in Python code, tries to enforce a coding standard and looks for code smells. It can also look for certain type errors, it can recommend suggestions about how particular blocks can be refactored and can offer you details about the code's complexity.
 
-* Run the analysis on all the source files with : `pylint ./narps_open`
-* To create a .xml JUnit report : `pylint --fail-under=8.0 --ignored-classes=_socketobject --load-plugins=pylint_junit --output-format=pylint_junit.JUnitReporter narps_open > pylint_report_narps_open.xml`
+```bash
+# Example: this runs the analysis on all files in the narps_open/ directory
+pylint ./narps_open
+```
 
 It is also a good idea to use [*black*](https://github.com/psf/black) to automatically conform your code to PEP8.
 
 > Black is the uncompromising Python code formatter. By using it, you agree to cede control over minutiae of hand-formatting. In return, Black gives you speed, determinism, and freedom from pycodestyle nagging about formatting. You will save time and mental energy for more important matters.
 
-* Run the command on any source file you want to lint : `black ./narps_open` or `black ./narps_open/runner.py` 
+```bash
+# Example: run the command on any source file you want to lint, e.g.:
+black ./narps_open/runner.py
+```
 
-Use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage. Furthermore, [*pytest-helpers-namespace*](https://pypi.org/project/pytest-helpers-namespace/) enables to register helper functions.
+## Automatic tests
+
+We use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage. Furthermore, [*pytest-helpers-namespace*](https://pypi.org/project/pytest-helpers-namespace/) enables to register helper functions.
 
 > The pytest framework makes it easy to write small tests, yet scales to support complex functional testing for applications and libraries.
-
-## Launching tests
 
 Tests can be launched manually or while using CI (Continuous Integration).
 
@@ -29,31 +41,55 @@ Tests can be launched manually or while using CI (Continuous Integration).
 * To specify a test file to run : `pytest test_file.py`
 * To specify a test -for which the name contains 'test_pattern'- inside a test file : `pytest test_file.py -k "test_pattern"`
 * To run a tests with a given mark 'mark' : `pytest -m 'mark'`
-* [CI] to output a xml JUnit test report, use the option : `--junit-xml=pytest_report.xml`
 * To create code coverage data : `coverage run -m pytest ./tests` then `coverage report` to see the code coverage result or `coverage xml` to output a .xml report file
+
+## Command line tool
+
+We created the simple command line tool `narps_open_tester` to help testing the outcome of one pipeline.
+
+> [!WARNING]
+> This command must be launched from inside the repository's root directory, because it needs to access the `tests` directory relatively to the current/working directory.
+
+```bash
+narps_open_tester -t 08MQ
+```
+
+This will run the pipeline for the requested team -here 08MQ- on subsets of subjects (20, 40, 60, 80 and 108). For each subset, the outputs of the pipeline (statistical maps for each of the 9 hypotheses) will be compared with original results from the team using a Pearson correlation computation. At each step, if one of the correlation score is below the threshold (see `correlation_thresholds` defined in `narps_open/utils/configuration/testing_config.toml`), the tests ends. Otherwise, it proceeds to the next step, i.e.: the next subset of subjects.
+
+Once finished, a text file report (`test_pipeline-*.txt`) is created, containing all the computed correlation values.
 
 ## Configuration files for testing
 
 * `pytest.ini` is a global configuration files for using pytest (see reference [here](https://docs.pytest.org/en/7.1.x/reference/customize.html)). It allows to [register markers](https://docs.pytest.org/en/7.1.x/example/markers.html) that help to better identify tests. Note that `pytest.ini` could be replaced by data inside `pyproject.toml` in the next versions.
 * `tests/conftest.py` defines common functions, parameters, and [helpers](https://pytest-helpers-namespace.readthedocs.io/en/latest/) that are later available to all tests
-* `narps_open/utils/configuration/testing_config.toml` sets the parameters for the `testing` configuration type (see how the [configuration](/docs/configuration.md) works). This configuration type is automatically used for testing (as defined in `tests/conftest.py`).
-
-## Types of tests
-
-We use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to identify the different types of test. Currently, the following types are available :
-
-| Type of test | marker | Description |
-| ----------- | ----------- | ----------- |
-| unit tests | `unit_test` | Unitary test a method/function |
-| pipeline tests | `pieline_test` | These tests compute whole pipeline one or several times making them time and resources consuming. |
+* `narps_open/utils/configuration/testing_config.toml` sets the parameters for the `testing` configuration type (see how the [configuration](/docs/configuration.md) module works). This configuration type is automatically used for testing (as defined in `tests/conftest.py`).
 
 ## Writing tests
 
 The main idea is to create one test file per source module (eg.: *tests/pipelines/test_pipelines.py* contains all the unit tests for the module `narps_open.pipelines`).
 
-Each test file defines a class (in the example: `TestPipelines`), in which each test is written in a static method begining with `test_`.
+Each test file defines a class (in the example: `TestPipelines`), in which each test is written in a static method beginning with `test_`.
 
 Finally we use one or several `assert` ; each one of them making the whole test fail if the assertion is False. One can also use the `raises` method of pytest, writing `with raises(Exception):` to test if a piece of code raised the expected Exception. See the reference [here](https://docs.pytest.org/en/6.2.x/reference.html?highlight=raises#pytest.raises).
+
+Use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to identify the types of test you write. Currently, the following types are available :
+
+| Type of test | marker | Description |
+| ----------- | ----------- | ----------- |
+| unit tests | `unit_test` | Unitary test a method/function |
+| pipeline tests | `pipeline_test` | Compute a whole pipeline and check its outputs are close enough with the team's results |
+
+## Save time by downsampling data
+
+Running pipelines over all the subjects is time and resource consuming. Ideally, this could be done only once we are confident that the pipeline is correctly reproduced, just to make sure the final values of correlations between original team results and the reproduced ones are above the expected thresholds.
+
+But most of the time we need to run pipelines earlier in the development process, and for this step we need a (quick) answer whether it is going the right way or not.
+
+To save you time while testing your code, you can run pipelines on a smaller subset of participants. This table shows the expected minimum correlations values as a function of the subset size.
+
+| Number of subjects | 20 | 40 | 60 | 80 | 108 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Correlation value | 0.30 | 0.70 | 0.80 | 0.85 | 0.93 |
 
 ## Non regression testing
 

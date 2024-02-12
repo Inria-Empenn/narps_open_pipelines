@@ -5,9 +5,6 @@ name: pipeline_tests
 
 # Define when it runs
 on:
-  push:
-    paths:
-      - 'narps_open/pipelines/team**'
   pull_request:
     paths:
       - 'narps_open/pipelines/team**'
@@ -19,14 +16,9 @@ jobs:
   identify-tests:
     runs-on: ubuntu-latest
     outputs:
+      teams: ${{ steps.identify.outputs.teams }}
       tests: ${{ steps.identify.outputs.tests }}
     steps:
-    - name: Checkout main branch for comparison
-      uses: actions/checkout@v3
-      with:
-        ref: main
-        fetch-depth: 0
-
     - name: Checkout current branch
       uses: actions/checkout@v3
       with:
@@ -35,48 +27,75 @@ jobs:
     - name: Create a list of tests for changed pipelines
       id: identify
       run: |
-        # Loop through modified files
-        for file in $(git diff --name-only remotes/origin/main...$GITHUB_SHA)
+        # Loop through modified files between PR base and last head
+        for file in $(git diff --name-only --diff-filter=d remotes/origin/main...$GITHUB_SHA)
         do
           # echo each file
           echo $file
           # List team id corresponding to team_* files
-          if [[ "$file" =~ .*"narps_open/pipelines/team_".* ]]; then
+          if [[ "$file" =~ narps_open/pipelines/team_[A-Z0-9]{4}.py ]]; then
             echo "Modified pipeline = $file"
             tmp=${file#*"team_"} # remove prefix ending in "team_"
             team_id=${tmp%".py"*}   # remove suffix starting with ".py"
-            # Populate the list of test files
+            # Populate the lists of test files and teams
             test_files="$test_files tests/pipelines/test_team_$team_id.py"
+            teams="$teams $team_id"
           fi
         done
         # Send the test list as job output
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
+        echo "teams=$teams" >> $GITHUB_OUTPUT
 
-  # A job to run the identified tests
+  # A job to run the tests
   pytest:
     needs: identify-tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 2880 # 48h
     steps:
-    - name: Checkout repository
+    - name: Checkout PR branch
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v3
-      with:
-        python-version: 3.9
-
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+    - name: Load configuration for self-hosted runner
+      run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install .[tests]
 
-    - name: Collect tests with pytest
-      run: pytest --collect-only -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
+    - name: Remove test reports if any existing
+      run: rm -f test_pipeline-*.txt
+
+    - name: Execute tests with pytest
+      run: |
+        if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
+          pytest -s -q -m "pipeline_test" ${{ needs.identify-tests.outputs.tests }}
+        fi
+
+    - name: Archive pipeline execution failures
+      if: ${{ failure() }} # Run only if previous job fails
+      uses: actions/upload-artifact@v3
+      with:
+        name: pipeline_tests-reports
+        path: |
+          crash-*.pklz
+        retention-days: 15
+
+    - name: Report results on GitHub
+      if: ${{ always() }}
+      run: |
+        # Start report
+        echo "# Correlation values" >> $GITHUB_STEP_SUMMARY
+        echo "Unthresholded maps, reproduced vs. results" >> $GITHUB_STEP_SUMMARY
+        echo "Correlation values are sorted from hypotheses 1 to 9" >> $GITHUB_STEP_SUMMARY
+
+        # Start report table
+        echo "| Team    | Number of subjects | Test status | Correlation values |" >> $GITHUB_STEP_SUMMARY
+        echo "| -------- | ------- | ------- | ------- |" >> $GITHUB_STEP_SUMMARY
+
+        # Loop through test report files
+        for team in ${{ needs.identify-tests.outputs.teams }}
+        do
+          cat test_pipeline-$team.txt >> $GITHUB_STEP_SUMMARY
+        done

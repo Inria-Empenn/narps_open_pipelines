@@ -1,0 +1,61 @@
+name: Pipeline reproduction
+description: Select this when you are about to start a pipeline reproduction.
+title: "[team_id] Pipeline reproduction"
+labels: ["\U0001F6A6 status: awaiting triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for starting this pipeline reproduction! :tada:
+        Please make sure there is no concurrent issue about it : have a look [here](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status).
+        Once it's ok, start by changing the `team_id` in the title of this issue, then fill the form.
+
+        :warning: Please do not reference any other team IDs in the following, unless the issue is actually related these IDs.
+
+  - type: textarea
+    id: softwares
+    attributes:
+      label: Softwares
+      description: Which softwares are used by the pipeline ?
+      placeholder: Basically, this is the `general.software` column of the pipeline description.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data
+    attributes:
+      label: Input data
+      description: Which data used the team ?
+      options:
+        - raw data
+        - derivatives (fMRIprep)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any supplementary information you find relevant about the pipeline, that would help reproducing it.
+      placeholder: ex. This pipeline uses a run level analysis.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: List of tasks
+      description: Please keep the following tasks, as they are common to all pipeline reproduction. Feel free to add other tasks.
+      value: |
+        Please tick the boxes below once the corresponding task is finished. :+1:
+        - [ ] :ok_hand: A maintainer of the project approved the issue, by assigning a :checkered_flag:`status: ready for dev` label to it.
+        - [ ] :deciduous_tree: Create a branch on your fork to start the reproduction.
+        - [ ] :sunrise: Create a file `team_{team_id}.py` inside the [`narps_open/pipelines/`](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/narps_open/pipelines) directory. You can use a file inside [`narps_open/pipelines/templates`](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/narps_open/pipelines/templates) as a template if needed.
+        - [ ] :inbox_tray: Create a [pull request](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/CONTRIBUTING.md#pull_requests) as soon as you completed the previous task.
+        - [ ] :brain: Write the code for the pipeline, using Nipype and the file architecture described in [docs/pipelines.md](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/docs/pipelines.md).
+        - [ ] :blue_book: Make sure your code is documented enough.
+        - [ ] :snake: Make sure your code is explicit and conforms with PEP8.
+        - [ ] :microscope: Create tests for your pipeline. You can use files in [`tests/pipelines/test_team_*`](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/tests/pipelines/) as examples.
+        - [ ] :microscope: Make sure your code passes all the tests you created (see [docs/testing.md](https://github.com/Inria-Empenn/narps_open_pipelines/blob/main/docs/testing.md)).
+    validations:
+      required: true

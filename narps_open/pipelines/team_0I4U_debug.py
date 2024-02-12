@@ -1,3 +1,4 @@
+# pylint: skip-file
 from nipype.interfaces.spm import (Coregister, Smooth, OneSampleTTestDesign, EstimateModel, EstimateContrast, 
                                    Level1Design, TwoSampleTTestDesign, RealignUnwarp, FieldMap, NewSegment, 
                                    Normalize12, Reslice)
@@ -394,7 +395,7 @@ def get_subset_contrasts(file_list, subject_list, participants_file, method):
     Parameters :
     - file_list : original file list selected by selectfiles node 
     - subject_list : list of subject IDs that are in the wanted group for the analysis
-    - participants_file: str, file containing participants caracteristics
+    - participants_file: str, file containing participants characteristics
     - method: str, one of "equalRange", "equalIndifference" or "groupComp"
     
     This function return the file list containing only the files belonging to subject in the wanted group.

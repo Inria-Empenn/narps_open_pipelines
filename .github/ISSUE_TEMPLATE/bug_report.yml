@@ -1,0 +1,65 @@
+name: Bug report
+description: Create a report to help improving the project.
+title: "[BUG] "
+labels: ["\U0001F6E0 goal: fix, \U0001F6A6 status: awaiting triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting this feature! :raised_hands:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: ex. I cannot access the pipeline_template.py file.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Describe the steps to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: This should work like this '...'
+    validations:
+      required: true
+  - type: input
+    id: narps_open_pipelines_verion
+    attributes:
+      label: NARPS Open Pipeline version
+      placeholder: ex. 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: operating_system
+    attributes:
+      label: Operating System
+      placeholder: ex. Ubuntu 22.04
+    validations:
+      required: true
+  - type: input
+    id: softwares
+    attributes:
+      label: Softwares versions
+      placeholder: ex. SPM12 - version 7219 / FSL 5.0.9 / Docker 23.0.3
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+    validations:
+      required: false

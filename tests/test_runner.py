@@ -41,13 +41,14 @@ class MockupPipeline(Pipeline):
         if isfile(self.test_file):
             remove(self.test_file)
 
+    # @staticmethod
     def write_to_file(_, text_to_write: str, file_path: str):
         """ Method used inside a nipype Node, to write a line in a test file """
         with open(file_path, 'a', encoding = 'utf-8') as file:
             file.write(text_to_write)
 
     def create_workflow(self, workflow_name: str):
-        """ Return a nipype worflow with two nodes writing in a file """
+        """ Return a nipype workflow with two nodes writing in a file """
         node_1 = Node(Function(
             input_names = ['_', 'text_to_write', 'file_path'],
             output_names = ['_'],
@@ -128,6 +129,12 @@ class MockupPipeline(Pipeline):
             ]
         return [t.format(nb_subjects = len(self.subject_list)) for t in  templates]
 
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS.
+        """
+        template = join(Configuration()['directories']['test_runs'], 'hypothesis_{id}.md')
+        return [template.format(id = i) for i in range(1,18)]
+
 class MockupWrongPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
 
@@ -135,15 +142,23 @@ class MockupWrongPipeline(Pipeline):
         super().__init__()
 
     def get_preprocessing(self):
+        """ Return a preprocessing workflow with wrong type """
         return 'Wrong_workflow_type'
 
     def get_run_level_analysis(self):
+        """ Return a run level analysis workflow """
         return None
 
     def get_subject_level_analysis(self):
+        """ Return a subject level analysis workflow """
         return None
 
     def get_group_level_analysis(self):
+        """ Return a group level analysis workflow """
+        return None
+
+    def get_hypotheses_outputs(self):
+        """ Return hypotheses """
         return None
 
 class MockupWrongPipeline2(Pipeline):
@@ -153,15 +168,23 @@ class MockupWrongPipeline2(Pipeline):
         super().__init__()
 
     def get_preprocessing(self):
+        """ Return a preprocessing workflow list with wrong types inside """
         return ['Wrong_workflow_type', 'Wrong_workflow_type']
 
     def get_run_level_analysis(self):
+        """ Return a run level analysis workflow """
         return None
 
     def get_subject_level_analysis(self):
+        """ Return a subject level analysis workflow """
         return None
 
     def get_group_level_analysis(self):
+        """ Return a group level analysis workflow """
+        return None
+
+    def get_hypotheses_outputs(self):
+        """ Return hypotheses """
         return None
 
 class TestPipelineRunner:
@@ -172,26 +195,26 @@ class TestPipelineRunner:
     def test_create():
         """ Test the creation of a PipelineRunner object """
 
-        # 1 - Instanciate a runner without team id
+        # 1 - Instantiate a runner without team id
         with raises(KeyError):
             PipelineRunner()
 
-        # 2 - Instanciate a runner with wrong team id
+        # 2 - Instantiate a runner with wrong team id
         with raises(KeyError):
             PipelineRunner('wrong_id')
 
-        # 3 - Instanciate a runner with a not implemented team id
+        # 3 - Instantiate a runner with a not implemented team id
         with raises(NotImplementedError):
-            PipelineRunner('08MQ')
+            PipelineRunner('1K0E')
 
-        # 4 - Instanciate a runner with an implemented team id
+        # 4 - Instantiate a runner with an implemented team id
         runner = PipelineRunner('2T6S')
-        assert isinstance(runner._pipeline, PipelineTeam2T6S)
+        assert isinstance(runner.pipeline, PipelineTeam2T6S)
         assert runner.team_id == '2T6S'
 
         # 5 - Modify team id for an existing runner (with a not implemented team id)
         with raises(NotImplementedError):
-            runner.team_id = '08MQ'
+            runner.team_id = '1K0E'
 
     @staticmethod
     @mark.unit_test
@@ -241,14 +264,14 @@ class TestPipelineRunner:
         with raises(Exception):
             runner.start()
 
-        # 2 - test starting a pipeline with wrong worflow type
+        # 2 - test starting a pipeline with wrong workflow type
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupWrongPipeline() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start()
 
-        # 2b - test starting a pipeline with wrong worflow type
+        # 2b - test starting a pipeline with wrong workflow type
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupWrongPipeline2() # hack the runner by setting a test Pipeline
 

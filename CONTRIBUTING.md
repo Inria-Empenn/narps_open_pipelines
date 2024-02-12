@@ -1,51 +1,70 @@
-# HOW TO CONTRIBUTE TO OPEN PIPELINE ? 
+# How to contribute to NARPS Open Pipelines ? 
 
-General guidelines can be found [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). 
+For the reproductions, we are especially looking for contributors with the following profiles:
+ - `🧠 fMRI soft` SPM, FSL, AFNI or nistats has no secrets for you ; you know one of these fMRI analysis tools by :heart:.
+ - `🐍 Python` You are a Python guru, willing to use [Nipype](https://nipype.readthedocs.io/en/latest/).
 
-## Reproduce a pipeline ⌨️
+In the following, read the instruction sections where the badge corresponding to your profile appears.
 
-### If you have experience with NiPype
+## 1 - Choose a pipeline
+`🧠 fMRI soft` `🐍 Python`
 
-We created a template with modifications to make and holes to fill to create a pipeline. You can find it on `narps_open/pipelines/pipeline_template.py`. 
-Do not hesitate to modify this template if you fill it could be better explained. 
+Not sure which pipeline to start with :thinking:? The [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) provides the progress status for each pipeline. You can pick a pipeline that is not fully reproduced, i.e.: not started :red_circle: or in progress :orange_circle: . Also have a look to the [pipeline reproduction management page](https://github.com/orgs/Inria-Empenn/projects/1/views/1) in order to get in touch with contributors working on the same pipeline.
 
-### If you have experience with the original software package but not with NiPype
+> [!NOTE]
+> Need more information to make a decision? The `narps_open.utils.description` module of the project, as described [in the documentation](/docs/description.md) provides easy access to all the info we have on each pipeline.
 
-A fantastic tool named [Giraffe](https://giraffe.tools/porcupine/TimVanMourik/GiraffePlayground/master) is available. It allows you to create a graph of your pipeline using NiPype functions but without coding! Just save you NiPype script in a .py file and send it to us in a new issue, we will convert this script to a script which works with our specific parameters. 
+## 2 - Interact using issues
+`🧠 fMRI soft` `🐍 Python`
 
-## Find or propose an issue 📋
+Browse [issues](https://github.com/Inria-Empenn/narps_open_pipelines/issues/) before starting a new one. If the pipeline is :orange_circle:, the associated issues are listed on the [pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status).
 
-Issues are very important for this project. If you want to contribute, you can either **comment an existing issue** or **proposing a new issue**. 
+You can either:
+* comment on an existing issue with details or your findings about the pipeline;
+* [start an issue](https://github.com/Inria-Empenn/narps_open_pipelines/issues/new/choose) and choose **Pipeline reproduction**.
 
-### Answering an existing issue 🏷
-To answer an existing issue, make a new comment with the following information: 
-  - Your name and/or github username
-  - The step you want to contribute to 
-  - The approximate time needed 
+> [!WARNING]
+> As soon as the issue is marked as `🏁 status: ready for dev` you can proceed to the next step.
 
-### Proposing a new issue 💡
-  - When opening a **Feature request**, you aim at improving the project with your ideas
-  - If you encounter a problem or if there is a bug, please open a **Bug report** issue
-  - Whenever you want, you can open a **Classic issue** to ask question, give feedbacks...
+## 3 - Use pull requests
+`🐍 Python`
 
-Some issues are (probably) already open, **don't hesitate to take a look at them.** Maybe your issue was already reported and in that case you may want to add details or other circumstances in which a problem appear. 
+1. [Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository;
+2. create a separate branch for the issue you're working on (do not make changes to the default branch of your fork).
+3. push your work to the branch as soon as possible;
+4. visit [this page](https://github.com/Inria-Empenn/narps_open_pipelines/pulls) to start a draft pull request.
 
-## Pull Requests 📥
+> [!WARNING]
+> Make sure you create a **Draft Pull Request** as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork), and please stick to the description of the pull request template as much as possible.
 
-Pull requests are, the best way to get your ideas into this repository and to solve the problems as fast as possible.
+## 4 - Reproduce pipeline
 
-### Make A Branch 🌳
-Create a separate branch for each issue you're working on. Do not make changes to the default branch (e.g. master, develop) of your fork.
+### Translate the pipeline description into code
+`🐍 Python`
 
-### Push Your Code 📤
-Push your code as soon as you can and make a pull request with a "[WIP]" in the title. 
+Write your code and push it to the branch. Make sure you perform all the items of the pull request checklist.
 
-### Fulfill the Pull Request template 📝
-Use the format specified in pull request template for the repository. 
+From the description provided by the team you chose, write Nipype workflows that match the steps performed by the teams (preprocessing, run level analysis, subject level analysis, group level analysis).
 
-### Request Review 🥸
-Once your Pull Request is ready, you can remove the "[WIP]" from the title.
+We created templates with modifications to make and holes to fill to help you with that. Find them in [`narps_open/pipelines/templates`](/narps_open/pipelines/templates).
 
-**Important**: Be careful to respect all items of the Pull Request checklist (available in [Pull Request template](https://github.com/elodiegermani/open_pipeline/blob/main/.github/PULL_REQUEST_TEMPLATE/pull_request_template.md))
+> [!TIP]
+> Have a look to the already reproduced pipelines, as examples :
+> | team_id | softwares | fmriprep used ? | pipeline file |
+> | --- | --- | --- | --- |
+> | Q6O0 | SPM | Yes | [/narps_open/pipelines/team_Q6O0.py](/narps_open/pipelines/team_Q6O0.py) |
 
-**Thank you in advance for contributing to our project!**
+Once your work is ready, you may ask a reviewer to your pull request, as described [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review). Please turn your draft pull request into a *regular* pull request, by clicking **Ready for review** in the pull request page.
+
+### Run the pipeline and produce evidences
+`🧠 fMRI soft`
+
+From the description provided by the team you chose, perform the analysis on the associated software to get as many metadata (log, configuration files, and other relevant files for reproducibility) as possible from the execution. Complementary hints and comments on the process would definitely be welcome, to enrich the description (e.g.: relevant parameters not written in the description, etc.).
+
+Especially these files contain valuable information about model design:
+* for FSL pipelines, `design.fsf` setup files coming from FEAT ;
+* for SPM pipelines, `matlabbatch` files.
+
+You can attach these files as comments on the pipeline reproduction issue.
+
+**:wave: Thank you for contributing to the project!**
