@@ -895,7 +895,7 @@ class PipelineTeam43FJ(Pipeline):
         select_files = Node(
             SelectFiles(
                 template,
-                base_directory = self.directories.results_dir,
+                base_directory = self.directories.dataset_dir,
                 force_list = True
             ),
             name = 'select_files',
