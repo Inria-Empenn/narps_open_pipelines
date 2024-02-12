@@ -82,7 +82,7 @@ class PipelineTeam43FJ(Pipeline):
         reg = create_reg_workflow()
         reg.inputs.inputspec.target_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         reg.inputs.inputspec.target_image_brain = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        reg.inputs.mean2anat.dof = 12
+        reg.inputs.mepan2anat.dof = 12
         reg.inputs.mean2anatbbr.dof = 12
         reg.inputs.anat2target_linear.dof = 12
 
