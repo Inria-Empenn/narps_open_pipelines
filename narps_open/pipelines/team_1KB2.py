@@ -31,7 +31,7 @@ class PipelineTeam1KB2(Pipeline):
         self.contrast_list = ['0001', '0002', '0003', '0004']
 
     def get_preprocessing(self):
-        """ Return a Nipype worflow describing the prerpocessing part of the pipeline """
+        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
         # [INFO] The following part stays the same for all preprocessing pipelines
 
@@ -476,7 +476,7 @@ class PipelineTeam1KB2(Pipeline):
         return l1_analysis
 
     def get_registration(self):
-        """ Return a Nipype worflow describing the registration part of the pipeline """
+        """ Return a Nipype workflow describing the registration part of the pipeline """
         
         # Infosource Node - To iterate on subjects
         info_source = Node(
@@ -594,7 +594,7 @@ class PipelineTeam1KB2(Pipeline):
         
         
     def get_subject_level_analysis(self):
-        """ Return a Nipype worflow describing the subject level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
         # [INFO] The following part stays the same for all pipelines
 
@@ -937,7 +937,7 @@ class PipelineTeam1KB2(Pipeline):
         #   - the name of the variable in which you store the Node object
         #   - the 'name' attribute of the Node
         # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the begining of the file.
+        # at the beginning of the file.
         merge_copes = Node(
             Merge(dimension = 't'),
             name = 'merge_copes'
@@ -1020,7 +1020,7 @@ class PipelineTeam1KB2(Pipeline):
         
         
 
-        # [INFO] Here whe define the contrasts used for the group level analysis, depending on the
+        # [INFO] Here we define the contrasts used for the group level analysis, depending on the
         # method used.
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
