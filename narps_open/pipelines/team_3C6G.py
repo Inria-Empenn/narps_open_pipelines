@@ -30,6 +30,7 @@ from nipype.interfaces.spm import (
    Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
    EstimateModel, EstimateContrast, Threshold
    )
+from nipype.interfaces.spm.base import Info as SPMInfo
 from nipype.interfaces.fsl import (
     ExtractROI
     )
@@ -265,12 +266,15 @@ class PipelineTeam3C6G(Pipeline):
         # 3 - Unified segmentation using tissue probability maps in SPM12. 
         # Unified segmentation in SPM12 to MNI space (the MNI-space tissue probability maps used in segmentation) using default parameters.
         # Bias-field correction in the context of unified segmentation in SPM12.
-        tissue1 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 1), 1, (True,False), (True, False)]
-        tissue2 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 2), 1, (True,False), (True, False)]
-        tissue3 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 3), 2, (True,False), (True, False)]
-        tissue4 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 4), 3, (True,False), (True, False)]
-        tissue5 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 5), 4, (True,False), (True, False)]
-        tissue6 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 6), 2, (True,False), (True, False)]
+        # Get SPM Tissue Probability Maps file
+        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
+
+        tissue1 = [(spm_tissues_file, 1), 1, (True,False), (True, False)]
+        tissue2 = [(spm_tissues_file, 2), 1, (True,False), (True, False)]
+        tissue3 = [(spm_tissues_file, 3), 2, (True,False), (True, False)]
+        tissue4 = [(spm_tissues_file, 4), 3, (True,False), (True, False)]
+        tissue5 = [(spm_tissues_file, 5), 4, (True,False), (True, False)]
+        tissue6 = [(spm_tissues_file, 6), 2, (True,False), (True, False)]
         tissue_list = [tissue1, tissue2, tissue3, tissue4, tissue5, tissue6]
 
         segment = Node(
