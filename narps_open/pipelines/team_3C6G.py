@@ -478,7 +478,7 @@ class PipelineTeam3C6G(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.output_dir),
+            SelectFiles(templates, base_directory = self.directories.dataset_dir),
             name = 'select_files'
         )
 
@@ -728,7 +728,7 @@ class PipelineTeam3C6G(Pipeline):
             }
 
         selectfiles_groupanalysis = Node(SelectFiles(
-            templates, base_directory = self.directories.results_dir, force_list = True),
+            templates, base_directory = self.directories.dataset_dir, force_list = True),
             name = 'selectfiles_groupanalysis')
 
         # Datasink - save important files
