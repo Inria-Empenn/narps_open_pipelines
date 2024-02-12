@@ -1,6 +1,15 @@
 #!/usr/bin/python
 # coding: utf-8
 
+"""
+This template can be use to reproduce a pipeline using FSL as main software.
+
+- Replace all occurrences of 1KB2 by the actual id of the team.
+- All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
+eventually.
+- Also remove lines starting with [TODO], once you did what they suggested.
+"""
+
 from os.path import join
 
 # [INFO] The import of base objects from Nipype, to create Workflows
@@ -27,6 +36,11 @@ class PipelineTeam1KB2(Pipeline):
 
     def __init__(self):
         super().__init__()
+
+        # [INFO] Remove the init method completely if unused
+        # [TODO] Init the attributes of the pipeline, if any other than the ones defined
+        # in the pipeline class
+
         self.team_id = '1KB2'
         self.contrast_list = ['0001', '0002', '0003', '0004']
 
@@ -57,18 +71,27 @@ class PipelineTeam1KB2(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(file_templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                file_templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name='select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name='data_sink',
         )
 
         img2float = Node(
-            ImageMaths(out_data_type='float', op_string='', suffix='_dtype'),
+            ImageMaths(
+                out_data_type='float', 
+                op_string='', 
+                suffix='_dtype'
+                ),
             name='img2float',
         )
     
@@ -78,6 +101,7 @@ class PipelineTeam1KB2(Pipeline):
         )
         
         reg = create_reg_workflow()
+
         reg.inputs.inputspec.target_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         reg.inputs.inputspec.target_image_brain = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         
@@ -85,7 +109,8 @@ class PipelineTeam1KB2(Pipeline):
             name='featpreproc',
             highpass=True,
             whichvol='middle',
-            whichrun=0)
+            whichrun=0
+            )
         
         mc_smooth.inputs.inputspec.fwhm = 7
         mc_smooth.inputs.inputspec.highpass = 100
@@ -258,7 +283,8 @@ class PipelineTeam1KB2(Pipeline):
             durations=[duration[k] for k in cond_names],
             amplitudes=[amplitude[k] for k in cond_names],
             regressor_names=None,
-            regressors=None)
+            regressors=None
+            )
         )
 
         return subject_info
@@ -269,9 +295,6 @@ class PipelineTeam1KB2(Pipeline):
         Create the list of tuples that represents contrasts. 
         Each contrast is in the form : 
         (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Parameters:
-            - subject_id: str, ID of the subject 
 
         Returns:
             - contrasts: list of tuples, list of contrasts to analyze
@@ -291,19 +314,7 @@ class PipelineTeam1KB2(Pipeline):
 
     def get_run_level_analysis(self):
         """
-        Returns the first level analysis workflow.
-
-        Parameters: 
-            - exp_dir: str, directory where raw data are stored
-            - result_dir: str, directory where results will be stored
-            - working_dir: str, name of the sub-directory for intermediate results
-            - output_dir: str, name of the sub-directory for final results
-            - subject_list: list of str, list of subject for which you want to do the analysis
-            - run_list: list of str, list of runs for which you want to do the analysis 
-            - TR: float, time repetition used during acquisition
-
-        Returns: 
-            - l1_analysis : Nipype WorkFlow 
+        Return a Nipype workflow describing the run level analysis part of the pipeline
         """
         # Infosource Node - To iterate on subject and runs 
         info_source = Node(
@@ -485,9 +496,11 @@ class PipelineTeam1KB2(Pipeline):
             ),
             name='info_source',
         )
-        info_source.iterables = [('subject_id', self.subject_list), 
-                                 ('contrast_id', self.contrast_list),
-                                ('run_id', self.run_list)]
+        info_source.iterables = [
+        ('subject_id', self.subject_list), 
+        ('contrast_id', self.contrast_list),
+        ('run_id', self.run_list)
+        ]
 
         # Templates to select files node
         # [TODO] Change the name of the files depending on the filenames of results of preprocessing
@@ -522,18 +535,25 @@ class PipelineTeam1KB2(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name = 'select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name = 'data_sink'
         )
         
         warpall_cope = MapNode(
-            ApplyWarp(interp='spline'),
+            ApplyWarp(
+                interp='spline'
+                ),
             name='warpall_cope', 
             iterfield=['in_file']
         )
@@ -542,7 +562,9 @@ class PipelineTeam1KB2(Pipeline):
         warpall_cope.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         warpall_varcope = MapNode(
-            ApplyWarp(interp='spline'),
+            ApplyWarp(
+                interp='spline'
+                ),
             name='warpall_varcope', 
             iterfield=['in_file']
         )
@@ -605,7 +627,10 @@ class PipelineTeam1KB2(Pipeline):
             ),
             name='info_source',
         )
-        info_source.iterables = [('subject_id', self.subject_list), ('contrast_id', self.contrast_list)]
+        info_source.iterables = [
+        ('subject_id', self.subject_list), 
+        ('contrast_id', self.contrast_list)
+        ]
 
         # Templates to select files node
         # [TODO] Change the name of the files depending on the filenames of results of preprocessing
@@ -628,27 +653,52 @@ class PipelineTeam1KB2(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name = 'select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name = 'data_sink'
         )
 
         # Generate design matrix
-        specify_model = Node(L2Model(num_copes = len(self.run_list)), name='l2model')
+        specify_model = Node(
+            L2Model(
+                num_copes = len(self.run_list)
+                ), 
+            name='l2model'
+            )
 
         # Merge copes and varcopes files for each subject
-        merge_copes = Node(Merge(dimension='t'), name='merge_copes')
+        merge_copes = Node(
+            Merge(
+                dimension='t'
+                ), 
+            name='merge_copes'
+            )
 
-        merge_varcopes = Node(Merge(dimension='t'), name='merge_varcopes')
+        merge_varcopes = Node(
+            Merge(
+                dimension='t'
+                ), 
+            name='merge_varcopes'
+            )
 
         # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
-        flame = Node(FLAMEO(run_mode = 'fe', mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')), 
-                     name='flameo')
+        flame = Node(
+            FLAMEO(
+                run_mode = 'fe', 
+                mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
+                ), 
+            name='flameo'
+            )
 
         # [INFO] The following part defines the nipype workflow and the connections between nodes
 
@@ -893,7 +943,9 @@ class PipelineTeam1KB2(Pipeline):
 
         # Datasink node - to save important files
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name = 'data_sink',
         )
 
