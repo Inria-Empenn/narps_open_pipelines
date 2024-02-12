@@ -41,7 +41,15 @@ class PipelineTeam48CD(Pipeline):
         # [INFO] Remove the init method completely if unused
         # [TODO] Init the attributes of the pipeline, if any other than the ones defined
         # in the pipeline class
-        pass
+
+        # [INFO] You may for example define the contrasts that will be analyzed
+        # in the run level analysis. Each contrast is in the form :
+        # [Name, Stat, [list of condition names], [weights on those conditions]]
+        self.run_level_contrasts = [
+            ['trial', 'T', ['trial', 'trialxgain^1', 'trialxloss^1'], [1, 0, 0]],
+            ['effect_of_gain', 'T', ['trial', 'trialxgain^1', 'trialxloss^1'], [0, 1, 0]],
+            ['effect_of_loss', 'T', ['trial', 'trialxgain^1', 'trialxloss^1'], [0, 0, 1]]
+        ]
 
     def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
@@ -58,7 +66,7 @@ class PipelineTeam48CD(Pipeline):
             ('run_id', self.run_list),
         ]
 
-        # Templates to select files node
+        # SelectFiles node - to select necessary files
         file_templates = {
             'anat': join(
                 'sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'
@@ -73,18 +81,12 @@ class PipelineTeam48CD(Pipeline):
                 'sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz'
                 )
         }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(file_templates, base_directory = self.directories.dataset_dir),
-            name='select_files'
-        )
+        select_files = Node(SelectFiles(file_templates), name='select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name='data_sink',
-        )
+        data_sink = Node(DataSink(), name='data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
 
         # [INFO] The following part has to be modified with nodes of the pipeline
 
@@ -109,132 +111,151 @@ class PipelineTeam48CD(Pipeline):
 
         # [TODO] Add the connections the workflow needs
         # [INFO] Input and output names can be found on NiPype documentation
-        preprocessing.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('subject_id', 'subject_id'), ('run_id', 'run_id')],
-                ),
-                (
-                    select_files,
-                    node_name,
-                    [('func', 'node_input_name')],
-                ),
-                (
-                    node_name,
-                    data_sink,
-                    [('node_output_name', 'preprocessing.@sym_link')],
-                ),
-            ]
-        )
+        preprocessing.connect([
+            (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
+            (select_files, node_name, [('func', 'node_input_name')]),
+            (node_name, data_sink, [('node_output_name', 'preprocessing.@sym_link')])
+        ])
 
         # [INFO] Here we simply return the created workflow
         return preprocessing
 
-    # [INFO] There was no run level analysis for the pipelines using FSL
-    def get_run_level_analysis(self):
-        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
-        return None
-
-    # [INFO] This function is used in the subject level analysis pipelines using FSL
+    # [INFO] This function is used in the run level analysis, in order to 
+    #   extract trial information from the event files
     # [TODO] Adapt this example to your specific pipeline
-    def get_session_infos(event_file: str):
+    def get_subject_information(event_file: str):
         """
-        Create Bunchs for specifyModel.
+        Extract information from an event file, to setup the model.
 
         Parameters :
-        - event_file : file corresponding to the run and the subject to analyze
+        - event_file : str, event file corresponding to the run and the subject to analyze
 
         Returns :
-        - subject_info : list of Bunch for 1st level analysis.
+        - subject_info : list of Bunch containing event information
         """
+        # [INFO] nipype requires to import all dependencies from inside the methods that are
+        #   later used in Function nodes
+        from nipype.interfaces.base import Bunch
 
-        condition_names = ['trial', 'gain', 'loss']
+        condition_names = ['event', 'gain', 'loss', 'response']
+        onsets = {}
+        durations = {}
+        amplitudes = {}
 
-        onset = {}
-        duration = {}
-        amplitude = {}
+        # Create dictionary items with empty lists
+        for condition in condition_names:
+            onsets.update({condition : []})
+            durations.update({condition : []})
+            amplitudes.update({condition : []})
 
-        # Creates dictionary items with empty lists for each condition.
-        for condition in condition_names:  
-            onset.update({condition: []}) 
-            duration.update({condition: []})
-            amplitude.update({condition: []})
-
+        # Parse information in the event_file
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
 
             for line in file:
                 info = line.strip().split()
-                # Creates list with onsets, duration and loss/gain for amplitude (FSL)
-                for condition in condition_names:
-                    if condition == 'gain':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
-                        amplitude[condition].append(float(info[2]))
-                    elif condition == 'loss':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
-                        amplitude[condition].append(float(info[3]))
-                    elif condition == 'trial':
-                        onset[condition].append(float(info[0]))
-                        duration[condition].append(float(info[4]))
-                        amplitude[condition].append(float(1))
+                onsets['event'].append(float(info[0]))
+                durations['event'].append(float(info[1]))
+                amplitudes['event'].append(1.0)
+                onsets['gain'].append(float(info[0]))
+                durations['gain'].append(float(info[1]))
+                amplitudes['gain'].append(float(info[2]))
+                onsets['loss'].append(float(info[0]))
+                durations['loss'].append(float(info[1]))
+                amplitudes['loss'].append(float(info[3]))
+                onsets['response'].append(float(info[0]))
+                durations['response'].append(float(info[1]))
+                if 'accept' in info[5]:
+                    amplitudes['response'].append(1.0)
+                elif 'reject' in info[5]:
+                    amplitudes['response'].append(-1.0)
+                else:
+                    amplitudes['response'].append(0.0)
 
-        subject_info = []
-        subject_info.append(
+        return [
             Bunch(
                 conditions = condition_names,
-                onsets = [onset[k] for k in condition_names],
-                durations = [duration[k] for k in condition_names],
-                amplitudes = [amplitude[k] for k in condition_names],
+                onsets = [onsets[k] for k in condition_names],
+                durations = [durations[k] for k in condition_names],
+                amplitudes = [amplitudes[k] for k in condition_names],
                 regressor_names = None,
-                regressors = None,
-            )
+                regressors = None)
+            ]
+
+    def get_run_level_analysis(self):
+        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
+
+        # [INFO] The following part stays the same for all pipelines
+        # [TODO] Modify the templates dictionary to select the files
+        #    that are relevant for your analysis only.
+
+        # IdentityInterface node - allows to iterate over subjects and runs
+        information_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source')
+        information_source.iterables = [
+            ('run_id', self.run_list),
+            ('subject_id', self.subject_list),
+        ]
+
+        # SelectFiles node - to select necessary files
+        templates = {
+            # Functional MRI - computed by preprocessing
+            'func' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_{run_id}_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
+                ),
+            # Event file - from the original dataset
+            'event' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'
+                ),
+            # Motion parameters - computed by preprocessing's motion_correction Node
+            'motion' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_{run_id}_subject_id_{subject_id}',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
+                )
+        }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+
+        # DataSink Node - store the wanted results in the wanted directory
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+
+        # [TODO] Continue adding nodes to the run level analysis part of the pipeline
+
+        # [INFO] The following part defines the nipype workflow and the connections between nodes
+        run_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'run_level_analysis'
         )
 
-        return subject_info
+        # [TODO] Add the connections the workflow needs
+        # [INFO] Input and output names can be found on NiPype documentation
+        run_level_analysis.connect([
+            (info_source, select_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')])
+            # [TODO] Add other connections here
+        ])
 
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts():
-        """
-        Create the list of tuples that represents contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # List of condition names
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
-
-        # Create contrasts
-        trial = ('trial', 'T', conditions, [1, 0, 0])
-        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
-
-        # Contrast list
-        return [trial, effect_gain, effect_loss]
+        # [INFO] Here we simply return the created workflow
+        return run_level_analysis
 
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
         # [INFO] The following part stays the same for all pipelines
 
+        # [TODO] Define a self.contrast_list in the __init__() method. It will allow to iterate
+        #   on contrasts computed in the run level analysis
+
         # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-                dataset_dir = self.directories.dataset_dir,
-                results_dir = self.directories.results_dir,
-                working_dir = self.directories.working_dir,
-                run_list = self.run_list
-            ),
-            name='info_source',
-        )
-        info_source.iterables = [('subject_id', self.subject_list)]
+        info_source = Node(IdentityInterface(
+                fields = ['subject_id', 'contrast_id']),
+            name='info_source')
+        information_source.iterables = [
+            ('subject_id', self.subject_list),
+            ('contrast_id', self.contrast_list)
+            ]
 
         # Templates to select files node
         # [TODO] Change the name of the files depending on the filenames of results of preprocessing
@@ -254,16 +275,12 @@ class PipelineTeam48CD(Pipeline):
         }
 
         # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
-            name = 'select_files'
-        )
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink'
-        )
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
 
         # [INFO] This is the node executing the get_subject_infos_spm function
         # Subject Infos node - get subject specific condition information
@@ -276,17 +293,6 @@ class PipelineTeam48CD(Pipeline):
             name = 'subject_infos',
         )
         subject_infos.inputs.runs = self.run_list
-
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
-        contrasts = Node(
-            Function(
-                input_names = ['subject_id'],
-                output_names = ['contrasts'],
-                function = self.get_contrasts,
-            ),
-            name = 'contrasts',
-        )
 
         # [INFO] The following part has to be modified with nodes of the pipeline
 
@@ -311,165 +317,67 @@ class PipelineTeam48CD(Pipeline):
         # [TODO] Add the connections the workflow needs
         # [INFO] Input and output names can be found on NiPype documentation
         subject_level_analysis.connect([
-            (
-                info_source,
-                select_files,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                info_source,
-                contrasts,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                select_files,
-                subject_infos,
-                [('event', 'event_files')]
-            ),
-            (
-                select_files,
-                node_name,
-                [('func', 'node_input_name')]
-            ),
-            (
-                node_name, data_sink,
-                [('node_output_name', 'preprocess.@sym_link')]
-            ),
+            (info_source, select_files, [('subject_id', 'subject_id')]),
+            (info_source, contrasts, [('subject_id', 'subject_id')]),
+            (select_files, subject_infos, [('event', 'event_files')]),
+            (select_files, node_name, [('func', 'node_input_name')]),
+            (node_name, data_sink, [('node_output_name', 'preprocess.@sym_link')])
         ])
 
         # [INFO] Here we simply return the created workflow
         return subject_level_analysis
 
-    # [INFO] This function returns the list of ids and files of each group of participants
-    # to do analyses for both groups, and one between the two groups.
-    def get_subgroups_contrasts(
-        copes, varcopes, subject_list: list, participants_file: str
-    ):
-        """
-        This function return the file list containing only the files
-        belonging to subject in the wanted group.
-
-        Parameters :
-        - copes: original file list selected by select_files node
-        - varcopes: original file list selected by select_files node
-        - subject_ids: list of subject IDs that are analyzed
-        - participants_file: file containing participants characteristics
-
-        Returns :
-        - copes_equal_indifference : a subset of copes corresponding to subjects
-        in the equalIndifference group
-        - copes_equal_range : a subset of copes corresponding to subjects
-        in the equalRange group
-        - copes_global : a list of all copes
-        - varcopes_equal_indifference : a subset of varcopes corresponding to subjects
-        in the equalIndifference group
-        - varcopes_equal_range : a subset of varcopes corresponding to subjects
-        in the equalRange group
-        - equal_indifference_id : a list of subject ids in the equalIndifference group
-        - equal_range_id : a list of subject ids in the equalRange group
-        - varcopes_global : a list of all varcopes
-        """
-
-        equal_range_id = []
-        equal_indifference_id = []
-
-        # Reading file containing participants IDs and groups
-        with open(participants_file, 'rt') as file:
-            next(file)  # skip the header
-
-            for line in file:
-                info = line.strip().split()
-
-                # Checking for each participant if its ID was selected
-                # and separate people depending on their group
-                if info[0][-3:] in subject_list and info[1] == 'equalIndifference':
-                    equal_indifference_id.append(info[0][-3:])
-                elif info[0][-3:] in subject_list and info[1] == 'equalRange':
-                    equal_range_id.append(info[0][-3:])
-
-        copes_equal_indifference = []
-        copes_equal_range = []
-        copes_global = []
-        varcopes_equal_indifference = []
-        varcopes_equal_range = []
-        varcopes_global = []
-
-        # Checking for each selected file if the corresponding participant was selected
-        # and add the file to the list corresponding to its group
-        for cope, varcope in zip(copes, varcopes):
-            sub_id = cope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_id:
-                copes_equal_indifference.append(cope)
-            elif sub_id[-2][-3:] in equal_range_id:
-                copes_equal_range.append(cope)
-            if sub_id[-2][-3:] in subject_list:
-                copes_global.append(cope)
-
-            sub_id = varcope.split('/')
-            if sub_id[-2][-3:] in equal_indifference_id:
-                varcopes_equal_indifference.append(varcope)
-            elif sub_id[-2][-3:] in equal_range_id:
-                varcopes_equal_range.append(varcope)
-            if sub_id[-2][-3:] in subject_list:
-                varcopes_global.append(varcope)
-
-        return copes_equal_indifference, copes_equal_range,
-            varcopes_equal_indifference, varcopes_equal_range,
-            equal_indifference_id, equal_range_id,
-            copes_global, varcopes_global
-
-
     # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
-    def get_regressors(
-        equal_range_id: list,
-        equal_indifference_id: list,
-        method: str,
-        subject_list: list,
-    ) -> dict:
+    def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
-        Create dictionary of regressors for group analysis.
+        Create dictionary of regressors for one sample t-test group analysis.
 
         Parameters:
-            - equal_range_id: ids of subjects in equal range group
-            - equal_indifference_id: ids of subjects in equal indifference group
-            - method: one of "equalRange", "equalIndifference" or "groupComp"
+            - subject_list: ids of subject in the group for which to do the analysis
+
+        Returns:
+            - dict containing named lists of regressors.
+        """
+
+        return dict(group_mean = [1 for _ in subject_list])
+
+    # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
+    def get_two_sample_t_test_regressors(
+        equal_range_ids: list,
+        equal_indifference_ids: list,
+        subject_list: list,
+        ) -> dict:
+        """
+        Create dictionary of regressors for two sample t-test group analysis.
+
+        Parameters:
+            - equal_range_ids: ids of subjects in equal range group
+            - equal_indifference_ids: ids of subjects in equal indifference group
             - subject_list: ids of subject for which to do the analysis
 
         Returns:
-            - regressors: regressors used to distinguish groups in FSL group analysis
+            - regressors, dict: containing named lists of regressors.
+            - groups, list: group identifiers to distinguish groups in FSL analysis.
         """
-        # For one sample t-test, creates a dictionary
-        # with a list of the size of the number of participants
-        if method == 'equalRange':
-            regressors = dict(group_mean = [1 for i in range(len(equal_range_id))])
-        elif method == 'equalIndifference':
-            regressors = dict(group_mean = [1 for i in range(len(equal_indifference_id))])
 
-        # For two sample t-test, creates 2 lists:
-        #  - one for equal range group,
-        #  - one for equal indifference group
-        # Each list contains n_sub values with 0 and 1 depending on the group of the participant
-        # For equalRange_reg list --> participants with a 1 are in the equal range group
-        elif method == 'groupComp':
-            equalRange_reg = [
-                1 for i in range(len(equal_range_id) + len(equal_indifference_id))
-            ]
-            equalIndifference_reg = [
-                0 for i in range(len(equal_range_id) + len(equal_indifference_id))
+        # Create 2 lists containing n_sub values which are
+        #  * 1 if the participant is on the group
+        #  * 0 otherwise
+        equal_range_regressors = [1 if i in equal_range_ids else 0 for i in subject_list]
+        equal_indifference_regressors = [
+            1 if i in equal_indifference_ids else 0 for i in subject_list
             ]
 
-            for index, subject_id in enumerate(subject_list):
-                if subject_id in equal_indifference_id:
-                    equalIndifference_reg[index] = 1
-                    equalRange_reg[index] = 0
+        # Create regressors output : a dict with the two list
+        regressors = dict(
+            equalRange = equal_range_regressors,
+            equalIndifference = equal_indifference_regressors
+        )
 
-            regressors = dict(
-                equalRange = equalRange_reg,
-                equalIndifference = equalIndifference_reg
-            )
+        # Create groups outputs : a list with 1 for equalRange subjects and 2 for equalIndifference
+        groups = [1 if i == 1 else 2 for i in equal_range_regressors]
 
-        return regressors
-
+        return regressors, groups
     def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
@@ -495,19 +403,18 @@ class PipelineTeam48CD(Pipeline):
 
         # Infosource node - iterate over the list of contrasts generated
         # by the subject level analysis
-        info_source = Node(
+        information_source = Node(
             IdentityInterface(
-                fields = ['contrast_id', 'subjects'],
-                subjects = self.subject_list
+                fields = ['contrast_id']
             ),
-            name = 'info_source',
+            name = 'information_source',
         )
-        info_source.iterables = [('contrast_id', self.contrast_list)]
+        information_source.iterables = [('contrast_id', self.contrast_list)]
 
         # Templates to select files node
         # [TODO] Change the name of the files depending on the filenames
         # of results of first level analysis
-        template = {
+        templates = {
             'cope' : join(
                 self.directories.results_dir,
                 'subject_level_analysis',
@@ -520,54 +427,13 @@ class PipelineTeam48CD(Pipeline):
                 self.directories.dataset_dir,
                 'participants.tsv')
         }
-        select_files = Node(
-            SelectFiles(
-                templates,
-                base_directory = self.directories.results_dir,
-                force_list = True
-            ),
-            name = 'select_files',
-        )
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.results_dir,
+        select_files.inputs.force_list = True
 
         # Datasink node - to save important files
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink',
-        )
-
-        contrasts = Node(
-            Function(
-                input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
-                output_names=[
-                    'copes_equalIndifference',
-                    'copes_equalRange',
-                    'varcopes_equalIndifference',
-                    'varcopes_equalRange',
-                    'equalIndifference_id',
-                    'equalRange_id',
-                    'copes_global',
-                    'varcopes_global'
-                ],
-                function = self.get_subgroups_contrasts,
-            ),
-            name = 'subgroups_contrasts',
-        )
-
-        regs = Node(
-            Function(
-                input_names = [
-                    'equalRange_id',
-                    'equalIndifference_id',
-                    'method',
-                    'subject_list',
-                ],
-                output_names = ['regressors'],
-                function = self.get_regressors,
-            ),
-            name = 'regs',
-        )
-        regs.inputs.method = method
-        regs.inputs.subject_list = subject_list
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
 
         # [INFO] The following part has to be modified with nodes of the pipeline
 
@@ -591,41 +457,21 @@ class PipelineTeam48CD(Pipeline):
             base_dir = self.directories.working_dir,
             name = f'group_level_analysis_{method}_nsub_{nb_subjects}'
         )
-        group_level_analysis.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('contrast_id', 'contrast_id')],
-                ),
-                (
-                    info_source,
-                    subgroups_contrasts,
-                    [('subject_list', 'subject_ids')],
-                ),
-                (
-                    select_files,
-                    subgroups_contrasts,
-                    [
+        group_level_analysis.connect([
+            (info_source, select_files, [('contrast_id', 'contrast_id')]),
+            (info_source, subgroups_contrasts, [('subject_list', 'subject_ids')]),
+            (select_files, subgroups_contrasts,[
                         ('cope', 'copes'),
                         ('varcope', 'varcopes'),
                         ('participants', 'participants_file'),
-                    ],
-                ),
-                (
-                    select_files,
-                    node_name[('func', 'node_input_name')],
-                ),
-                (
-                    node_variable,
-                    datasink_groupanalysis,
-                    [('node_output_name', 'preprocess.@sym_link')],
-                ),
-            ]
-        ) # Complete with other links between nodes
+                    ]),
+            (select_files, node_name[('func', 'node_input_name')]),
+            (node_variable, datasink_groupanalysis,
+                [('node_output_name', 'preprocess.@sym_link')])
+        ]) # Complete with other links between nodes
 
-        # [INFO] Here we define the contrasts used for the group level analysis, depending on the
-        # method used.
+        # [INFO] You can add conditional sections of code to shape the workflow depending
+        #   on the method passed as parameter
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
 

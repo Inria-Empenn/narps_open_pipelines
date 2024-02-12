@@ -17,7 +17,7 @@ from shutil import rmtree
 
 from datetime import datetime
 
-from pytest import mark, helpers, fixture
+from pytest import mark, helpers, fixture, raises
 
 from nipype import Node, Workflow
 from nipype.interfaces.utility import Function
@@ -25,19 +25,18 @@ from nipype.interfaces.utility import Function
 from narps_open.utils.configuration import Configuration
 from narps_open.runner import PipelineRunner
 from narps_open.pipelines import Pipeline
-from narps_open.data.results import ResultsCollection
 
 TEST_DIR = abspath(join(Configuration()['directories']['test_runs'], 'test_conftest'))
 
 @fixture
 def set_test_directory(scope = 'function'):
+    """ A fixture to remove temporary directory created by tests """
+
     rmtree(TEST_DIR, ignore_errors = True)
     makedirs(TEST_DIR, exist_ok = True)
-
     yield
-
     # Comment this line for debugging
-    #rmtree(TEST_DIR, ignore_errors = True)
+    rmtree(TEST_DIR, ignore_errors = True)
 
 class MockupPipeline(Pipeline):
     """ A simple Pipeline class for test purposes """
@@ -50,11 +49,12 @@ class MockupPipeline(Pipeline):
         with open(self.test_file, 'w', encoding = 'utf-8') as file:
             file.write(str(0))
 
-    def update_execution_count(_, file_path: str, workflow_name: str):
+    def update_execution_count(_, file_path: str, workflow_name: str, nb_subjects: int):
         """ Method used inside a nipype Node, to update the execution count inside the file.
         Arguments:
         - file_path:str, path to the execution count file
         - workflow_name:str, name of the workflow
+        - nb_subjects:int, number of subjects in the workflow
 
         Return: the updated number of executions
         """
@@ -63,13 +63,13 @@ class MockupPipeline(Pipeline):
         execution_counter = 0
         with open(file_path, 'r', encoding = 'utf-8') as file:
             # Get last char of the file
-            execution_counter = int(file.read()[-1])
+            execution_counter = int(file.read().split(' ')[-1])
 
         execution_counter += 1
 
         # Write execution count back
         with open(file_path, 'a', encoding = 'utf-8') as file:
-            file.write(f'\n{workflow_name} {execution_counter}')
+            file.write(f'\n{workflow_name} {nb_subjects} {execution_counter}')
 
         return execution_counter
 
@@ -98,7 +98,7 @@ class MockupPipeline(Pipeline):
             - file_list: list, list of the files that the workflow is supposed to generate
         """
         node_count = Node(Function(
-            input_names = ['_', 'file_path', 'workflow_name'],
+            input_names = ['_', 'file_path', 'workflow_name', 'nb_subjects'],
             output_names = ['execution_counter'],
             function = self.update_execution_count),
             name = 'node_count'
@@ -108,6 +108,7 @@ class MockupPipeline(Pipeline):
         node_count.inputs._ = datetime.now()
         node_count.inputs.file_path = self.test_file
         node_count.inputs.workflow_name = workflow_name
+        node_count.inputs.nb_subjects = len(self.subject_list)
 
         node_decide = Node(Function(
             input_names = ['execution_counter'],
@@ -202,8 +203,106 @@ class MockupPipeline(Pipeline):
         template = join(TEST_DIR, 'hypothesis_{id}.md')
         return [template.format(id = i) for i in range(1,19)]
 
+class MockupResultsCollection():
+    """ A fake ResultsCollection object for test purposes """
+
+    def __init__(self, team_id: str):
+        self.team_id = team_id
+        self.uid = self.get_uid()
+        self.directory = join(
+            Configuration()['directories']['narps_results'],
+            'orig',
+            self.uid + '_' + self.team_id
+            )
+        self.files = self.get_file_urls()
+
+    def get_uid(self):
+        """ Return the uid of the collection by browsing the team description """
+        return 'uid'
+
+    def get_file_urls(self):
+        """ Return a dict containing the download url for each file of the collection.
+        * dict key is the file base name (with extension)
+        * dict value is the download url for the file on Neurovault
+        """
+        urls = {}
+        for file_id in range(1, 19):
+            urls[f'file_{file_id}'] = 'url'
+
+        return urls
+
+    def download(self):
+        """ Download the collection, file by file. """
+
 class TestConftest:
     """ A class that contains all the unit tests for the conftest module."""
+
+    @staticmethod
+    @mark.unit_test
+    def test_compare_float_2d_arrays():
+        """ Test the compare_float_2d_arrays helper """
+
+        array_1 = [[5.0, 0.0], [1.0, 2.0]]
+        array_2 = [[5.0, 0.0], [1.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[6.0, 0.0], [1.0]]
+        array_2 = [[6.0, 0.0], [1.0, 2.0]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[7.10001, 0.0], [1.0, 2.0]]
+        array_2 = [[7.10001, 0.0], [1.0, 2.00003]]
+        with raises(AssertionError):
+            helpers.compare_float_2d_arrays(array_1, array_2)
+
+        array_1 = [[10.0000200, 15.10], [1.0, 2.0]]
+        array_2 = [[10.00002, 15.10000], [1.0, 2.000003]]
+        helpers.compare_float_2d_arrays(array_1, array_2)
+
+    @staticmethod
+    @mark.unit_test
+    def test_test_outputs(set_test_directory):
+        """ Test the test_pipeline_outputs helper """
+
+        # Test pipeline
+        pipeline = MockupPipeline()
+        pipeline.subject_list = ['001', '002']
+
+        # Wrong length for nb_of_outputs
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [1,2,3])
+
+        # Wrong number of outputs
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [0, 2, 2, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 0, 2, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 0, 20, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 0, 18])
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 20, 0])
+
+        # Right number of outputs
+        helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 20, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : 'not_fo\rmatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : '{not_formatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
+
+        # Not a valid path name
+        pipeline.get_group_level_outputs = lambda : '{not_formatted'
+        with raises(AssertionError):
+            helpers.test_pipeline_outputs(pipeline, [2, 2, 2, 1, 18])
 
     @staticmethod
     @mark.unit_test
@@ -247,16 +346,18 @@ class TestConftest:
     def test_test_pipeline_execution(mocker, set_test_directory):
         """ Test the test_pipeline_execution helper """
 
+        # Set subgroups of subjects
+        Configuration()['testing']['pipelines']['nb_subjects_per_group'] = 4
+
         # Create mocks
         mocker.patch('conftest.get_correlation_coefficient', return_value = 1.0)
         fake_runner = PipelineRunner('2T6S')
         fake_runner._pipeline = MockupPipeline()
         mocker.patch('conftest.PipelineRunner', return_value = fake_runner)
-        fake_collection = ResultsCollection('2T6S')
-        mocker.patch('conftest.ResultsCollection', return_value = fake_collection)
+        mocker.patch('conftest.ResultsCollection', return_value = MockupResultsCollection('2T6S'))
 
         # Run pipeline
-        helpers.test_pipeline_execution('test_conftest', 20)
+        helpers.test_pipeline_execution('test_conftest', 7)
 
         # Check outputs
         assert isdir(join(TEST_DIR, 'TestConftest_preprocessing_workflow'))
@@ -268,18 +369,21 @@ class TestConftest:
         with open(join(TEST_DIR, 'test_conftest.txt'), 'r', encoding = 'utf-8') as file:
             assert file.readline() == '0\n'
             # First exec of preprocessing creates an exception (execution counter == 1)
-            assert file.readline() == 'TestConftest_preprocessing_workflow 1\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 1\n'
             # Relaunching the workflow
             # Preprocessing files won't be created(execution counter == 2)
-            assert file.readline() == 'TestConftest_preprocessing_workflow 2\n'
-            assert file.readline() == 'TestConftest_run_level_workflow 3\n'
-            assert file.readline() == 'TestConftest_subject_level_workflow 4\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 2\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 4 3\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 4 4\n'
             # Relaunching the workflow
             # Everything's fine
-            assert file.readline() == 'TestConftest_preprocessing_workflow 5\n'
-            assert file.readline() == 'TestConftest_run_level_workflow 6\n'
-            assert file.readline() == 'TestConftest_subject_level_workflow 7\n'
-            assert file.readline() == 'TestConftest_group_level_workflow 8'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 4 5\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 4 6\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 4 7\n'
+            assert file.readline() == 'TestConftest_preprocessing_workflow 3 8\n'
+            assert file.readline() == 'TestConftest_run_level_workflow 3 9\n'
+            assert file.readline() == 'TestConftest_subject_level_workflow 3 10\n'
+            assert file.readline() == 'TestConftest_group_level_workflow 7 11'
 
     @staticmethod
     @mark.unit_test

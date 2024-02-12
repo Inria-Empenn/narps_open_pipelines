@@ -38,7 +38,7 @@ jobs:
         echo $test_files
         echo "tests=$test_files" >> $GITHUB_OUTPUT
 
-  # A job to list the tests to be run
+  # A job to run the tests
   pytest:
     needs: identify-tests
     runs-on: self-hosted
@@ -58,5 +58,5 @@ jobs:
     - name: Execute tests with pytest
       run: |
         if [[ "${{ needs.identify-tests.outputs.tests }}" != "" ]]; then
-          pytest -s -q ${{ needs.identify-tests.outputs.tests }}
+          pytest -s -q ${{ needs.identify-tests.outputs.tests }} -m "not pipeline_test"
         fi

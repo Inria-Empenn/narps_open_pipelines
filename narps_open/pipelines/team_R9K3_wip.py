@@ -1,3 +1,4 @@
+# pylint: skip-file
 # THIS IS A TEMPLATE THAT CAN BE USE TO REPRODUCE A NEW PIPELINE
 
 import os

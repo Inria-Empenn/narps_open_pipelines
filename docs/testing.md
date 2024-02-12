@@ -2,6 +2,13 @@
 
 :mega: This file describes the test suite and features for the project.
 
+## Test dependencies
+
+Before using the test suite, make sure you installed all the dependencies, after step 5 of the [installation process](docs/install.md), run this command:
+```bash
+pip install .[tests]
+```
+
 ## Static analysis
 
 We use [*pylint*](http://pylint.pycqa.org/en/latest/) to run static code analysis.
@@ -24,7 +31,7 @@ black ./narps_open/runner.py
 
 ## Automatic tests
 
-Use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage. Furthermore, [*pytest-helpers-namespace*](https://pypi.org/project/pytest-helpers-namespace/) enables to register helper functions.
+We use [*pytest*](https://docs.pytest.org/en/6.2.x/contents.html) to run automatic testing and its [*pytest-cov*](https://pytest-cov.readthedocs.io/en/latest/) plugin to control code coverage. Furthermore, [*pytest-helpers-namespace*](https://pypi.org/project/pytest-helpers-namespace/) enables to register helper functions.
 
 > The pytest framework makes it easy to write small tests, yet scales to support complex functional testing for applications and libraries.
 
@@ -35,6 +42,21 @@ Tests can be launched manually or while using CI (Continuous Integration).
 * To specify a test -for which the name contains 'test_pattern'- inside a test file : `pytest test_file.py -k "test_pattern"`
 * To run a tests with a given mark 'mark' : `pytest -m 'mark'`
 * To create code coverage data : `coverage run -m pytest ./tests` then `coverage report` to see the code coverage result or `coverage xml` to output a .xml report file
+
+## Command line tool
+
+We created the simple command line tool `narps_open_tester` to help testing the outcome of one pipeline.
+
+> [!WARNING]
+> This command must be launched from inside the repository's root directory, because it needs to access the `tests` directory relatively to the current/working directory.
+
+```bash
+narps_open_tester -t 08MQ
+```
+
+This will run the pipeline for the requested team -here 08MQ- on subsets of subjects (20, 40, 60, 80 and 108). For each subset, the outputs of the pipeline (statistical maps for each of the 9 hypotheses) will be compared with original results from the team using a Pearson correlation computation. At each step, if one of the correlation score is below the threshold (see `correlation_thresholds` defined in `narps_open/utils/configuration/testing_config.toml`), the tests ends. Otherwise, it proceeds to the next step, i.e.: the next subset of subjects.
+
+Once finished, a text file report (`test_pipeline-*.txt`) is created, containing all the computed correlation values.
 
 ## Configuration files for testing
 
@@ -55,7 +77,7 @@ Use pytest [markers](https://docs.pytest.org/en/7.1.x/example/markers.html) to i
 | Type of test | marker | Description |
 | ----------- | ----------- | ----------- |
 | unit tests | `unit_test` | Unitary test a method/function |
-| pipeline tests | `pieline_test` | Compute a whole pipeline and check its outputs are close enough with the team's results |
+| pipeline tests | `pipeline_test` | Compute a whole pipeline and check its outputs are close enough with the team's results |
 
 ## Save time by downsampling data
 

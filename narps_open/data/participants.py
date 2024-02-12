@@ -49,3 +49,11 @@ def get_participants(team_id: str) -> list:
 def get_participants_subset(nb_participants: int = 108) -> list:
     """ Return a list of participants of length nb_participants """
     return get_all_participants()[0:nb_participants]
+
+def get_group(group_name: str) -> list:
+    """ Return a list containing all the participants inside the group_name group """
+
+    participants = get_participants_information()
+    group = participants.loc[participants['group'] == group_name]['participant_id'].values.tolist()
+
+    return [p.replace('sub-', '') for p in group]
