@@ -97,6 +97,16 @@ matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
 % 6 - Calculation of several quality metrics based on preprocessed data, 
 % including framewise displacement derived from motion correction 
 % (realignment) parameters.
+% The method was adapted from Power et al. (2012), 
+% using 50mm as the assumed radius for translating rotation parameters 
+% into displacements, assuming small angle approximations. A threshold of 
+% 0.5 mm was set to define so-called 'motion outlier' volumes, which after 
+% application to the FD timeseries yielded a binary 'scrubbing' regressor 
+% per run.
+
+% Note: here we can use FramewiseDisplacement from nipype that to compute
+% the framewise displacement from the motion parameters that are available
+% in the rp_ files generated after realignment.
 
 
 % 7 - Generation of nuisance regressors for 
@@ -104,6 +114,24 @@ matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
 % framewise displacement, and two tissue signal regressors (white matter 
 % and cerebrospinal fluid) derived from averaging the voxel values found 
 % within the segmentaed tissue maps.
+
+% Scrubbing nuisance regressor: any functional volume that has a
+% framewise displacement greater than 0.5mm is set to one in the scrubbing 
+% nuisance covariate (all other volumes are set to zero)
+
+% --> Save as reg_scrubbing.txt
+
+% white matter signal nuisance: average value of voxels in th functional
+% volume that are part of white matter (as computed using the segmentation,
+% threshold>0.5?)
+
+% --> Save as reg_wm.txt
+
+% CSF signal nuisance: average value of voxels in th functional
+% volume that are part of white matter (as computed using the segmentation,
+% threshold>0.5?)
+
+% --> Save as reg_csf.txt
 
 % "independent_vars_first_level": "The GLM design matrix for the 1st level 
 % analysis consited of 17 explicitly specified regressors per run. Of these
@@ -140,7 +168,7 @@ matlabbatch{end}.spm.spatial.smooth.fwhm = [4 4 4];
 % not implemented yet
 
 % 8 regresseurs : gain, loss, no gain no loss, parametric gain, RT gain, parametric loss, RT loss, RT no gain no loss
-% gain: onset of gambles that led to gain, duration=
+% 9 nuisance : 6 head motion parameter regressors, 2 tissue signal regressors, and 1 scrubbing regressor
 
 matlabbatch{end+1}.spm.stats.fmri_spec.dir = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.timing.units = 'secs';
@@ -149,142 +177,53 @@ matlabbatch{end}.spm.stats.fmri_spec.timing.fmri_t = 16;
 matlabbatch{end}.spm.stats.fmri_spec.timing.fmri_t0 = 8;
 matlabbatch{end}.spm.stats.fmri_spec.sess.scans = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).name = 'gain';
+% Below we should include the 'onset' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).onset = '<UNDEFINED>';
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).duration = 2;
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).tmod = 0;
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).name = 'money';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).duration = 4;
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).name = 'gain_value';
+% Below we should include the 'gain' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).param = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(1).poly = 1;
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).name = 'reaction_time';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).name = 'gain_RT';
+% Below we should include the 'RT' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).param = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).pmod(2).poly = 1;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(1).orth = 1;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).name = 'loss';
+% Below we should include the 'onset' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).onset = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).duration = 2;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).tmod = 0;
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).name = 'money';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).name = 'loss_value';
+% Below we should include the 'loss' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).param = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(1).poly = 1;
-matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).name = 'reaction_time';
+matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).name = 'loss_RT';
+% Below we should include the 'RT' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=accept (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).param = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).pmod(2).poly = 1;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(2).orth = 1;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).name = 'no_gain_no_loss';
+% Below we should include the 'RT' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=reject (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).onset = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).duration = 2;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).tmod = 0;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.name = 'reaction_time';
+% Below we should include the 'RT' values from sub-001_task-MGT_run-01_events
+% for which we have participant_response=reject (either weakly or strongly)
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.param = '<UNDEFINED>';
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).pmod.poly = 1;
 matlabbatch{end}.spm.stats.fmri_spec.sess.cond(3).orth = 1;
-matlabbatch{end}.spm.stats.fmri_spec.sess.multi = {''};
-matlabbatch{end}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});
-matlabbatch{end}.spm.stats.fmri_spec.sess.multi_reg = {''};
-matlabbatch{end}.spm.stats.fmri_spec.sess.hpf = 128;
-matlabbatch{end}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
-matlabbatch{end}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
-matlabbatch{end}.spm.stats.fmri_spec.volt = 1;
-matlabbatch{end}.spm.stats.fmri_spec.global = 'None';
-matlabbatch{end}.spm.stats.fmri_spec.mthresh = 0.8;
-matlabbatch{end}.spm.stats.fmri_spec.mask = {''};
-matlabbatch{end}.spm.stats.fmri_spec.cvi = 'AR(1)';
-
-
-
-% 
-% % TODO: ignored for now
-% 
-% % ---------
-% 
-% 
-% % --------
-% 
-% matlabbatch{end+1}.spm.util.imcalc.input(1) = {ANAT_FILE} 
-% matlabbatch{end+1}.spm.util.imcalc.input(2) = cfg_dep('Segment: c1 Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','tiss', '()',{1}, '.','c', '()',{':'}));
-% matlabbatch{end+1}.spm.util.imcalc.input(3) = cfg_dep('Segment: c2 Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','tiss', '()',{2}, '.','c', '()',{':'}));
-% matlabbatch{end+1}.spm.util.imcalc.input(4) = cfg_dep('Segment: c3 Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','tiss', '()',{3}, '.','c', '()',{':'}));
-% matlabbatch{end+1}.spm.util.imcalc.output = BRAIN_EXTRACTED;
-% matlabbatch{end+1}.spm.util.imcalc.outdir = {PREPROC_DIR};
-% matlabbatch{end+1}.spm.util.imcalc.expression = 'i1.*((i2+i3+i4)>0.5)';
-% matlabbatch{end+1}.spm.util.imcalc.var = struct('name', {}, 'value', {});
-% matlabbatch{end+1}.spm.util.imcalc.options.dmtx = 0;
-% matlabbatch{end+1}.spm.util.imcalc.options.mask = 0;
-% matlabbatch{end+1}.spm.util.imcalc.options.interp = 1;
-% matlabbatch{end+1}.spm.util.imcalc.options.dtype = 4;
-% 
-% 
-% % next !!
-% 
-% 
-% 
-% matlabbatch{5}.spm.spatial.normalise.write.subj(1).def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(1).resample(1) = cfg_dep('Realign: Estimate & Reslice: Realigned Images (Sess 1)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{1}, '.','cfiles'));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(2).def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(2).resample(1) = cfg_dep('Realign: Estimate & Reslice: Realigned Images (Sess 2)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{2}, '.','cfiles'));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(3).def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(3).resample(1) = cfg_dep('Realign: Estimate & Reslice: Realigned Images (Sess 3)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{3}, '.','cfiles'));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(4).def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(4).resample(1) = cfg_dep('Segment: Bias Corrected (1)', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','channel', '()',{1}, '.','biascorr', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(5).def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-% matlabbatch{5}.spm.spatial.normalise.write.subj(5).resample(1) = cfg_dep('Realign: Estimate & Reslice: Mean Image', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','rmean'));
-% matlabbatch{5}.spm.spatial.normalise.write.woptions.bb = [-78 -112 -70
-%                                                           78 76 85];
-% matlabbatch{5}.spm.spatial.normalise.write.woptions.vox = [2 2 2];
-% matlabbatch{5}.spm.spatial.normalise.write.woptions.interp = 4;
-% matlabbatch{5}.spm.spatial.normalise.write.woptions.prefix = 'w';
-% 
-% 
-% matlabbatch{9}.spm.stats.fmri_spec.dir = {OUT_DIR};
-% matlabbatch{9}.spm.stats.fmri_spec.timing.units = 'secs';
-% matlabbatch{9}.spm.stats.fmri_spec.timing.RT = 2;
-% matlabbatch{9}.spm.stats.fmri_spec.timing.fmri_t = 16;
-% matlabbatch{9}.spm.stats.fmri_spec.timing.fmri_t0 = 8;
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).scans(1) = cfg_dep('Smooth: Smoothed Images', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).multi = {ONSETS_RUN_1};
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).regress = struct('name', {}, 'val', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).multi_reg(1) = cfg_dep('Realign: Estimate & Reslice: Realignment Param File (Sess 1)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{1}, '.','rpfile'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(1).hpf = 128;
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).scans(1) = cfg_dep('Smooth: Smoothed Images', substruct('.','val', '{}',{7}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).multi = {ONSETS_RUN_2};
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).regress = struct('name', {}, 'val', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).multi_reg(1) = cfg_dep('Realign: Estimate & Reslice: Realignment Param File (Sess 2)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{2}, '.','rpfile'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(2).hpf = 128;
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).scans(1) = cfg_dep('Smooth: Smoothed Images', substruct('.','val', '{}',{8}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).multi = {ONSETS_RUN_3};
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).regress = struct('name', {}, 'val', {});
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).multi_reg(1) = cfg_dep('Realign: Estimate & Reslice: Realignment Param File (Sess 3)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','sess', '()',{3}, '.','rpfile'));
-% matlabbatch{9}.spm.stats.fmri_spec.sess(3).hpf = 128;
-% matlabbatch{9}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
-% matlabbatch{9}.spm.stats.fmri_spec.bases.hrf.derivs = [1 0];
-% matlabbatch{9}.spm.stats.fmri_spec.volt = 1;
-% matlabbatch{9}.spm.stats.fmri_spec.global = 'None';
-% matlabbatch{9}.spm.stats.fmri_spec.mthresh = 0.8;
-% matlabbatch{9}.spm.stats.fmri_spec.mask = {''};
-% matlabbatch{9}.spm.stats.fmri_spec.cvi = 'AR(1)';
-% matlabbatch{10}.spm.stats.fmri_est.spmmat(1) = cfg_dep('fMRI model specification: SPM.mat File', substruct('.','val', '{}',{9}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-% matlabbatch{10}.spm.stats.fmri_est.write_residuals = 0;
-% matlabbatch{10}.spm.stats.fmri_est.method.Classical = 1;
-% matlabbatch{11}.spm.stats.con.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{10}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-% matlabbatch{11}.spm.stats.con.consess{1}.tcon.name = 'pumps demean vs ctrl demean';
-% matlabbatch{11}.spm.stats.con.consess{1}.tcon.weights = [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 0 0 0 0 0 0 0];
-% matlabbatch{11}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-% matlabbatch{11}.spm.stats.con.delete = 0;
-% matlabbatch{12}.spm.stats.results.spmmat(1) = cfg_dep('Contrast Manager: SPM.mat File', substruct('.','val', '{}',{11}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-% matlabbatch{12}.spm.stats.results.conspec.titlestr = 'pumps demean vs ctrl demean';
-% matlabbatch{12}.spm.stats.results.conspec.contrasts = Inf;
-% matlabbatch{12}.spm.stats.results.conspec.threshdesc = 'none';
-% matlabbatch{12}.spm.stats.results.conspec.thresh = 0.01;
-% matlabbatch{12}.spm.stats.results.conspec.extent = 0;
-% matlabbatch{12}.spm.stats.results.conspec.conjunction = 1;
-% matlabbatch{12}.spm.stats.results.conspec.mask.none = 1;
-% matlabbatch{12}.spm.stats.results.units = 1;
-% matlabbatch{12}.spm.stats.results.export{1}.pdf = true;
-% matlabbatch{12}.spm.stats.results.export{2}.tspm.basename = 'thresh_';
-% matlabbatch{12}.spm.stats.results.export{3}.nidm.modality = 'FMRI';
-% matlabbatch{12}.spm.stats.results.export{3}.nidm.refspace = 'ixi';
-% matlabbatch{12}.spm.stats.results.export{3}.nidm.group.nsubj = 1;
-% matlabbatch{12}.spm.stats.results.export{3}.nidm.group.label = 'subject';
+matlabbatch{end}.spm.stats.fmri_spec.sess.multi_reg = {
+        'ABS_PATH/rp_MOTION_REG_FILE.txt'
+        'ABS_PATH/reg_scrubbing.txt'
+        'ABS_PATH/reg_wm.txt'
+        'ABS_PATH/reg_csf.txt'
+                                                     };
