@@ -1,0 +1,5 @@
+onset	duration	gain	loss	RT	participant_response
+4.071	4	14	6	2.388	weakly_accept
+11.834	4	34	14	2.289	strongly_accept
+27.535	4	10	15	2.08	strongly_reject
+36.435	4	16	17	2.288	weakly_reject

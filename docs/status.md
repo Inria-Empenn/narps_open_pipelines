@@ -1,10 +1,18 @@
 # Access the work progress status pipelines
 
 The class `PipelineStatusReport` of module `narps_open.utils.status` allows to create a report containing the following information for each pipeline:
+* a work progress status : `idle`, `progress`, or `done`;
 * the software it uses (collected from the `categorized_for_analysis.analysis_SW` of the [team description](/docs/description.md)) ;
 * whether it uses data from fMRIprep or not ;
 * a list of issues related to it (the opened issues of the project that have the team ID inside their title or description) ;
-* a work progress status : `idle`, `progress`, or `done`.
+* a list of pull requests related to it (the opened pull requests of the project that have the team ID inside their title or description) ;
+* whether it was excluded from the original NARPS analysis ;
+* a reproducibility rating :
+  * default score is 4;
+  * -1 if the team did not use fmriprep data;
+  * -1 if the team used several pieces of software (e.g.: FSL and AFNI);
+  * -1 if the team used custom or marginal software (i.e.: something else than SPM, FSL, AFNI or nistats);
+  * -1 if the team did not provided his source code.
 
 This allows contributors to best select the pipeline they want/need to contribute to. For this purpose, the GitHub Actions workflow [`.github/workflows/pipeline_status.yml`](/.github/workflows/pipeline_status.yml) allows to dynamically generate the report and to store it in the [project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki).
 
@@ -36,10 +44,13 @@ print(pipeline_info['status'])
 report.markdown() # Returns a string containing the markdown
 ```
 
-You can also use the command-line tool as so. Option `-t` is for the team id, option `-d` allows to print only one of the sub parts of the description among : `general`, `exclusions`, `preprocessing`, `analysis`, and `categorized_for_analysis`.
+You can also use the command-line tool as so.
+
+> [!TIP]
+> In the following examples, use `narps_open_status` or `python narps_open/utils/status.py` indifferently to launch the command line tool.
 
 ```bash
-python narps_open/utils/status -h
+narps_open_status -h
 # usage: status.py [-h] [--json | --md]
 # 
 # Get a work progress status report for pipelines.
@@ -49,28 +60,37 @@ python narps_open/utils/status -h
 #   --json      output the report as JSON
 #   --md        output the report as Markdown
 
-python narps_open/utils/status --json
+narps_open_status --json
 # {
 #     "08MQ": {
 #         "softwares": "FSL",
 #         "fmriprep": "No",
 #         "issues": {},
-#         "status": "idle"
+#         "excluded": "No",
+#         "reproducibility": 3,
+#         "reproducibility_comment": "",
+#         "issues": {},
+#         "pulls": {},
+#         "status": "2-idle"
 #     },
 #     "0C7Q": {
 #         "softwares": "FSL, AFNI",
 #         "fmriprep": "Yes",
 #         "issues": {},
+#         "excluded": "No",
+#         "reproducibility": 3,
+#         "reproducibility_comment": "",
+#         "issues": {},
+#         "pulls": {},
 #         "status": "idle"
 #     },
 # ...
 
-python narps_open/utils/status --md
-# | team_id | status | softwares used | fmriprep used ? | related issues |
-# | --- |:---:| --- | --- | --- |
-# | 08MQ | :red_circle: | FSL | No |  |
-# | 0C7Q | :red_circle: | FSL, AFNI | Yes |  |
-# | 0ED6 | :red_circle: | SPM | No |  |
-# | 0H5E | :red_circle: | SPM | No |  |
+narps_open_status --md
+# ...
+# | team_id | status | main software | fmriprep used ? | related issues | related pull requests | excluded from NARPS analysis | reproducibility |
+# | --- |:---:| --- | --- | --- | --- | --- | --- |
+# | Q6O0 | :green_circle: | SPM | Yes |  |  | No | :star::star::star::black_small_square:<br /> |
+# | UK24 | :orange_circle: | SPM | No | [2](url_issue_2),  |  | No | :star::star::black_small_square::black_small_square:<br /> |
 # ...
 ```

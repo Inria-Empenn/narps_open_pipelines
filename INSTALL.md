@@ -1,82 +1,125 @@
 # How to install NARPS Open Pipelines ? 
 
-## 1 - Get the code
+## 1 - Fork the repository
 
-First, [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository, so you have your own working copy of it.
+[Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository, so you have your own working copy of it.
 
-Then, you have two options to [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) the project :
+## 2 - Clone the code
 
-### Option 1: Using DataLad (recommended)
+First, install [Datalad](https://handbook.datalad.org/en/latest/intro/installation.html#install-datalad). This will allow you to access the NARPS data easily, as it is included in the repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
 
-Cloning the fork using [Datalad](https://www.datalad.org/) will allow you to get the code as well as "links" to the data, because the NARPS data is bundled in this repository as [datalad subdatasets](http://handbook.datalad.org/en/latest/basics/101-106-nesting.html).
+Then, [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) the project :
 
 ```bash
+# Replace YOUR_GITHUB_USERNAME in the following command.
 datalad install --recursive https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
 ```
 
-### Option 2: Using Git
+> [!WARNING]  
+> It is still possible to clone the fork using [git](https://git-scm.com/) ; but by doing this, you will only get the code.
+> ```bash
+> # Replace YOUR_GITHUB_USERNAME in the following command.
+> git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
+> ```
 
-Cloning the fork using [git](https://git-scm.com/) ; by doing this, you will only get the code.
+## 3 - Get the data
 
-```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/narps_open_pipelines.git
-```
-
-## 2 - Get the data
-
-Ignore this step if you used DataLad (option 1) in the previous step.
-
-Otherwise, there are several ways to get the data.
-
-## 3 - Set up the environment
-
-The Narps Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). 
-
-To facilitate this step, we created a Docker container based on [Neurodocker](https://github.com/ReproNim/neurodocker) that contains the necessary Python packages and software. To install the Docker image, two options are available.
-
-### Option 1: Using Dockerhub
+Now that you cloned the repository using Datalad, you are able to get the data :
 
 ```bash
-docker pull elodiegermani/open_pipeline:latest
+# Move inside the root directory of the repository.
+cd narps_open_pipelines
+
+# Select the data you want to download. Here is an example to get data of the first 4 subjects.
+datalad get data/original/ds001734/sub-00[1-4] -J 12
+datalad get data/original/ds001734/derivatives/fmriprep/sub-00[1-4] -J 12
 ```
 
-The image should install itself. Once it's done you can check the image is available on your system:
+> [!NOTE]  
+> For further information and alternatives on how to get the data, see the corresponding documentation page [docs/data.md](docs/data.md).
+
+## 4 - Set up the environment
+
+[Install Docker](https://docs.docker.com/engine/install/) then pull the nipype Docker image :
+
+```bash
+docker pull nipype/nipype
+```
+
+Once it's done you can check the image is available on your system :
 
 ```bash
 docker images
-   docker.io/elodiegermani/open_pipeline    latest    0f3c74d28406    9 months ago    22.7 GB
+   REPOSITORY                 TAG       IMAGE ID        CREATED         SIZE
+   docker.io/nipype/nipype    latest    0f3c74d28406    9 months ago    22.7 GB
 ```
 
-### Option 2: Using a Dockerfile 
+> [!NOTE]  
+> Feel free to read this documentation page [docs/environment.md](docs/environment.md) to get further information about this environment.
 
-The Dockerfile used to create the image stored on DockerHub is available at the root of the repository ([Dockerfile](Dockerfile)). But you might want to personalize this Dockerfile. To do so, change the command below that will generate a new Dockerfile: 
+## 5 - Run the project
+
+Start a Docker container from the Docker image :
 
 ```bash
-docker run --rm repronim/neurodocker:0.7.0 generate docker \
-           --base neurodebian:stretch-non-free --pkg-manager apt \
-           --install git \
-           --fsl version=6.0.3 \
-           --afni version=latest method=binaries install_r=true install_r_pkgs=true install_python2=true install_python3=true \
-           --spm12 version=r7771 method=binaries \
-           --user=neuro \
-           --workdir /home \
-           --miniconda create_env=neuro \
-                       conda_install="python=3.8 traits jupyter nilearn graphviz nipype scikit-image" \
-                       pip_install="matplotlib" \
-                       activate=True \
-           --env LD_LIBRARY_PATH="/opt/miniconda-latest/envs/neuro:$LD_LIBRARY_PATH" \
-           --run-bash "source activate neuro" \
-           --user=root \
-           --run 'chmod 777 -Rf /home' \
-           --run 'chown -R neuro /home' \
-           --user=neuro \
-           --run 'mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py' > Dockerfile
+# Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
+docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype
 ```
 
-When you are satisfied with your Dockerfile, just build the image:
+Optionally edit the configuration file `narps_open/utils/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
+```toml
+# default_config.toml
+# ...
+
+[directories]
+dataset = "/home/neuro/code/data/original/ds001734/"
+reproduced_results = "/home/neuro/code/data/reproduced/"
+narps_results = "/home/neuro/code/data/results/"
+
+# ...
+```
+
+> [!NOTE]  
+> Further information about configuration files can be found on the page [docs/configuration.md](docs/configuration.md).
+
+Install NARPS Open Pipelines inside the container :
 
 ```bash
-docker build --tag [name_of_the_image] - < Dockerfile
+source activate neuro
+cd /home/neuro/code/
+pip install .
 ```
 
-When the image is built, follow the instructions in [docs/environment.md](docs/environment.md) to start the environment from it.
+Finally, you are able to use the scripts of the project :
+
+* `narps_open_runner`: run pipelines
+* `narps_open_tester`: run a pipeline and test its results against original ones from the team
+* `narps_description`: get the textual description made by a team
+* `narps_results`: download the original results from teams
+* `narps_open_status`: get status information about the development process of the pipelines
+
+```bash
+# Run the pipeline for team 2T6S, with 40 subjects
+narps_open_runner -t 2T6S -n 40
+
+# Run the pipeline for team 08MQ, compare results with original ones,
+#   and produces a report with correlation values.
+narps_open_tester -t 08MQ
+
+# Get the description of team C88N in markdown formatting
+narps_description -t C88N --md
+
+# Download the results from all teams
+narps_results -a
+
+#  Get the pipeline work status information in json formatting
+narps_open_status --json
+```
+
+> [!NOTE]  
+> For further information about these command line tools, read the corresponding documentation pages.
+> * `narps_open_runner` : [docs/running.md](docs/running.md)
+> * `narps_open_tester` : [docs/testing.md](docs/testing.md#command-line-tool)
+> * `narps_description` : [docs/description.md](docs/description.md)
+> * `narps_results` : [docs/data.md](docs/data.md#results-from-narps-teams)
+> * `narps_open_status` : [docs/status.md](docs/status.md)
