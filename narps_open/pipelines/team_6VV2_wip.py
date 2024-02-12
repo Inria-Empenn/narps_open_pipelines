@@ -15,6 +15,11 @@ from os.path import abspath
 from os.path import join as opj
 import os
 import pathlib
+from glob import glob
+from nilearn import plotting
+import matplotlib.pyplot as plt
+from nilearn import image
+import pandas as pd
 
 ########################################################################
 ################## FIRST LEVEL ANALYSIS FOR TEAM 6VV2 ##################
@@ -22,7 +27,7 @@ import pathlib
 
 # define environment for first level analysis
 data_dir = "/home/jlefortb/narps_open_pipelines/data/original/ds001734/"
-results_dir =  "/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/"
+results_dir =  "/home/jlefortb/narps_open_pipelines/data/results/derived/team_6VV2_afni/firstlevel/"
 
 path = pathlib.Path(results_dir)
 path.mkdir(parents=True, exist_ok=True)
@@ -36,6 +41,8 @@ subject_list = []
 for dirs in dir_list:
     if dirs[0:3] == 'sub':
         subject_list.append(dirs[-3:])
+
+
 
 
 # Infosource Node - To iterate on subjects + get directoris paths
@@ -117,6 +124,33 @@ wf_run.connect([(infosource, create_stimuli, [('subject_id', 'subject')]),
 # wf_run.write_graph()
 wf_run.run()
 
+####
+# to do: relaunch sub 1 and launch sub 2, then launch part 2 to check which data are mandatory and which we can delete
+# because taking a bunch of space (60G)
+####
+
+# convert BRIK to nii
+command = "3dAFNItoNIFTI"
+for Afni_file in glob("/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/sub-001.results.block/*.HEAD"):
+    file_name = Afni_file.split('/')[-1]
+    nifti_file_name = file_name[:-5]
+    results_dir = "/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/sub-001.results.block/results_as_nifti/"
+    prefixname = opj(results_dir, nifti_file_name)
+    subprocess.run([command, "-prefix", prefixname, Afni_file])
+
+# visualise nifti
+for nifi_file in glob("/home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/sub-001.results.block/results_as_nifti/*"):
+    shape = image.load_img(nifi_file).shape
+    print("shape: ", shape)
+    if len(shape) > 3:
+        plotting.plot_stat_map(image.index_img(nifi_file, 0), annotate=False, title=nifi_file.split('/')[-1] + " ind 0", colorbar=True, cut_coords=(-24, -10, 4, 18, 32, 52, 64), display_mode='z', cmap='coolwarm')
+        plotting.plot_stat_map(image.index_img(nifi_file, 30), annotate=False, title=nifi_file.split('/')[-1] + " ind 30", colorbar=True, cut_coords=(-24, -10, 4, 18, 32, 52, 64), display_mode='z', cmap='coolwarm')
+        plotting.plot_stat_map(image.index_img(nifi_file, 60), annotate=False, title=nifi_file.split('/')[-1] + " ind 60", colorbar=True, cut_coords=(-24, -10, 4, 18, 32, 52, 64), display_mode='z', cmap='coolwarm')
+        plt.show()
+    else:
+        plotting.plot_stat_map(nifi_file, annotate=False, title=nifi_file.split('/')[-1], colorbar=True, cut_coords=(-24, -10, 4, 18, 32, 52, 64), display_mode='z', cmap='coolwarm')
+        plt.show()
+        
 
 ########################################################################
 ################## SECOND LEVEL ANALYSIS FOR TEAM 6VV2 #################
