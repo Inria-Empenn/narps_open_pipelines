@@ -59,18 +59,27 @@ class PipelineTeam43FJ(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(file_templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                file_templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name='select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name='data_sink',
         )
 
         img2float = Node(
-            ImageMaths(out_data_type='float', op_string='', suffix='_dtype'),
+            ImageMaths(
+                out_data_type='float', 
+                op_string='', 
+                suffix='_dtype'
+                ),
             name='img2float',
         )
     
@@ -80,20 +89,29 @@ class PipelineTeam43FJ(Pipeline):
         )
         
         reg = create_reg_workflow()
+
         reg.inputs.inputspec.target_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         reg.inputs.inputspec.target_image_brain = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        reg.inputs.mepan2anat.dof = 12
+        reg.inputs.mean2anat.dof = 12
         reg.inputs.mean2anatbbr.dof = 12
         reg.inputs.anat2target_linear.dof = 12
 
-        outliers = Node(MotionOutliers(metric='fd'), name='outliers')
+        outliers = MapNode(MotionOutliers(
+            metric='fd',
+            out_metric_plot = 'fd_plot.png',
+            out_metric_values='fd_raw.txt'
+            ), 
+        name='outliers',
+        iterfield = ['in_file']
+        )
 
         
         mc_smooth = create_featreg_preproc(
             name='featpreproc',
             highpass=True,
             whichvol='middle',
-            whichrun=0)
+            whichrun=0
+            )
         
         mc_smooth.inputs.inputspec.fwhm = 5
         mc_smooth.inputs.inputspec.highpass = 100
@@ -139,9 +157,9 @@ class PipelineTeam43FJ(Pipeline):
                     [('func', 'inputspec.func')],
                 ), 
                 (
-                    mc_smooth, 
+                    select_files, 
                     outliers, 
-                    [('img2float.out_file', 'in_file')]
+                    [('func', 'in_file')]
                 ),
 
                 (
@@ -271,13 +289,15 @@ class PipelineTeam43FJ(Pipeline):
 
         subject_info = []
 
-        subject_info.append(Bunch(
-            conditions=cond_names,
-            onsets=[onset[k] for k in cond_names],
-            durations=[duration[k] for k in cond_names],
-            amplitudes=[amplitude[k] for k in cond_names],
-            regressor_names=None,
-            regressors=None)
+        subject_info.append(
+            Bunch(
+                conditions=cond_names,
+                onsets=[onset[k] for k in cond_names],
+                durations=[duration[k] for k in cond_names],
+                amplitudes=[amplitude[k] for k in cond_names],
+                regressor_names=None,
+                regressors=None
+            )
         )
 
         return subject_info
@@ -360,13 +380,18 @@ class PipelineTeam43FJ(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name = 'select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name = 'data_sink'
         )
 
@@ -583,21 +608,33 @@ class PipelineTeam43FJ(Pipeline):
 
         # SelectFiles node - to select necessary files
         select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
+            SelectFiles(
+                templates, 
+                base_directory = self.directories.dataset_dir
+                ),
             name = 'select_files'
         )
 
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
+            DataSink(
+                base_directory = self.directories.output_dir
+                ),
             name = 'data_sink'
         )
 
         # Generate design matrix
-        specify_model = Node(L2Model(num_copes = len(self.run_list)), name='l2model')
+        specify_model = Node(
+            L2Model(
+                num_copes = len(self.run_list)
+                ), 
+            name='l2model'
+            )
 
         warpall_cope = MapNode(
-            ApplyWarp(interp='spline'),
+            ApplyWarp(
+                interp='spline'
+                ),
             name='warpall_cope', 
             iterfield=['in_file']
         )
@@ -606,7 +643,9 @@ class PipelineTeam43FJ(Pipeline):
         warpall_cope.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         warpall_varcope = MapNode(
-            ApplyWarp(interp='spline'),
+            ApplyWarp(
+                interp='spline'
+                ),
             name='warpall_varcope', 
             iterfield=['in_file']
         )
@@ -615,13 +654,25 @@ class PipelineTeam43FJ(Pipeline):
         warpall_varcope.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
 
         # Merge copes and varcopes files for each subject
-        merge_copes = Node(Merge(dimension='t'), name='merge_copes')
+        merge_copes = Node(
+            Merge(
+                dimension='t'
+                ), 
+            name='merge_copes')
 
-        merge_varcopes = Node(Merge(dimension='t'), name='merge_varcopes')
+        merge_varcopes = Node(
+            Merge(
+                dimension='t'
+                ), 
+            name='merge_varcopes')
 
         # Second level (single-subject, mean of all four scans) analyses: Fixed effects analysis.
-        flame = Node(FLAMEO(run_mode = 'fe', mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')), 
-                     name='flameo')
+        flame = Node(FLAMEO(
+            run_mode = 'fe', 
+            mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
+            ), 
+        name='flameo'
+        )
 
         # [INFO] The following part defines the nipype workflow and the connections between nodes
 
@@ -755,6 +806,7 @@ class PipelineTeam43FJ(Pipeline):
                 # and separate people depending on their group
                 if info[0][-3:] in subject_list and info[1] == 'equalIndifference':
                     equal_indifference_id.append(info[0][-3:])
+
                 elif info[0][-3:] in subject_list and info[1] == 'equalRange':
                     equal_range_id.append(info[0][-3:])
 
@@ -771,20 +823,25 @@ class PipelineTeam43FJ(Pipeline):
             sub_id = cope.split('/')
             if sub_id[-2][-3:] in equal_indifference_id:
                 copes_equal_indifference.append(cope)
+
             elif sub_id[-2][-3:] in equal_range_id:
                 copes_equal_range.append(cope)
+
             if sub_id[-2][-3:] in subject_list:
                 copes_global.append(cope)
 
             sub_id = varcope.split('/')
             if sub_id[-2][-3:] in equal_indifference_id:
                 varcopes_equal_indifference.append(varcope)
+
             elif sub_id[-2][-3:] in equal_range_id:
                 varcopes_equal_range.append(varcope)
+
             if sub_id[-2][-3:] in subject_list:
                 varcopes_global.append(varcope)
 
-        return copes_equal_indifference, copes_equal_range, varcopes_equal_indifference, varcopes_equal_range,equal_indifference_id, equal_range_id,copes_global, varcopes_global
+        return (copes_equal_indifference, copes_equal_range, varcopes_equal_indifference, 
+            varcopes_equal_range,equal_indifference_id, equal_range_id,copes_global, varcopes_global)
 
 
     # [INFO] This function creates the dictionary of regressors used in FSL Nipype pipelines
@@ -811,6 +868,7 @@ class PipelineTeam43FJ(Pipeline):
         if method == 'equalRange':
             regressors = dict(group_mean = [1 for i in range(len(equal_range_id))])
             group = [1 for i in equal_range_id]
+            
         elif method == 'equalIndifference':
             regressors = dict(group_mean = [1 for i in range(len(equal_indifference_id))])
             group = [1 for i in equal_indifference_id]
