@@ -485,21 +485,23 @@ class PipelineTeam1KB2(Pipeline):
         ])
 
         return l1_analysis
-
-    def get_registration(self):
-        """ Return a Nipype workflow describing the registration part of the pipeline """
         
+        
+    def get_subject_level_analysis(self):
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
+
+        # [INFO] The following part stays the same for all pipelines
+
         # Infosource Node - To iterate on subjects
         info_source = Node(
             IdentityInterface(
-                fields = ['subject_id', 'contrast_id', 'run_id'],
+                fields = ['subject_id', 'contrast_id'],
             ),
             name='info_source',
         )
         info_source.iterables = [
         ('subject_id', self.subject_list), 
-        ('contrast_id', self.contrast_list),
-        ('run_id', self.run_list)
+        ('contrast_id', self.contrast_list)
         ]
 
         # Templates to select files node
@@ -508,14 +510,14 @@ class PipelineTeam1KB2(Pipeline):
             'cope': join(
                 self.directories.output_dir,
                 'run_level_analysis',
-                '_run_id_{run_id}_subject_id_{subject_id}',
+                '_contrast_id_{contrast_id}_run_id_*_subject_id_{subject_id}',
                 'results', 
                 'cope{contrast_id}.nii.gz',
             ),
             'varcope': join(
                 self.directories.output_dir,
                 'run_level_analysis',
-                '_run_id_{run_id}_subject_id_{subject_id}',
+                '_contrast_id_{contrast_id}_run_id_*_subject_id_{subject_id}',
                 'results', 
                 'varcope{contrast_id}.nii.gz',
             ),
@@ -549,7 +551,15 @@ class PipelineTeam1KB2(Pipeline):
                 ),
             name = 'data_sink'
         )
-        
+
+        # Generate design matrix
+        specify_model = Node(
+            L2Model(
+                num_copes = len(self.run_list)
+                ), 
+            name='l2model'
+            )
+
         warpall_cope = MapNode(
             ApplyWarp(
                 interp='spline'
@@ -571,110 +581,6 @@ class PipelineTeam1KB2(Pipeline):
         
         warpall_varcope.inputs.ref_file = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
         warpall_varcope.inputs.mask_file = Info.standard_image('MNI152_T1_2mm_brain_mask.nii.gz')
-
-        # Create registration workflow and connect its nodes
-        registration = Workflow(
-            base_dir = self.directories.working_dir, 
-            name = "registration"
-        )
-
-        registration.connect([
-            (
-                info_source, 
-                select_files, 
-                [('subject_id', 'subject_id'),
-                ('run_id', 'run_id'),
-                ('contrast_id', 'contrast_id')]
-            ),
-            (
-                select_files, 
-                warpall_cope, 
-                [('func2anat_transform', 'premat'), 
-                ('anat2target_transform', 'field_file'), 
-                ('cope', 'in_file')]
-            ), 
-            (
-                select_files, 
-                warpall_varcope, 
-                [('func2anat_transform', 'premat'), 
-                ('anat2target_transform', 'field_file'), 
-                ('varcope', 'in_file')]
-            ), 
-            (
-                warpall_cope, 
-                data_sink, 
-                [('out_file', 'registration.@reg_cope')]
-            ),
-            (
-                warpall_varcope, 
-                data_sink, 
-                [('out_file', 'registration.@reg_varcope')]
-            )
-        ])
-        
-        return registration
-        
-        
-    def get_subject_level_analysis(self):
-        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
-
-        # [INFO] The following part stays the same for all pipelines
-
-        # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'contrast_id'],
-            ),
-            name='info_source',
-        )
-        info_source.iterables = [
-        ('subject_id', self.subject_list), 
-        ('contrast_id', self.contrast_list)
-        ]
-
-        # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
-        templates = {
-            'cope': join(
-                self.directories.output_dir,
-                'registration',
-                '_contrast_id_{contrast_id}_run_id_*_subject_id_{subject_id}',
-                '_warpall_cope0', 
-                'cope{contrast_id}_warp.nii.gz',
-            ),
-            'varcope': join(
-                self.directories.output_dir,
-                'registration',
-                '_contrast_id_{contrast_id}_run_id_*_subject_id_{subject_id}',
-                '_warpall_varcope0', 
-                'varcope{contrast_id}_warp.nii.gz',
-            )
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(
-                templates, 
-                base_directory = self.directories.dataset_dir
-                ),
-            name = 'select_files'
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(
-                base_directory = self.directories.output_dir
-                ),
-            name = 'data_sink'
-        )
-
-        # Generate design matrix
-        specify_model = Node(
-            L2Model(
-                num_copes = len(self.run_list)
-                ), 
-            name='l2model'
-            )
 
         # Merge copes and varcopes files for each subject
         merge_copes = Node(
@@ -717,13 +623,27 @@ class PipelineTeam1KB2(Pipeline):
             ),
             (
                 select_files, 
-                merge_copes, 
-                [('cope', 'in_files')]
-            ),
+                warpall_cope, 
+                [('func2anat_transform', 'premat'), 
+                ('anat2target_transform', 'field_file'),
+                ('cope', 'in_file')]
+            ), 
             (
                 select_files, 
+                warpall_varcope, 
+                [('func2anat_transform', 'premat'), 
+                ('anat2target_transform', 'field_file'), 
+                ('varcope', 'in_file')]
+            ), 
+            (
+                warpall_cope, 
+                merge_copes, 
+                [('out_file', 'in_files')]
+            ),
+            (
+                warpall_varcope, 
                 merge_varcopes, 
-                [('varcope', 'in_files')]
+                [('out_file', 'in_files')]
             ),
             (
                 merge_copes, 
@@ -854,8 +774,11 @@ class PipelineTeam1KB2(Pipeline):
         # with a list of the size of the number of participants
         if method == 'equalRange':
             regressors = dict(group_mean = [1 for i in range(len(equal_range_id))])
+            group = [1 for i in equal_range_id]
+            
         elif method == 'equalIndifference':
             regressors = dict(group_mean = [1 for i in range(len(equal_indifference_id))])
+            group = [1 for i in equal_indifference_id]
 
         # For two sample t-test, creates 2 lists:
         #  - one for equal range group,
@@ -880,7 +803,9 @@ class PipelineTeam1KB2(Pipeline):
                 equalIndifference = equalIndifference_reg
             )
 
-        return regressors
+            group = [1 if i == 1 else 2 for i in equalRange_reg]
+
+        return regressors, group
 
     def get_group_level_analysis(self):
         """
@@ -934,8 +859,8 @@ class PipelineTeam1KB2(Pipeline):
         }
         select_files = Node(
             SelectFiles(
-                templates,
-                base_directory = self.directories.results_dir,
+                template,
+                base_directory = self.directories.dataset_dir,
                 force_list = True
             ),
             name = 'select_files',
@@ -943,13 +868,11 @@ class PipelineTeam1KB2(Pipeline):
 
         # Datasink node - to save important files
         data_sink = Node(
-            DataSink(
-                base_directory = self.directories.output_dir
-                ),
+            DataSink(base_directory = self.directories.output_dir),
             name = 'data_sink',
         )
 
-        contrasts = Node(
+        subgroups_contrasts = Node(
             Function(
                 input_names=['copes', 'varcopes', 'subject_ids', 'participants_file'],
                 output_names=[
@@ -975,7 +898,10 @@ class PipelineTeam1KB2(Pipeline):
                     'method',
                     'subject_list',
                 ],
-                output_names = ['regressors'],
+                output_names = [
+                'regressors',
+                'group'
+                ],
                 function = self.get_regressors,
             ),
             name = 'regs',
@@ -1095,12 +1021,12 @@ class PipelineTeam1KB2(Pipeline):
                 group_level_analysis.connect([
                     (
                         subgroups_contrasts, 
-                        merge_copes_3rdlevel, 
+                        merge_copes, 
                         [('copes_equalRange', 'in_files')]
                     ),
                     (
                         subgroups_contrasts, 
-                        merge_varcopes_3rdlevel, 
+                        merge_varcopes, 
                         [('varcopes_equalRange', 'in_files')]
                     )
                 ])
@@ -1168,3 +1094,47 @@ class PipelineTeam1KB2(Pipeline):
 
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
+
+    def get_hypotheses_outputs(self):
+        """ Return the names of the files used by the team to answer the hypotheses of NARPS. """
+
+        nb_sub = len(self.subject_list)
+        files = [
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_1', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
