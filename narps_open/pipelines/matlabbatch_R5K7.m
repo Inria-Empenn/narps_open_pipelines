@@ -77,9 +77,10 @@ matlabbatch{end+1}.spm.tools.oldseg.data = {
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/anat/sub-001_T1w.nii,1'};
 
 % --> Here we get a c1sub-001_T1w.nii file that is the grey matter
-% probability map
+% probability map and transfo.nii file (not sure it is a .nii) that is the
+% calculated transformation between anat and standardized space
 
-% Coreg sbref onto mean unwarp
+% Coreg each sbref onto mean unwarp
 matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
     'ABS_PATH/unwarped_mean_image.nii'
     };
@@ -87,7 +88,28 @@ matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_sbref.nii'};
 matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
 
-% --> HERE WE get one file sub-001_task-MGT_run-01_sbref.nii (that
+matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
+    'ABS_PATH/unwarped_mean_image.nii'
+    };
+matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_sbref.nii'};
+matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
+
+matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
+    'ABS_PATH/unwarped_mean_image.nii'
+    };
+matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_sbref.nii'};
+matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
+
+matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
+    'ABS_PATH/unwarped_mean_image.nii'
+    };
+matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_sbref.nii'};
+matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
+
+% --> HERE WE get 4 file ssub-001_task-MGT_run-XX_sbref.nii (that
 % keeps the same name as before *but* the header has been modified to apply
 % the coregistration'
 
@@ -95,11 +117,30 @@ matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
     'ABS_PATH/c1sub-001_T1w.nii'
 };
 matlabbatch{end}.spm.spatial.coreg.estimate.source(1) = {
-    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_sbref.nii,1'};
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_sbref.nii'
+    };
 matlabbatch{end}.spm.spatial.coreg.estimate.other = {'usub-001_task-MGT_run-01_bold.nii'
     'usub-001_task-MGT_run-02_bold.nii'
     'usub-001_task-MGT_run-03_bold.nii'
-    'usub-001_task-MGT_run-04_bold.nii'};
+    'usub-001_task-MGT_run-04_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_sbref.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_sbref.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_sbref.nii'
+};
 matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
+
+
+% We apply the transformation to standardized space
+
+matlabbatch{end+1}.spm.spatial.normalise.write.subj.def = {'transfo.nii'};
+matlabbatch{end}.spm.spatial.normalise.write.subj.resample = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_sbref.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_sbref.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_sbref.nii'
+};
 
 % 3) spatial smoothing
