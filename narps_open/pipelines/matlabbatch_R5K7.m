@@ -134,13 +134,20 @@ matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
 
 matlabbatch{end+1}.spm.spatial.normalise.write.subj.def = {'transfo.nii'};
 matlabbatch{end}.spm.spatial.normalise.write.subj.resample = {
-    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-01_bold.nii'
-    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_bold.nii'
-    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_bold.nii'
-    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-01_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-02_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-03_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-04_bold.nii'
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-02_sbref.nii'
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-03_sbref.nii'
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/sub-001_task-MGT_run-04_sbref.nii'
 };
 
 % 3) spatial smoothing
+matlabbatch{end+1}.spm.spatial.smooth.data = {
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-01_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-02_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-03_bold.nii'
+    'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-04_bold.nii'
+};
+matlabbatch{end}.spm.spatial.smooth.fwhm = [8 8 8];
