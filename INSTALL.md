@@ -66,11 +66,8 @@ Start a Docker container from the Docker image :
 docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype
 ```
 
-<<<<<<< HEAD
-Optionally edit the configuration file `narps_open/utils/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
-=======
 Optionally edit the configuration file `narps_open/utils/configuration/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
->>>>>>> main
+
 ```toml
 # default_config.toml
 # ...
