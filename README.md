@@ -53,7 +53,7 @@ This project is supported by Région Bretagne (Boost MIND) and by Inria (Explora
 This project is developed in the Empenn team by Boris Clénet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
 
 In addition, this project was presented and received contributions during the following events:
- - Empenn team hackathon (February 2024): Mathieu Acher, Élise Bannier, Boris Clénet, Isabelle Corouge, Malo Gaubert, Élodie Germani,  Gauthier Le Bartz Lyan, Jérémy Lefort-Besnard, Camille Maumet, Youenn Merel, Alexandre Pron.
+ - [Empenn team](https://team.inria.fr/empenn/) hackathon (February 2024): Mathieu Acher, Élise Bannier, Boris Clénet, Isabelle Corouge, Malo Gaubert, Élodie Germani,  Gauthier Le Bartz Lyan, Jérémy Lefort-Besnard, Camille Maumet, Youenn Merel, Alexandre Pron.
  - [Brainhack Marseille 2023](https://brainhack-marseille.github.io/) (December 2023)
  - [ORIGAMI lab](https://neurodatascience.github.io/) hackathon (September 2023): 
  - [OHBM Brainhack 2023](https://ohbm.github.io/hackathon2023/) (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
