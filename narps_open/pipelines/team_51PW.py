@@ -1,57 +1,58 @@
 #!/usr/bin/python
 # coding: utf-8
 
-""" Write the work of NARPS team 08MQ using Nipype """
+""" Write the work of NARPS team 51PW using Nipype """
 
 from os.path import join
 from itertools import product
 
 from nipype import Node, Workflow, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split, Select
+from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     # General usage
     FSLCommand, ImageStats,
     # Preprocessing
-    FAST, BET, ErodeImage, PrepareFieldmap, MCFLIRT, SliceTimer,
-    Threshold, Info, SUSAN, FLIRT, ApplyXFM, ConvertXFM,
+    SUSAN,
     # Analyses
     Level1Design, FEATModel, L2Model, FILMGLS,
     FLAMEO, Randomise, MultipleRegressDesign
     )
-from nipype.interfaces.fsl.utils import Merge as MergeImages
-from nipype.interfaces.fsl.maths import MultiImageMaths
-from nipype.algorithms.confounds import CompCor
+from nipype.interfaces.fsl.utils import ExtractROI, Merge as MergeImages
+from nipype.interfaces.fsl.maths import MathsCommand, MultiImageMaths
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.ants import Registration, WarpTimeSeriesImageMultiTransform
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.core.common import (
-    remove_file, list_intersection, elements_in_string, clean_list, list_to_file
+    list_intersection, elements_in_string, clean_list
     )
+from narps_open.core.interfaces import InterfaceFactory
+from narps_open.utils.configuration import Configuration
 
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
 
-class PipelineTeam08MQ(Pipeline):
-    """ A class that defines the pipeline of team 08MQ """
+class PipelineTeam51PW(Pipeline):
+    """ A class that defines the pipeline of team 51PW """
 
     def __init__(self):
         super().__init__()
-        self.fwhm = 6.0
-        self.team_id = '08MQ'
-        self.contrast_list = ['1', '2', '3']
+        self.fwhm = 5.0
+        self.team_id = '51PW'
+        self.contrast_list = ['1', '2']
         self.run_level_contasts = [
-            ('positive_effect_gain', 'T', ['gain', 'loss'], [1, 0]),
-            ('positive_effect_loss', 'T', ['gain', 'loss'], [0, 1]),
-            ('negative_effect_loss', 'T', ['gain', 'loss'], [0, -1])
+            ('effect_gain', 'T', ['gamble', 'gain', 'loss'], [0, 1, 0]),
+            ('effect_loss', 'T', ['gamble', 'gain', 'loss'], [0, 0, 1])
         ]
 
     def get_preprocessing(self):
-        """ Return a Nipype workflow describing the preprocessing part of the pipeline """
+        """ Return a Nipype workflow describing the preprocessing part of the pipeline
 
+        Returns:
+            - preprocessing : nipype.WorkFlow
+        """
         # IdentityInterface node - allows to iterate over subjects and runs
         information_source = Node(IdentityInterface(
             fields = ['subject_id', 'run_id']),
@@ -62,140 +63,35 @@ class PipelineTeam08MQ(Pipeline):
         ]
 
         # SelectFiles node - to select necessary files
-        file_templates = {
-            'anat': join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
-            'func': join(
-                'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz'
+        templates = {
+            # Functional MRI - from the fmriprep derivatives
+            'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'
                 ),
-            'sbref': join(
-                'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_sbref.nii.gz'
-                ),
-            'magnitude': join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz'),
-            'phasediff': join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
+            # Mask - from the fmriprep derivatives
+            'mask' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'
+                )
         }
-        select_files = Node(SelectFiles(file_templates), name = 'select_files')
+        select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
 
         # DataSink Node - store the wanted results in the wanted directory
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
-        # FAST Node - Bias field correction on anatomical images
-        bias_field_correction = Node(FAST(), name = 'bias_field_correction')
-        bias_field_correction.inputs.img_type = 1 # T1 image
-        bias_field_correction.inputs.output_biascorrected = True
+        # ImageStats Node - Compute mean value of the 4D data
+        #   -k option adds a mask
+        #   -m computes the mean value
+        #   we do not need to filter on not-zero values (option -P) because a mask is passed
+        #   Warning : these options must be passed in the right order
+        #       (i.e.: apply mask then compute stat)
+        compute_mean = Node(ImageStats(), name = 'compute_mean')
+        compute_mean.inputs.op_string = '-k %s -m'
 
-        # BET Node - Brain extraction for anatomical images
-        brain_extraction_anat = Node(BET(), name = 'brain_extraction_anat')
-        brain_extraction_anat.inputs.frac = 0.5
-
-        # FAST Node - Segmentation of anatomical images
-        segmentation_anat = Node(FAST(), name = 'segmentation_anat')
-        segmentation_anat.inputs.no_bias = True # Bias field was already removed
-        segmentation_anat.inputs.segments = False # Only output partial volume estimation
-        segmentation_anat.inputs.probability_maps = False # Only output partial volume estimation
-
-        # Split Node - Split probability maps as they output from the segmentation node
-        #   outputs.out1 is CSF
-        #   outputs.out2 is grey matter
-        #   outputs.out3 is white matter
-        split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
-        split_segmentation_maps.inputs.splits = [1, 1, 1]
-        split_segmentation_maps.inputs.squeeze = True # Unfold one-element splits removing the list
-
-        # ANTs Node - Normalization of anatomical images to T1 MNI152 space
-        #   https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
-        normalization_anat = Node(Registration(), name = 'normalization_anat')
-        normalization_anat.inputs.fixed_image = Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-        normalization_anat.inputs.collapse_output_transforms = True
-        normalization_anat.inputs.convergence_threshold = [1e-06]
-        normalization_anat.inputs.convergence_window_size = [10]
-        normalization_anat.inputs.dimension = 3
-        normalization_anat.inputs.initial_moving_transform_com = True
-        normalization_anat.inputs.radius_or_number_of_bins = [32, 32, 4]
-        normalization_anat.inputs.sampling_percentage = [0.25, 0.25, 1]
-        normalization_anat.inputs.sampling_strategy = ['Regular', 'Regular', 'None']
-        normalization_anat.inputs.transforms = ['Rigid', 'Affine', 'SyN']
-        normalization_anat.inputs.metric = ['MI', 'MI', 'CC']
-        normalization_anat.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3.0, 0.0)]
-        normalization_anat.inputs.metric_weight = [1.0]*3
-        normalization_anat.inputs.shrink_factors = [[8, 4, 2, 1]]*3
-        normalization_anat.inputs.smoothing_sigmas = [[3, 2, 1, 0]]*3
-        normalization_anat.inputs.sigma_units = ['vox']*3
-        normalization_anat.inputs.number_of_iterations = [
-            [1000, 500, 250, 100],
-            [1000, 500, 250, 100],
-            [100, 70, 50, 20]
-            ]
-        normalization_anat.inputs.use_histogram_matching = True
-        normalization_anat.inputs.winsorize_lower_quantile = 0.005
-        normalization_anat.inputs.winsorize_upper_quantile = 0.995
-
-        # Threshold Node - create white-matter mask
-        threshold_white_matter = Node(Threshold(), name = 'threshold_white_matter')
-        threshold_white_matter.inputs.thresh = 1
-
-        # Threshold Node - create CSF mask
-        threshold_csf = Node(Threshold(), name = 'threshold_csf')
-        threshold_csf.inputs.thresh = 1
-
-        # ErodeImage Node - Erode white-matter mask
-        erode_white_matter = Node(ErodeImage(), name = 'erode_white_matter')
-        erode_white_matter.inputs.kernel_shape = 'sphere'
-        erode_white_matter.inputs.kernel_size = 2.0 #mm
-
-        # ErodeImage Node - Erode CSF mask
-        erode_csf = Node(ErodeImage(), name = 'erode_csf')
-        erode_csf.inputs.kernel_shape = 'sphere'
-        erode_csf.inputs.kernel_size = 1.5 #mm
-
-        # BET Node - Brain extraction of magnitude images
-        brain_extraction_magnitude = Node(BET(), name = 'brain_extraction_magnitude')
-        brain_extraction_magnitude.inputs.frac = 0.5
-
-        # PrepareFieldmap Node - Convert phase and magnitude to fieldmap images
-        convert_to_fieldmap = Node(PrepareFieldmap(), name = 'convert_to_fieldmap')
-
-        # BET Node - Brain extraction for high contrast functional images
-        brain_extraction_sbref = Node(BET(), name = 'brain_extraction_sbref')
-        brain_extraction_sbref.inputs.frac = 0.3
-        brain_extraction_sbref.inputs.mask = True
-        brain_extraction_sbref.inputs.functional = False # 3D data
-
-        # FLIRT Node - Align high contrast functional images to anatomical
-        #   (i.e.: single-band reference images a.k.a. sbref)
-        coregistration_sbref = Node(FLIRT(), name = 'coregistration_sbref')
-        coregistration_sbref.inputs.interp = 'trilinear'
-        coregistration_sbref.inputs.cost = 'bbr' # boundary-based registration
-
-        # ConvertXFM Node - Inverse coregistration transform, to get anat to func transform
-        inverse_func_to_anat = Node(ConvertXFM(), name = 'inverse_func_to_anat')
-        inverse_func_to_anat.inputs.invert_xfm = True
-
-        # BET Node - Brain extraction for functional images
-        brain_extraction_func = Node(BET(), name = 'brain_extraction_func')
-        brain_extraction_func.inputs.frac = 0.3
-        brain_extraction_func.inputs.mask = True
-        brain_extraction_func.inputs.functional = True
-
-        # MCFLIRT Node - Motion correction of functional images
-        motion_correction = Node(MCFLIRT(), name = 'motion_correction')
-        motion_correction.inputs.cost = 'normcorr'
-        motion_correction.inputs.interpolation = 'spline' # should be 'trilinear'
-        motion_correction.inputs.save_plots = True # Save transformation parameters
-
-        # Function Nodes get_slice_timings - Create a file with acquisition timing for each slide
-        slice_timings = Node(Function(
-            function = list_to_file,
-            input_names = ['input_list', 'file_name'],
-            output_names = ['output_file']
-            ), name = 'slice_timings')
-        slice_timings.inputs.input_list = TaskInformation()['SliceTiming']
-        slice_timings.inputs.file_name = 'slice_timings.tsv'
-
-        # SliceTimer Node - Slice time correction
-        slice_time_correction = Node(SliceTimer(), name = 'slice_time_correction')
-        slice_time_correction.inputs.time_repetition = TaskInformation()['RepetitionTime']
+        # MathsCommand Node - Perform grand-mean intensity normalisation of the entire 4D data
+        intensity_normalization = Node(MathsCommand(), name = 'intensity_normalization')
+        build_ing_args = lambda x : f'-ing {x}'
 
         # ImageStats Node - Compute median of voxel values to derive SUSAN's brightness_threshold
         #   -k option adds a mask
@@ -212,171 +108,51 @@ class PipelineTeam08MQ(Pipeline):
         smoothing.inputs.fwhm = self.fwhm
         compute_brightness_threshold = lambda x : .75 * x
 
-        # ApplyXFM Node - Alignment of white matter to functional space
-        alignment_white_matter = Node(ApplyXFM(), name = 'alignment_white_matter')
-        alignment_white_matter.inputs.apply_xfm = True
-        alignment_white_matter.inputs.no_resample = True
-
-        # ApplyXFM Node - Alignment of CSF to functional space
-        alignment_csf = Node(ApplyXFM(), name = 'alignment_csf')
-        alignment_csf.inputs.apply_xfm = True
-        alignment_csf.inputs.no_resample = True
-
-        # FLIRT Node - Alignment of functional data to anatomical space
-        #   To save disk space we force isotropic resampling with 2.0 mm voxel dimension
-        #   instead of 1.0 mm as reference file would suggest.
-        #   We have to use FLIRT instead of ApplyXFM because there is a bug with
-        #   apply_isoxfm and the latter.
-        alignment_func_to_anat = Node(FLIRT(), name = 'alignment_func_to_anat')
-        alignment_func_to_anat.inputs.apply_isoxfm = 2.0
-        alignment_func_to_anat.inputs.no_resample = True
-
-        # ApplyTransforms Node - Alignment of functional brain mask to anatomical space
-        alignment_func_mask_to_anat = Node(ApplyXFM(), name = 'alignment_func_mask_to_anat')
-        alignment_func_mask_to_anat.inputs.apply_xfm = True
-        alignment_func_mask_to_anat.inputs.no_resample = True
-
-        # Select Node - Change the order of transforms coming from ANTs Registration
-        reverse_transform_order = Node(Select(), name = 'reverse_transform_order')
-        reverse_transform_order.inputs.index = [1, 0]
-
-        # ApplyWarp Node - Alignment of functional data to MNI space
-        alignment_func_to_mni = Node(WarpTimeSeriesImageMultiTransform(),
-            name = 'alignment_func_to_mni')
-        alignment_func_to_mni.inputs.reference_image = \
-            Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-
-        # ApplyWarp Node - Alignment of functional data to MNI space
-        alignment_func_mask_to_mni = Node(WarpTimeSeriesImageMultiTransform(),
-            name = 'alignment_func_mask_to_mni')
-        alignment_func_mask_to_mni.inputs.reference_image = \
-            Info.standard_image('MNI152_T1_2mm_brain.nii.gz')
-
-        # Merge Node - Merge the two masks (WM and CSF) in one input for the next node
-        merge_masks = Node(Merge(2), name = 'merge_masks')
-
-        # CompCor Node - Compute anatomical confounds (regressors of no interest in the model)
-        #   from the WM and CSF masks
-        compute_confounds = Node(CompCor(), name = 'compute_confounds')
-        compute_confounds.inputs.num_components = 4
-        compute_confounds.inputs.merge_method = 'union'
-        compute_confounds.inputs.repetition_time = TaskInformation()['RepetitionTime']
-
-        # Merge Node - Merge file names to be removed after datasink node is performed
-        merge_removable_files = Node(Merge(8), name = 'merge_removable_files')
-        merge_removable_files.inputs.ravel_inputs = True
-
-        # Function Nodes remove_files - Remove sizeable files once they aren't needed
-        remove_after_datasink = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_after_datasink', iterfield = 'file_name')
-        remove_func = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []
-            ), name = 'remove_func', iterfield = 'file_name')
-
+        # Define workflow
         preprocessing = Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
         preprocessing.config['execution']['stop_on_first_crash'] = 'true'
         preprocessing.connect([
-            # Inputs
             (information_source, select_files, [
                 ('subject_id', 'subject_id'), ('run_id', 'run_id')
                 ]),
-
-            # Anatomical images
-            (select_files, bias_field_correction, [('anat', 'in_files')]),
-            (bias_field_correction, brain_extraction_anat, [('restored_image', 'in_file')]),
-            (brain_extraction_anat, segmentation_anat, [('out_file', 'in_files')]),
-            (brain_extraction_anat, normalization_anat, [('out_file', 'moving_image')]),
-            (segmentation_anat, split_segmentation_maps, [('partial_volume_files', 'inlist')]),
-            (split_segmentation_maps, threshold_white_matter, [('out3', 'in_file')]),
-            (split_segmentation_maps, threshold_csf, [('out1', 'in_file')]),
-            (threshold_white_matter, erode_white_matter, [('out_file', 'in_file')]),
-            (threshold_csf, erode_csf, [('out_file', 'in_file')]),
-            (erode_white_matter, alignment_white_matter, [('out_file', 'in_file')]),
-            (inverse_func_to_anat, alignment_white_matter, [('out_file', 'in_matrix_file')]),
-            (select_files, alignment_white_matter, [('sbref', 'reference')]),
-            (erode_csf, alignment_csf, [('out_file', 'in_file')]),
-            (inverse_func_to_anat, alignment_csf, [('out_file', 'in_matrix_file')]),
-            (select_files, alignment_csf, [('sbref', 'reference')]),
-            (alignment_csf, merge_masks, [('out_file', 'in1')]),
-            (alignment_white_matter, merge_masks, [('out_file', 'in2')]),
-
-            # Field maps
-            (select_files, brain_extraction_magnitude, [('magnitude', 'in_file')]),
-            (brain_extraction_magnitude, convert_to_fieldmap, [('out_file', 'in_magnitude')]),
-            (select_files, convert_to_fieldmap, [('phasediff', 'in_phase')]),
-
-            # High contrast functional volume
-            (select_files, brain_extraction_sbref, [('sbref', 'in_file')]),
-            (brain_extraction_sbref, coregistration_sbref, [('out_file', 'in_file')]),
-            (brain_extraction_anat, coregistration_sbref, [('out_file', 'reference')]),
-            (split_segmentation_maps, coregistration_sbref, [('out3', 'wm_seg')]),
-            (convert_to_fieldmap, coregistration_sbref, [('out_fieldmap', 'fieldmap')]),
-            (coregistration_sbref, inverse_func_to_anat, [('out_matrix_file', 'in_file')]),
-
-            # Functional images
-            (select_files, brain_extraction_func, [('func', 'in_file')]),
-            (brain_extraction_func, motion_correction, [('out_file', 'in_file')]),
-            (select_files, motion_correction, [('sbref', 'ref_file')]),
-            (slice_timings, slice_time_correction, [('output_file', 'custom_timings')]),
-            (motion_correction, slice_time_correction, [('out_file', 'in_file')]),
-            (slice_time_correction, smoothing, [('slice_time_corrected_file', 'in_file')]),
-            (slice_time_correction, compute_median, [('slice_time_corrected_file', 'in_file')]),
-            (brain_extraction_func, compute_median, [('mask_file', 'mask_file')]),
+            (select_files, compute_mean, [('func', 'in_file')]),
+            (select_files, compute_mean, [('mask', 'mask_file')]),
+            (select_files, intensity_normalization, [('func', 'in_file')]),
+            (select_files, compute_median, [('func', 'in_file')]),
+            (select_files, compute_median, [('mask', 'mask_file')]),
+            (compute_mean, intensity_normalization, [
+                (('out_stat', build_ing_args), 'args')
+                ]),
             (compute_median, smoothing, [
                 (('out_stat', compute_brightness_threshold), 'brightness_threshold')
                 ]),
-            (smoothing, alignment_func_to_anat, [('smoothed_file', 'in_file')]),
-            (coregistration_sbref, alignment_func_to_anat, [
-                ('out_matrix_file', 'in_matrix_file')
-                ]),
-            (brain_extraction_anat, alignment_func_to_anat, [('out_file', 'reference')]),
-            (brain_extraction_func, alignment_func_mask_to_anat, [('mask_file', 'in_file')]),
-            (coregistration_sbref, alignment_func_mask_to_anat, [
-                ('out_matrix_file', 'in_matrix_file')
-                ]),
-            (brain_extraction_anat, alignment_func_mask_to_anat, [('out_file', 'reference')]),
-            (alignment_func_to_anat, alignment_func_to_mni, [('out_file', 'input_image')]),
-            (alignment_func_mask_to_anat, alignment_func_mask_to_mni, [
-                ('out_file', 'input_image')
-                ]),
-            (normalization_anat, reverse_transform_order, [('forward_transforms', 'inlist')]),
-            (reverse_transform_order, alignment_func_to_mni, [('out', 'transformation_series')]),
-            (reverse_transform_order, alignment_func_mask_to_mni, [
-                ('out', 'transformation_series')
-                ]),
-            (merge_masks, compute_confounds, [('out', 'mask_files')]), #Masks are in the func space
-            (slice_time_correction, compute_confounds, [
-                ('slice_time_corrected_file', 'realigned_file')
-                ]),
+            (intensity_normalization, smoothing, [('out_file', 'in_file')]),
+            (smoothing, data_sink, [('smoothed_file', 'preprocessing.@output_image')])
+            ])
 
-            # Outputs of preprocessing
-            (motion_correction, data_sink, [('par_file', 'preprocessing.@par_file')]),
-            (compute_confounds, data_sink, [
-                ('components_file', 'preprocessing.@components_file')]),
-            (alignment_func_to_mni, data_sink, [('output_image', 'preprocessing.@output_image')]),
-            (alignment_func_mask_to_mni, data_sink, [
-                ('output_image', 'preprocessing.@output_mask')]),
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
 
-            # File removals
-            (alignment_func_to_anat, remove_func, [('out_file', 'file_name')]),
-            (alignment_func_to_mni, remove_func, [('output_image', '_')]),
+            # Remove Node - Remove intensity normalization files once they are no longer needed
+            remove_intensity_normalization = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_intensity_normalization'
+                )
 
-            (motion_correction, merge_removable_files, [('out_file', 'in1')]),
-            (slice_time_correction, merge_removable_files, [('slice_time_corrected_file', 'in2')]),
-            (smoothing, merge_removable_files, [('smoothed_file', 'in3')]),
-            (alignment_func_to_mni, merge_removable_files, [('output_image', 'in4')]),
-            (brain_extraction_func, merge_removable_files, [('out_file', 'in5')]),
-            (brain_extraction_anat, merge_removable_files, [('out_file', 'in6')]),
-            (bias_field_correction, merge_removable_files, [('restored_image', 'in7')]),
-            (normalization_anat, merge_removable_files, [('forward_transforms', 'in8')]),
-            (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
-            (data_sink, remove_after_datasink, [('out_file', '_')])
-        ])
+            # Remove Node - Remove smoothed files once they are no longer needed
+            remove_smooth = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_smooth'
+                )
+
+            # Add connections
+            preprocessing.connect([
+                (data_sink, remove_intensity_normalization, [('out_file', '_')]),
+                (intensity_normalization, remove_intensity_normalization, [
+                    ('out_file', 'file_name')]),
+                (data_sink, remove_smooth, [('out_file', '_')]),
+                (smoothing, remove_smooth, [('smoothed_file', 'file_name')]),
+                ])
 
         return preprocessing
 
@@ -388,30 +164,19 @@ class PipelineTeam08MQ(Pipeline):
             'run_id': self.run_list,
         }
         parameter_sets = product(*parameters.values())
-        output_dir = join(
+        template = join(
             self.directories.output_dir,
             'preprocessing',
-            '_run_id_{run_id}_subject_id_{subject_id}'
-        )
-        templates = [
-            join(output_dir, 'components_file.txt'),
-            join(output_dir, 'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par'),
-            join(output_dir,
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'),
-            join(output_dir,
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mask_flirt_wtsimt.nii.gz')
-        ]
+            '_run_id_{run_id}_subject_id_{subject_id}',
+            'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_maths_smooth.nii.gz'
+            )
 
         return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets for template in templates]
+            for parameter_values in parameter_sets]
 
     def get_subject_information(event_file):
         """
-        Extract information from an event file, to setup the model. 4 regressors are extracted :
-        - event: a regressor with 4 second ON duration
-        - gain : a parametric modulation of events corresponding to gain magnitude. Mean centred.
-        - loss : a parametric modulation of events corresponding to loss magnitude. Mean centred.
-        - response : a regressor with 1 for accept and -1 for reject. Mean centred.
+        Extract information from an event file, to setup the model.
 
         Parameters :
         - event_file : str, event file corresponding to the run and the subject to analyze
@@ -421,7 +186,7 @@ class PipelineTeam08MQ(Pipeline):
         """
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['event', 'gain', 'loss', 'response']
+        condition_names = ['gamble', 'gain', 'loss']
         onsets = {}
         durations = {}
         amplitudes = {}
@@ -438,23 +203,15 @@ class PipelineTeam08MQ(Pipeline):
 
             for line in file:
                 info = line.strip().split()
-                onsets['event'].append(float(info[0]))
-                durations['event'].append(float(info[1]))
-                amplitudes['event'].append(1.0)
+                onsets['gamble'].append(float(info[0]))
+                durations['gamble'].append(float(info[1]))
+                amplitudes['gamble'].append(1.0)
                 onsets['gain'].append(float(info[0]))
                 durations['gain'].append(float(info[1]))
                 amplitudes['gain'].append(float(info[2]))
                 onsets['loss'].append(float(info[0]))
                 durations['loss'].append(float(info[1]))
                 amplitudes['loss'].append(float(info[3]))
-                onsets['response'].append(float(info[0]))
-                durations['response'].append(float(info[1]))
-                if 'accept' in info[5]:
-                    amplitudes['response'].append(1.0)
-                elif 'reject' in info[5]:
-                    amplitudes['response'].append(-1.0)
-                else:
-                    amplitudes['response'].append(0.0)
 
         return [
             Bunch(
@@ -466,13 +223,57 @@ class PipelineTeam08MQ(Pipeline):
                 regressors = None)
             ]
 
+    def get_confounds(in_file, subject_id, run_id, working_dir):
+        """
+        Create a new tsv file with only desired confounds for one subject, one run.
+
+        Parameters :
+        - in_file : paths to subject's and run's confounds file
+        - subject_id : subject id to pick the file from
+        - run_id : run id to pick the file from
+
+        Return :
+        - path to a new file containing only desired confounds.
+        """
+        from os import makedirs
+        from os.path import join
+
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
+
+        # Read input confounds file
+        data_frame = read_csv(in_file, sep = '\t', header=0)
+
+        # Extract confounds we want to use for the model
+        confounds = DataFrame(transpose(array([
+            data_frame['X'], data_frame['Y'], data_frame['Z'],
+            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
+            data_frame['FramewiseDisplacement'], data_frame['aCompCor00'],
+            data_frame['aCompCor01'], data_frame['aCompCor02'],
+            data_frame['aCompCor03'], data_frame['aCompCor04']
+            ])))
+
+        # Exclude 2 time points for each run
+        confounds = confounds.iloc[2:]
+
+        # Write confounds to a file
+        confounds_file_path = join(working_dir, 'confounds_files',
+            f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
+
+        makedirs(join(working_dir, 'confounds_files'), exist_ok = True)
+
+        with open(confounds_file_path, 'w') as writer:
+            writer.write(confounds.to_csv(
+                    sep = '\t', index = False, header = False, na_rep = '0.0'))
+
+        return confounds_file_path
+
     def get_run_level_analysis(self):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline
 
         Returns:
             - run_level_analysis : nipype.WorkFlow
         """
-
         # IdentityInterface node - allows to iterate over subjects and runs
         information_source = Node(IdentityInterface(
             fields = ['subject_id', 'run_id']),
@@ -484,19 +285,18 @@ class PipelineTeam08MQ(Pipeline):
 
         # SelectFiles node - to select necessary files
         templates = {
-            # Functional MRI - computed by preprocessing
+            # Functional MRI - from the preprocessing
             'func' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_{run_id}_subject_id_{subject_id}',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf_st_smooth_flirt_wtsimt.nii.gz'
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc_maths_smooth.nii.gz'
                 ),
-            # Event file - from the original dataset
-            'event' : join('sub-{subject_id}', 'func',
+            # Events file - from the original dataset
+            'events' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'
                 ),
-            # Motion parameters - computed by preprocessing's motion_correction Node
-            'motion' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_{run_id}_subject_id_{subject_id}',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_brain_mcf.nii.gz.par',
+            # Confounds values - from the fmriprep derivatives
+            'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_confounds.tsv'
                 )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
@@ -506,6 +306,11 @@ class PipelineTeam08MQ(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
 
+        # ExtractROI Node - Exclude the first 2 time points/scans for each run
+        exclude_time_points = Node(ExtractROI(), name = 'exclude_time_points')
+        exclude_time_points.inputs.t_min = 2
+        exclude_time_points.inputs.t_size = 451 # number of time points - 2
+
         # Function Node get_subject_information - Get subject information from event files
         subject_information = Node(Function(
             function = self.get_subject_information,
@@ -513,17 +318,24 @@ class PipelineTeam08MQ(Pipeline):
             output_names = ['subject_info']
             ), name = 'subject_information')
 
+        # Function MapNode get_confounds - Get subject information from event files
+        select_confounds = Node(Function(
+            function = self.get_confounds,
+            input_names = ['in_file', 'subject_id', 'run_id', 'working_dir'],
+            output_names = ['confounds_file']
+            ), name = 'select_confounds', iterfield = ['run_id'])
+        select_confounds.inputs.working_dir = self.directories.working_dir
+
         # SpecifyModel Node - Generates a model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
-        specify_model.inputs.high_pass_filter_cutoff = 90
+        specify_model.inputs.high_pass_filter_cutoff = 50.0
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
-        specify_model.inputs.parameter_source = 'FSL' # Source of motion parameters.
 
         # Level1Design Node - Generate files for first level computation
         model_design = Node(Level1Design(), 'model_design')
         model_design.inputs.bases = {
-            'dgamma':{'derivs' : True} # Canonical double gamma HRF plus temporal derivative
+            'gamma':{'derivs' : False} # Canonical gamma HRF
             }
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
@@ -534,6 +346,9 @@ class PipelineTeam08MQ(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name = 'model_estimate')
+        #model_estimate.inputs.fit_armodel = True
+        #The noise level was set to the default 0.66.
+        #The AR(1) parameter was fixed to 0.34.
 
         # Create l1 analysis workflow and connect its nodes
         run_level_analysis = Workflow(
@@ -544,15 +359,20 @@ class PipelineTeam08MQ(Pipeline):
             (information_source, select_files, [
                 ('subject_id', 'subject_id'), ('run_id', 'run_id')
                 ]),
-            (select_files, subject_information, [('event', 'event_file')]),
+            (information_source, select_confounds, [
+                ('subject_id', 'subject_id'), ('run_id', 'run_id')
+                ]),
+            (select_files, subject_information, [('events', 'event_file')]),
+            (select_files, select_confounds, [('confounds', 'in_file')]),
+            (select_files, exclude_time_points, [('func', 'in_file')]),
+            (exclude_time_points, specify_model, [('roi_file', 'functional_runs')]),
+            (exclude_time_points, model_estimate, [('roi_file', 'in_file')]),
             (subject_information, specify_model, [('subject_info', 'subject_info')]),
-            (select_files, specify_model, [('motion', 'realignment_parameters')]),
-            (select_files, specify_model, [('func', 'functional_runs')]),
+            (select_confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
             (specify_model, model_design, [('session_info', 'session_info')]),
             (model_design, model_generation, [
                 ('ev_files', 'ev_files'),
                 ('fsf_files', 'fsf_file')]),
-            (select_files, model_estimate, [('func', 'in_file')]),
             (model_generation, model_estimate, [
                 ('con_file', 'tcon_file'),
                 ('design_file', 'design_file')]),
@@ -562,44 +382,53 @@ class PipelineTeam08MQ(Pipeline):
                 ('design_image', 'run_level_analysis.@design_img')]),
             ])
 
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Remove Node - Remove smoothed files (computed by preprocessing)
+            #   once they are no longer needed
+            remove_smooth = MapNode(
+                InterfaceFactory.create('remove_file'),
+                name = 'remove_smooth',
+                iterfield = ['file_name']
+                )
+
+            # Remove Node - Remove roi files once they are no longer needed
+            remove_roi = Node(
+                InterfaceFactory.create('remove_parent_directory'),
+                name = 'remove_roi'
+                )
+
+            # Add connections
+            run_level_analysis.connect([
+                (data_sink, remove_smooth, [('out_file', '_')]),
+                (select_files, remove_smooth, [('func', 'file_name')]),
+                (data_sink, remove_roi, [('out_file', '_')]),
+                (exclude_time_points, remove_roi, [('roi_file', 'file_name')])
+                ])
+
         return run_level_analysis
 
     def get_run_level_outputs(self):
         """ Return a list of the files generated by the run level analysis """
 
-        parameters = {
-            'run_id' : self.run_list,
-            'subject_id' : self.subject_list,
-            'file' : [
-                'run0.mat',
-                'run0.png'
-            ]
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}','{file}'
-            )
-        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
+        output_dir = join(self.directories.output_dir, 'run_level_analysis',
+            '_run_id_{run_id}_subject_id_{subject_id}')
 
+        # Handle results dir
         parameters = {
             'run_id' : self.run_list,
             'subject_id' : self.subject_list,
-            'contrast_id' : self.contrast_list,
+            'contrast_id' : self.contrast_list
         }
         parameter_sets = product(*parameters.values())
-        output_dir = join(
-            self.directories.output_dir,
-            'run_level_analysis', '_run_id_{run_id}_subject_id_{subject_id}'
-            )
         templates = [
             join(output_dir, 'results', 'cope{contrast_id}.nii.gz'),
             join(output_dir, 'results', 'tstat{contrast_id}.nii.gz'),
             join(output_dir, 'results', 'varcope{contrast_id}.nii.gz'),
-            join(output_dir, 'results', 'zstat{contrast_id}.nii.gz'),
-        ]
-        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            join(output_dir, 'results', 'zstat{contrast_id}.nii.gz')
+            ]
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets for template in templates]
 
         return return_list
@@ -622,9 +451,9 @@ class PipelineTeam08MQ(Pipeline):
                 '_run_id_*_subject_id_{subject_id}', 'results', 'cope{contrast_id}.nii.gz'),
             'varcopes' : join(self.directories.output_dir, 'run_level_analysis',
                 '_run_id_*_subject_id_{subject_id}', 'results', 'varcope{contrast_id}.nii.gz'),
-            'masks' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'sub-{subject_id}_task-MGT_run-*_bold_brain_mask_flirt_wtsimt.nii.gz')
+            'masks' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'
+                )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -701,9 +530,22 @@ class PipelineTeam08MQ(Pipeline):
             self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
             )
-
-        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        # Handle mask file
+        parameters = {
+            'contrast_id' : self.contrast_list,
+            'subject_id' : self.subject_list
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(self.directories.output_dir,
+            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
+        'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
@@ -788,7 +630,7 @@ class PipelineTeam08MQ(Pipeline):
                 '_contrast_id_{contrast_id}_subject_id_*', 'varcope1.nii.gz'),
             'masks' : join(self.directories.output_dir, 'subject_level_analysis',
                 '_contrast_id_{contrast_id}_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_brain_mask_flirt_wtsimt_maths.nii.gz')
+                'sub-*_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -1038,17 +880,19 @@ class PipelineTeam08MQ(Pipeline):
         # Handle groupComp
         parameters = {
             'contrast_id': self.contrast_list,
-            'file': [
+            'method' : ['groupComp'],
+            'file' : [
                 'randomise_tfce_corrp_tstat1.nii.gz',
                 'randomise_tstat1.nii.gz',
                 'zstat1.nii.gz',
                 'tstat1.nii.gz'
-            ]
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
             '_contrast_id_{contrast_id}', '{file}')
 
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\

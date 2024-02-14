@@ -10,7 +10,7 @@ Usage:
     pytest -q test_common.py
     pytest -q test_common.py -k <selected_test>
 """
-from os import mkdir
+from os import mkdir, makedirs
 from os.path import join, exists, abspath
 from shutil import rmtree
 from pathlib import Path
@@ -59,6 +59,61 @@ class TestCoreCommon:
 
         # Check file is removed
         assert not exists(test_file_path)
+
+    @staticmethod
+    @mark.unit_test
+    def test_remove_directory(remove_test_dir):
+        """ Test the remove_directory function """
+
+        # Create a single inside dir tree
+        dir_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2'))
+        makedirs(dir_path)
+        file_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2', 'file1.txt'))
+        Path(file_path).touch()
+        test_dir_path = abspath(join(TEMPORARY_DIR, 'dir_1'))
+
+        # Check file exist
+        assert exists(file_path)
+
+        # Create a Nipype Node using remove_files
+        test_remove_dir_node = Node(Function(
+            function = co.remove_directory,
+            input_names = ['_', 'directory_name'],
+            output_names = []
+            ), name = 'test_remove_dir_node')
+        test_remove_dir_node.inputs._ = ''
+        test_remove_dir_node.inputs.directory_name = test_dir_path
+        test_remove_dir_node.run()
+
+        # Check file is removed
+        assert not exists(test_dir_path)
+
+    @staticmethod
+    @mark.unit_test
+    def test_remove_parent_directory(remove_test_dir):
+        """ Test the remove_parent_directory function """
+
+        # Create a single inside dir tree
+        dir_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2'))
+        makedirs(dir_path)
+        file_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2', 'file1.txt'))
+        Path(file_path).touch()
+
+        # Check file exist
+        assert exists(file_path)
+
+        # Create a Nipype Node using remove_files
+        test_remove_dir_node = Node(Function(
+            function = co.remove_parent_directory,
+            input_names = ['_', 'file_name'],
+            output_names = []
+            ), name = 'test_remove_dir_node')
+        test_remove_dir_node.inputs._ = ''
+        test_remove_dir_node.inputs.file_name = file_path
+        test_remove_dir_node.run()
+
+        # Check file is removed
+        assert not exists(dir_path)
 
     @staticmethod
     @mark.unit_test
@@ -341,7 +396,7 @@ class TestCoreCommon:
 
         # Check file was created
         assert exists(out_file)
- 
+
         # Check file was created
         with open(out_file, 'r', encoding = 'utf-8') as file:
             for list_element, file_element in zip(out_list, file.read().split('\n')):
@@ -374,9 +429,8 @@ class TestCoreCommon:
 
         # Check file was created
         assert exists(out_file)
- 
+
         # Check file was created
         with open(out_file, 'r', encoding = 'utf-8') as file:
             for list_element, file_element in zip(out_list, file.read().split('\n')):
                 assert list_element == file_element
-

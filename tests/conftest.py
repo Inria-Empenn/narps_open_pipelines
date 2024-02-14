@@ -10,8 +10,11 @@ from os import remove
 from os.path import join, isfile
 from shutil import rmtree
 
+from numpy import isclose
 from pytest import helpers
+from pathvalidate import is_valid_filepath
 
+from narps_open.pipelines import Pipeline
 from narps_open.runner import PipelineRunner
 from narps_open.utils import get_subject_id
 from narps_open.utils.correlation import get_correlation_coefficient
@@ -20,6 +23,39 @@ from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
+
+@helpers.register
+def compare_float_2d_arrays(array_1, array_2):
+    """ Assert array_1 and array_2 are close enough """
+
+    assert len(array_1) == len(array_2)
+    for reference_array, test_array in zip(array_1, array_2):
+        assert len(reference_array) == len(test_array)
+        assert isclose(reference_array, test_array).all()
+
+@helpers.register
+def test_pipeline_outputs(pipeline: Pipeline, number_of_outputs: list):
+    """ Test the outputs of a Pipeline.
+        Arguments:
+        - pipeline, Pipeline: the pipeline to test
+        - number_of_outputs, list: a list containing the expected number of outputs for each
+          stage of the pipeline (preprocessing, run_level, subject_level, group_level, hypotheses)
+
+        Return: True if the outputs are in sufficient number and each ones name is valid,
+          False otherwise.
+    """
+    assert len(number_of_outputs) == 5
+    for outputs, number in zip([
+        pipeline.get_preprocessing_outputs(),
+        pipeline.get_run_level_outputs(),
+        pipeline.get_subject_level_outputs(),
+        pipeline.get_group_level_outputs(),
+        pipeline.get_hypotheses_outputs()], number_of_outputs):
+
+        assert len(outputs) == number
+        for output in outputs:
+            assert is_valid_filepath(output, platform = 'auto')
+            assert not any(c in output for c in ['{', '}'])
 
 @helpers.register
 def test_pipeline_execution(
@@ -43,35 +79,46 @@ def test_pipeline_execution(
     TODO : how to keep intermediate files of the low level for the next numbers of subjects ?
         - keep intermediate levels : boolean in PipelineRunner
     """
+    # A list of number of subject to iterate over
+    nb_subjects_list = list(range(
+        Configuration()['testing']['pipelines']['nb_subjects_per_group'],
+        nb_subjects,
+        Configuration()['testing']['pipelines']['nb_subjects_per_group'])
+        )
+    nb_subjects_list.append(nb_subjects)
+
     # Initialize the pipeline
     runner = PipelineRunner(team_id)
-    runner.nb_subjects = nb_subjects
     runner.pipeline.directories.dataset_dir = Configuration()['directories']['dataset']
     runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(team_id)
     runner.pipeline.directories.set_working_dir_with_team_id(team_id)
 
-    # Run as long as there are missing files after first level (with a max number of trials)
-    # TODO : this is a workaround
-    for _ in range(Configuration()['runner']['nb_trials']):
+    # Run first level by (small) sub-groups of subjects
+    for subjects in nb_subjects_list:
+        runner.nb_subjects = subjects
 
-        # Get missing subjects
-        missing_subjects = set()
-        for file in runner.get_missing_first_level_outputs():
-            subject_id = get_subject_id(file)
-            if subject_id is not None:
-                missing_subjects.add(subject_id)
+        # Run as long as there are missing files after first level (with a max number of trials)
+        # TODO : this is a workaround
+        for _ in range(Configuration()['runner']['nb_trials']):
 
-        # Leave if no missing subjects
-        if not missing_subjects:
-            break
+            # Get missing subjects
+            missing_subjects = set()
+            for file in runner.get_missing_first_level_outputs():
+                subject_id = get_subject_id(file)
+                if subject_id is not None:
+                    missing_subjects.add(subject_id)
 
-        # Start pipeline
-        runner.subjects = missing_subjects
-        try: # This avoids errors in the workflow to make the test fail
-            runner.start(True, False)
-        except(RuntimeError) as err:
-            print('RuntimeError: ', err)
+            # Leave if no missing subjects
+            if not missing_subjects:
+                break
+
+            # Start pipeline
+            runner.subjects = missing_subjects
+            try: # This avoids errors in the workflow to make the test fail
+                runner.start(True, False)
+            except(RuntimeError) as err:
+                print('RuntimeError: ', err)
 
     # Check missing files for the last time
     missing_files = runner.get_missing_first_level_outputs()
@@ -158,4 +205,5 @@ def test_pipeline_evaluation(team_id: str):
             file.write('success' if passed else 'failure')
             file.write(f' | {[round(i, 2) for i in results]} |\n')
 
-        assert passed
+        if not passed:
+            break
