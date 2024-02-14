@@ -1,189 +1,67 @@
 #!/usr/bin/python
 # coding: utf-8
 
-"""
-This template can be use to reproduce a pipeline using SPM as main software.
-
-- Replace all occurrences of 48CD by the actual id of the team.
-- All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
-eventually.
-- Also remove lines starting with [TODO], once you did what they suggested.
-"""
-
-# [TODO] Only import modules you use further in te code, remove others from the import section
+""" Write the work of NARPS team 3TR7 using Nipype """
 
 from os.path import join
+from itertools import product
 
-# [INFO] The import of base objects from Nipype, to create Workflows
-from nipype import Node, Workflow # , JoinNode, MapNode
-
-# [INFO] a list of interfaces used to manpulate data
+from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-# from nipype.algorithms.misc import Gunzip
+from nipype.interfaces.spm import (
+    Smooth,
+    Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
+    EstimateModel, EstimateContrast, Threshold
+    )
+from nipype.algorithms.modelgen import SpecifySPMModel
+from nipype.algorithms.misc import Gunzip
 
-# [INFO] a list of SPM-specific interfaces
-# from nipype.algorithms.modelgen import SpecifySPMModel
-# from nipype.interfaces.spm import (
-#    Smooth,
-#    Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
-#    EstimateModel, EstimateContrast, Threshold
-#    )
-
-# [INFO] In order to inherit from Pipeline
 from narps_open.pipelines import Pipeline
 
-class PipelineTeam48CD(Pipeline):
-    """ A class that defines the pipeline of team 48CD """
+class PipelineTeam3TR7(Pipeline):
+    """ A class that defines the pipeline of team 2T6S. """
 
     def __init__(self):
-        # [INFO] Remove the init method completely if unused
-        # [TODO] Init the attributes of the pipeline, if any other than the ones defined
-        # in the pipeline class
-        pass
+        super().__init__()
+        self.fwhm = 8.0
+        self.team_id = '3TR7'
+        self.contrast_list = ['0001', '0002', '0003']
 
     def get_preprocessing(self):
-        """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
-
-        # [INFO] The following part stays the same for all preprocessing pipelines
-
-        # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(
-            IdentityInterface(fields=['subject_id', 'run_id']),
-            name='info_source'
-        )
-        info_source.iterables = [
-            ('subject_id', self.subject_list),
-            ('run_id', self.run_list),
-        ]
-
-        # Templates to select files node
-        file_templates = {
-            'anat': join(
-                'sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'
-                ),
-            'func': join(
-                'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz'
-                ),
-            'magnitude': join(
-                'sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz'
-                ),
-            'phasediff': join(
-                'sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz'
-                )
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(file_templates, base_directory = self.directories.dataset_dir),
-            name='select_files'
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name='data_sink',
-        )
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name='node_name'
-        )
-
-        # [TODO] Add another node for each step of the pipeline
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
-        preprocessing = Workflow(
-            base_dir = self.directories.working_dir,
-            name = 'preprocessing'
-        )
-
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        preprocessing.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('subject_id', 'subject_id'), ('run_id', 'run_id')],
-                ),
-                (
-                    select_files,
-                    node_name,
-                    [('func', 'node_input_name')],
-                ),
-                (
-                    node_name,
-                    data_sink,
-                    [('node_output_name', 'preprocessing.@sym_link')],
-                ),
-            ]
-        )
-
-        # [INFO] Here we simply return the created workflow
-        return preprocessing
-
-    # [INFO] There was no run level analysis for the pipelines using SPM
-    def get_run_level_analysis(self):
-        """ Return a Nipype workflow describing the run level analysis part of the pipeline """
+        """ No preprocessing has been done by team 3TR7 """
         return None
 
-    # [INFO] This function is used in the subject level analysis pipelines using SPM
-    # [TODO] Adapt this example to your specific pipeline
-    def get_subject_infos(event_files: list, runs: list):
-        """
-        The model contained 6 regressors per run:
+    def get_run_level_analysis(self):
+        """ No run level analysis has been done by team 3TR7 """
+        return None
 
-        - One predictor with onset at the start of the trial and duration of 4s.
-
-        - Two parametric modulators (one for gains, one for losses)
-          were added to the trial onset predictor.
-          The two parametric modulators were orthogonalized w.r.t. the main predictor,
-          but were not orthogonalized w.r.t. one another.
-
-        - Two predictors modelling the decision output,
-          one for accepting the gamble and one for rejecting it
-          (merging strong and weak decisions).
-
-        The onset was defined as the beginning of the trial + RT
-        and the duration was set to 0 (stick function).
-        - One constant term for each run was included (SPM12 default design).
-
-        Create Bunchs for specifySPMModel.
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
+    def get_subject_infos(event_files, runs):
+        """ Create Bunchs for specifySPMModel.
 
         Parameters :
-        - event_files: list of events files (one per run) for the subject
-        - runs: list of runs to use
+        - event_files: list of str, list of events files (one per run) for the subject
+        - runs: list of str, list of runs to use
 
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
         """
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['trial', 'accepting', 'rejecting']
+        condition_names = ['trial']
         onset = {}
         duration = {}
         weights_gain = {}
         weights_loss = {}
-        onset_button = {}
-        duration_button = {}
 
-        # Loop over number of runs
         for run_id in range(len(runs)):
-
             # Create dictionary items with empty lists
-            onset.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            duration.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            weights_gain.update({'gain_run' + str(run_id + 1): []})
-            weights_loss.update({'loss_run' + str(run_id + 1): []})
+            onset.update({c + '_run' + str(run_id + 1) : [] for c in condition_names})
+            duration.update({c + '_run' + str(run_id + 1) : [] for c in condition_names})
+            weights_gain.update({'gain_run' + str(run_id + 1) : []})
+            weights_loss.update({'loss_run' + str(run_id + 1) : []})
 
             with open(event_files[run_id], 'rt') as event_file:
                 next(event_file)  # skip the header
@@ -192,27 +70,25 @@ class PipelineTeam48CD(Pipeline):
                     info = line.strip().split()
 
                     for condition in condition_names:
-                        val = condition + '_run' + str(run_id + 1)  # trial_run1 or accepting_run1
-                        val_gain = 'gain_run' + str(run_id + 1)  # gain_run1
-                        val_loss = 'loss_run' + str(run_id + 1)  # loss_run1
-                        if condition == 'trial':
-                            onset[val].append(float(info[0]))  # onsets for trial_run1
+                        val = condition + '_run' + str(run_id + 1) # trial_run1
+                        val_gain = 'gain_run' + str(run_id + 1) # gain_run1
+                        val_loss = 'loss_run' + str(run_id + 1) # loss_run1
+                        onset[val].append(float(info[0])) # onsets for trial_run1
+                        if float(info[4]) != 0: # If RT different from 0 -> trial with response
+                            duration[val].append(float(info[4])) # durations for trial (rpz by RT)
+                        else: # trial with no response : duration of 4 s
                             duration[val].append(float(4))
-                            weights_gain[val_gain].append(float(info[2]))
-                            weights_loss[val_loss].append(float(info[3]))
-                        elif condition == 'accepting' and 'accept' in info[5]:
-                            onset[val].append(float(info[0]) + float(info[4]))
-                            duration[val].append(float(0))
-                        elif condition == 'rejecting' and 'reject' in info[5]:
-                            onset[val].append(float(info[0]) + float(info[4]))
-                            duration[val].append(float(0))
+                        # weights gain for trial_run1
+                        weights_gain[val_gain].append(float(info[2]))
+                        # weights loss for trial_run1
+                        weights_loss[val_loss].append(-1.0 * float(info[3]))
 
         # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
         # But names must not have '_run1' etc because we concatenate runs
         subject_info = []
         for run_id in range(len(runs)):
 
-            conditions = [s + '_run' + str(run_id + 1) for s in condition_names]
+            conditions = [c + '_run' + str(run_id + 1) for c in condition_names]
             gain = 'gain_run' + str(run_id + 1)
             loss = 'loss_run' + str(run_id + 1)
 
@@ -224,31 +100,24 @@ class PipelineTeam48CD(Pipeline):
                     durations = [duration[c] for c in conditions],
                     amplitudes = None,
                     tmod = None,
-                    pmod = [
-                        Bunch(
-                            name = ['gain', 'loss'],
-                            poly = [1, 1],
-                            param = [weights_gain[gain], weights_loss[loss]],
-                        ),
-                        None,
+                    pmod = [Bunch(
+                        name = ['gain', 'loss'],
+                        poly = [1, 1],
+                        param = [weights_gain[gain], weights_loss[loss]])
                     ],
                     regressor_names = None,
-                    regressors = None,
-                ),
-            )
+                    regressors = None)
+                )
 
         return subject_info
 
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
     def get_contrasts():
         """
-        Create the list of tuples that represents contrasts.
+        Create a list of tuples that represent contrasts.
         Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
+        (Name, Stat, [list of condition names],[weights on those conditions])
         """
         # List of condition names
         conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
@@ -258,140 +127,267 @@ class PipelineTeam48CD(Pipeline):
         effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
         effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
 
-        # Contrast list
+        # Return contrast list
         return [trial, effect_gain, effect_loss]
 
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
+    def get_parameters_file(filepaths, subject_id, working_dir):
+        """
+        Create new tsv files with only desired parameters per subject per run.
+
+        Parameters :
+        - filepaths : paths to subject parameters file (i.e. one per run)
+        - subject_id : subject for whom the 1st level analysis is made
+
+        Return :
+        - parameters_file : paths to new files containing only desired parameters.
+        """
+        from os import makedirs
+        from os.path import join, isdir
+
+        from pandas import read_csv, DataFrame
+        from numpy import array, transpose
+
+        # Handle the case where filepaths is a single path (str)
+        if not isinstance(filepaths, list):
+            filepaths = [filepaths]
+
+        # Create the parameters files
+        parameters_file = []
+        for file_id, file in enumerate(filepaths):
+            data_frame = read_csv(file, sep = '\t', header=0)
+
+            # Extract parameters we want to use for the model
+            temp_list = array([
+                data_frame['X'], data_frame['Y'], data_frame['Z'],
+                data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']])
+            retained_parameters = DataFrame(transpose(temp_list))
+
+            # Write parameters to a parameters file
+            # TODO : warning !!! filepaths must be ordered (1,2,3,4) for the following code to work
+            new_path = join(working_dir, 'parameters_file',
+                f'parameters_file_sub-{subject_id}_run-{str(file_id + 1).zfill(2)}.tsv')
+
+            makedirs(join(working_dir, 'parameters_file'), exist_ok = True)
+
+            with open(new_path, 'w') as writer:
+                writer.write(retained_parameters.to_csv(
+                    sep = '\t', index = False, header = False, na_rep = '0.0'))
+
+            parameters_file.append(new_path)
+
+        return parameters_file
+
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
+    def remove_gunzip_files(_, subject_id, working_dir):
+        """
+        This method is used in a Function node to fully remove
+        the files generated by the gunzip node, once they aren't needed anymore.
+
+        Parameters:
+        - _: Node input only used for triggering the Node
+        - subject_id: str, subject id from which to remove the unzipped file
+        - working_dir: str, path to the working directory
+        """
+        from os.path import join
+        from shutil import rmtree
+
+        try:
+            rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'gunzip_func'))
+        except OSError as error:
+            print(error)
+        else:
+            print('The directory is deleted successfully')
+
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
+    def remove_smoothed_files(_, subject_id, working_dir):
+        """
+        This method is used in a Function node to fully remove
+        the files generated by the smoothing node, once they aren't needed anymore.
+
+        Parameters:
+        - _: Node input only used for triggering the Node
+        - subject_id: str, subject id from which to remove the smoothed file
+        - working_dir: str, path to the working directory
+        """
+        from os.path import join
+        from shutil import rmtree
+
+        try:
+            rmtree(join(working_dir, 'l1_analysis', f'_subject_id_{subject_id}', 'smooth'))
+        except OSError as error:
+            print(error)
+        else:
+            print('The directory is deleted successfully')
+
     def get_subject_level_analysis(self):
-        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
+        """
+        Create the subject level analysis workflow.
 
-        # [INFO] The following part stays the same for all pipelines
-
+        Returns:
+            - l1_analysis : nipype.WorkFlow
+        """
         # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-                dataset_dir = self.directories.dataset_dir,
-                results_dir = self.directories.results_dir,
-                working_dir = self.directories.working_dir,
-                run_list = self.run_list
-            ),
-            name='info_source',
-        )
-        info_source.iterables = [('subject_id', self.subject_list)]
+        infosource = Node(IdentityInterface(
+            fields = ['subject_id']),
+            name = 'infosource')
+        infosource.iterables = [('subject_id', self.subject_list)]
 
         # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
-        templates = {
-            'func': join(
-                self.directories.results_dir,
-                'preprocess',
-                '_run_id_*_subject_id_{subject_id}',
-                'complete_filename_{subject_id}_complete_filename.nii',
-            ),
-            'event': join(
-                self.directories.dataset_dir,
-                'sub-{subject_id}',
-                'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv',
-            )
+        template = {
+            # Parameter file
+            'param' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
+            # Functional MRI
+            'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'),
+            # Event file
+            'event' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_events.tsv')
         }
 
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
-            name = 'select_files'
-        )
+        # SelectFiles - to select necessary files
+        selectfiles = Node(SelectFiles(template, base_directory = self.directories.dataset_dir),
+            name = 'selectfiles')
 
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink'
-        )
+        # DataSink - store the wanted results in the wanted repository
+        datasink = Node(DataSink(base_directory = self.directories.output_dir),
+            name = 'datasink')
 
-        # [INFO] This is the node executing the get_subject_infos_spm function
-        # Subject Infos node - get subject specific condition information
-        subject_infos = Node(
-            Function(
-                input_names = ['event_files', 'runs'],
-                output_names = ['subject_info'],
-                function = self.get_subject_infos,
-            ),
-            name = 'subject_infos',
-        )
+        # Gunzip - gunzip files because SPM do not use .nii.gz files
+        gunzip_func = MapNode(Gunzip(),
+            name = 'gunzip_func',
+            iterfield = ['in_file'])
+
+        # Smooth - smoothing node
+        smooth = Node(Smooth(fwhm = self.fwhm),
+            name = 'smooth')
+
+        # Function node get_subject_infos - get subject specific condition information
+        subject_infos = Node(Function(
+            function = self.get_subject_infos,
+            input_names = ['event_files', 'runs'],
+            output_names = ['subject_info']),
+            name = 'subject_infos')
         subject_infos.inputs.runs = self.run_list
 
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
-        contrasts = Node(
-            Function(
-                input_names = ['subject_id'],
-                output_names = ['contrasts'],
-                function = self.get_contrasts,
-            ),
-            name = 'contrasts',
-        )
+        # SpecifyModel - generates SPM-specific Model
+        specify_model = Node(SpecifySPMModel(
+            concatenate_runs = True, input_units = 'secs', output_units = 'secs',
+            time_repetition = self.tr, high_pass_filter_cutoff = 128),
+            name = 'specify_model')
 
-        # [INFO] The following part has to be modified with nodes of the pipeline
+        # Level1Design - generates an SPM design matrix
+        l1_design = Node(Level1Design(
+            bases = {'hrf': {'derivs': [0, 0]}}, timing_units = 'secs',
+            interscan_interval = self.tr),
+            name = 'l1_design')
 
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name = 'node_name'
-        )
+        # EstimateModel - estimate the parameters of the model
+        l1_estimate = Node(EstimateModel(
+            estimation_method = {'Classical': 1}),
+            name = 'l1_estimate')
 
-        # [TODO] Add other nodes with the different steps of the pipeline
+        # Function node get_contrasts - get the contrasts
+        contrasts = Node(Function(
+            function = self.get_contrasts,
+            input_names = [],
+            output_names = ['contrasts']),
+            name = 'contrasts')
 
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
+        # Function node get_parameters_file - get parameters files
+        parameters = Node(Function(
+            function = self.get_parameters_file,
+            input_names = ['filepaths', 'subject_id', 'working_dir'],
+            output_names = ['parameters_file']),
+            name = 'parameters')
+        parameters.inputs.working_dir = self.directories.working_dir
 
-        subject_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = 'subject_level_analysis'
-        )
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        subject_level_analysis.connect([
-            (
-                info_source,
-                select_files,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                info_source,
-                contrasts,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                select_files,
-                subject_infos,
-                [('event', 'event_files')]
-            ),
-            (
-                select_files,
-                node_name,
-                [('func', 'node_input_name')]
-            ),
-            (
-                node_name, data_sink,
-                [('node_output_name', 'preprocess.@sym_link')]
-            ),
-        ])
+        # EstimateContrast - estimates contrasts
+        contrast_estimate = Node(EstimateContrast(),
+            name = 'contrast_estimate')
 
-        # [INFO] Here we simply return the created workflow
-        return subject_level_analysis
+        # Function node remove_gunzip_files - remove output of the gunzip node
+        remove_gunzip_files = Node(Function(
+            function = self.remove_gunzip_files,
+            input_names = ['_', 'subject_id', 'working_dir'],
+            output_names = []),
+            name = 'remove_gunzip_files')
+        remove_gunzip_files.inputs.working_dir = self.directories.working_dir
 
-    # [INFO] This function returns the list of ids and files of each group of participants
-    # to do analyses for both groups, and one between the two groups.
-    def get_subset_contrasts(
-        file_list, subject_list: list, participants_file: str
-    ):
+        # Function node remove_smoothed_files - remove output of the smooth node
+        remove_smoothed_files = Node(Function(
+            function = self.remove_smoothed_files,
+            input_names = ['_', 'subject_id', 'working_dir'],
+            output_names = []),
+            name = 'remove_smoothed_files')
+        remove_smoothed_files.inputs.working_dir = self.directories.working_dir
+
+        # Create l1 analysis workflow and connect its nodes
+        l1_analysis = Workflow(base_dir = self.directories.working_dir, name = 'l1_analysis')
+        l1_analysis.connect([
+            (infosource, selectfiles, [('subject_id', 'subject_id')]),
+            (infosource, remove_gunzip_files, [('subject_id', 'subject_id')]),
+            (infosource, remove_smoothed_files, [('subject_id', 'subject_id')]),
+            (infosource, parameters, [('subject_id', 'subject_id')]),
+            (subject_infos, specify_model, [('subject_info', 'subject_info')]),
+            (contrasts, contrast_estimate, [('contrasts', 'contrasts')]),
+            (selectfiles, parameters, [('param', 'filepaths')]),
+            (selectfiles, subject_infos, [('event', 'event_files')]),
+            (selectfiles, gunzip_func, [('func', 'in_file')]),
+            (gunzip_func, specify_model, [('out_file', 'functional_runs')]),
+            (smooth, remove_gunzip_files, [('smoothed_files', '_')]),
+            (parameters, specify_model, [('parameters_file', 'realignment_parameters')]),
+            (specify_model, l1_design, [('session_info', 'session_info')]),
+            (l1_design, l1_estimate, [('spm_mat_file', 'spm_mat_file')]),
+            (l1_estimate, contrast_estimate, [
+                ('spm_mat_file', 'spm_mat_file'),
+                ('beta_images', 'beta_images'),
+                ('residual_image', 'residual_image')]),
+            (contrast_estimate, smooth, [('beta_images','smoothed_files')])
+            (contrast_estimate, datasink, [
+                ('con_images', 'l1_analysis.@con_images'),
+                ('spmT_images', 'l1_analysis.@spmT_images'),
+                ('spm_mat_file', 'l1_analysis.@spm_mat_file')]),
+            (contrast_estimate, remove_smoothed_files, [('spmT_images', '_')])
+            ])
+
+        return l1_analysis
+
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
+        # Contrat maps
+        templates = [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # SPM.mat file
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+
+        # spmT maps
+        templates += [join(
+            self.directories.output_dir,
+            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
+
+    # @staticmethod # Starting python 3.10, staticmethod should be used here
+    # Otherwise it produces a TypeError: 'staticmethod' object is not callable
+    def get_subset_contrasts(file_list, subject_list, participants_file):
         """
-        This function return the file list containing only the files belonging
-        to the subjects in the wanted group.
-
         Parameters :
         - file_list : original file list selected by selectfiles node
         - subject_list : list of subject IDs that are in the wanted group for the analysis
@@ -400,17 +396,16 @@ class PipelineTeam48CD(Pipeline):
         Returns :
         - equal_indifference_id : a list of subject ids in the equalIndifference group
         - equal_range_id : a list of subject ids in the equalRange group
-        - equal_indifference_files : a subset of file_list corresponding to subjects
-        in the equalIndifference group
-        - equal_range_files : a subset of file_list corresponding to subjects
-        in the equalRange group
+        - equal_indifference_files : a subset of file_list corresponding to
+            subjects in the equalIndifference group
+        - equal_range_files : a subset of file_list corresponding to
+            subjects in the equalRange group
         """
         equal_indifference_id = []
         equal_range_id = []
         equal_indifference_files = []
         equal_range_files = []
 
-        # Reading file containing participants IDs and groups
         with open(participants_file, 'rt') as file:
             next(file)  # skip the header
             for line in file:
@@ -448,114 +443,220 @@ class PipelineTeam48CD(Pipeline):
             - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns:
-            - group_level_analysis: nipype.WorkFlow
+            - l2_analysis: nipype.WorkFlow
         """
-        # [INFO] The following part stays the same for all preprocessing pipelines
-
-        # Infosource node - iterate over the list of contrasts generated
-        # by the subject level analysis
-        info_source = Node(
-            IdentityInterface(
-                fields = ['contrast_id', 'subjects'],
-                subjects = self.subject_list
-            ),
-            name = 'info_source',
-        )
-        info_source.iterables = [('contrast_id', self.contrast_list)]
-
-        # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames
-        # of results of first level analysis
-        templates = {
-            'contrast': join(
-                self.directories.results_dir,
-                'subject_level_analysis',
-                '_subject_id_*',
-                'complete_filename_{contrast_id}_complete_filename.nii',
-            ),
-            'participants': join(
-                self.directories.dataset_dir,
-                'participants.tsv'
-            )
-        }
-        select_files = Node(
-            SelectFiles(
-                templates,
-                base_directory = self.directories.results_dir,
-                force_list = True
-            ),
-            name = 'select_files',
-        )
-
-        # Datasink node - to save important files
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink',
-        )
-
-        # Contrasts node - to select subset of contrasts
-        sub_contrasts = Node(
-            Function(
-                input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
-                output_names = [
-                    'equalIndifference_id',
-                    'equalRange_id',
-                    'equalIndifference_files',
-                    'equalRange_files',
-                ],
-                function = self.get_subset_contrasts,
-            ),
-            name = 'sub_contrasts',
-        )
-        sub_contrasts.inputs.method = method
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name = 'node_name'
-        )
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
 
-        # Declare the workflow
-        group_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_{method}_nsub_{nb_subjects}'
-        )
-        group_level_analysis.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('contrast_id', 'contrast_id')],
-                ),
-                (info_source, sub_contrasts, [('subjects', 'subject_list')]),
-                (
-                    select_files,
-                    sub_contrasts,
-                    [('contrast', 'file_list'), ('participants', 'participants_file')],
-                ),  # Complete with other links between nodes
-            ]
-        )
+        # Infosource - iterate over the list of contrasts
+        infosource_groupanalysis = Node(
+            IdentityInterface(
+                fields = ['contrast_id', 'subjects']),
+                name = 'infosource_groupanalysis')
+        infosource_groupanalysis.iterables = [('contrast_id', self.contrast_list)]
 
-        # [INFO] Here we define the contrasts used for the group level analysis, depending on the
-        # method used.
+        # SelectFiles
+        templates = {
+            # Contrast for all participants
+            'contrast' : join(self.directories.output_dir,
+                'l1_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
+            # Participants file
+            'participants' : join(self.directories.dataset_dir, 'participants.tsv')
+            }
+
+        selectfiles_groupanalysis = Node(SelectFiles(
+            templates, base_directory = self.directories.results_dir, force_list = True),
+            name = 'selectfiles_groupanalysis')
+
+        # Datasink - save important files
+        datasink_groupanalysis = Node(DataSink(
+            base_directory = str(self.directories.output_dir)
+            ),
+            name = 'datasink_groupanalysis')
+
+        # Function node get_subset_contrasts - select subset of contrasts
+        sub_contrasts = Node(Function(
+            function = self.get_subset_contrasts,
+            input_names = ['file_list', 'subject_list', 'participants_file'],
+            output_names = [
+                'equalIndifference_id',
+                'equalRange_id',
+                'equalIndifference_files',
+                'equalRange_files']),
+            name = 'sub_contrasts')
+        sub_contrasts.inputs.subject_list = self.subject_list
+
+        # Estimate model
+        estimate_model = Node(EstimateModel(
+            estimation_method = {'Classical':1}),
+            name = 'estimate_model')
+
+        # Estimate contrasts
+        estimate_contrast = Node(EstimateContrast(
+            group_contrast = True),
+            name = 'estimate_contrast')
+
+        # Create thresholded maps
+        threshold = MapNode(Threshold(
+            use_topo_fdr = False, use_fwe_correction = False, extent_threshold = 10,
+            height_threshold = 0.001, height_threshold_type = 'p-value',
+            force_activation = True),
+            name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
+        threshold.synchronize = True
+
+        l2_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'l2_analysis_{method}_nsub_{nb_subjects}')
+        l2_analysis.connect([
+            (infosource_groupanalysis, selectfiles_groupanalysis, [
+                ('contrast_id', 'contrast_id')]),
+            (selectfiles_groupanalysis, sub_contrasts, [
+                ('contrast', 'file_list'),
+                ('participants', 'participants_file')]),
+            (estimate_model, estimate_contrast, [
+                ('spm_mat_file', 'spm_mat_file'),
+                ('residual_image', 'residual_image'),
+                ('beta_images', 'beta_images')]),
+            (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),
+                ('spmT_images', 'stat_image')]),
+            (estimate_model, datasink_groupanalysis, [
+                ('mask_image', f'l2_analysis_{method}_nsub_{nb_subjects}.@mask')]),
+            (estimate_contrast, datasink_groupanalysis, [
+                ('spm_mat_file', f'l2_analysis_{method}_nsub_{nb_subjects}.@spm_mat'),
+                ('spmT_images', f'l2_analysis_{method}_nsub_{nb_subjects}.@T'),
+                ('con_images', f'l2_analysis_{method}_nsub_{nb_subjects}.@con')]),
+            (threshold, datasink_groupanalysis, [
+                ('thresholded_map', f'l2_analysis_{method}_nsub_{nb_subjects}.@thresh')])])
+
         if method in ('equalRange', 'equalIndifference'):
             contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
+            threshold.inputs.contrast_index = [1, 2]
+
+            # Specify design matrix
+            one_sample_t_test_design = Node(OneSampleTTestDesign(),
+                name = 'one_sample_t_test_design')
+
+            l2_analysis.connect([
+                (sub_contrasts, one_sample_t_test_design, [(f'{method}_files', 'in_files')]),
+                (one_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])])
 
         elif method == 'groupComp':
             contrasts = [
-                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])
-            ]
+                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1])]
+            threshold.inputs.contrast_index = [1]
 
-        # [INFO] Here we simply return the created workflow
-        return group_level_analysis
+            # Specify design matrix
+            two_sample_t_test_design = Node(TwoSampleTTestDesign(),
+                name = 'two_sample_t_test_design')
+
+            l2_analysis.connect([
+                (sub_contrasts, two_sample_t_test_design, [
+                    ('equalRange_files', 'group1_files'),
+                    ('equalIndifference_files', 'group2_files')]),
+                (two_sample_t_test_design, estimate_model, [
+                    ('spm_mat_file', 'spm_mat_file')])
+                ])
+
+        estimate_contrast.inputs.contrasts = contrasts
+
+        return l2_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'l2_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 6
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 7
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'l2_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0002.nii'),
+            # Hypothesis 9
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'l2_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
