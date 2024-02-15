@@ -22,8 +22,8 @@ The `datalad install` command only downloaded the metadata associated with the d
 
 > [! WARNING]
 > The following command lines will download **all** the data, which represents around :
->  * 3.2GB for `data/results/`
->  * 550GB for `data/original/`
+>  * 3 GB for `data/results/`
+>  * 880 GB for `data/original/`
 
 ```bash
 # To get all the data
