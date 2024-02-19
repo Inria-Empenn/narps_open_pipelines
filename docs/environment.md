@@ -2,12 +2,12 @@
 
 ## The Docker container :whale:
 
-The NARPS Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore we recommend to use the [`nipype/nipype` Docker image](https://hub.docker.com/r/nipype/nipype/) that contains all the required software dependencies.
+The NARPS Open Pipelines project is build upon several dependencies, such as [Nipype](https://nipype.readthedocs.io/en/latest/) but also the original software packages used by the pipelines (SPM, FSL, AFNI...). Therefore we recommend to use the [`nipype/nipype:py38` Docker image](https://hub.docker.com/r/nipype/nipype/) that contains all the required software dependencies.
 
 The simplest way to start the container is by using the command below :
 
 ```bash
-docker run -it nipype/nipype
+docker run -it nipype/nipype:py38
 ```
 
 From this command line, you need to add volumes to be able to link with your local files (code repository).
@@ -16,7 +16,7 @@ From this command line, you need to add volumes to be able to link with your loc
 # Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
 docker run -it \
            -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ \
-           nipype/nipype
+           nipype/nipype:py38
 ``` 
 
 ## Use Jupyter with the container
@@ -27,7 +27,7 @@ If you wish to use [Jupyter](https://jupyter.org/) to run the code, a port forwa
 docker run -it \
            -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ \
            -p 8888:8888 \
-           nipype/nipype
+           nipype/nipype:py38
 ``` 
 
 Then, from inside the container :
@@ -81,7 +81,7 @@ To use SPM inside the container, use this command at the beginning of your scrip
 ```python
 from nipype.interfaces import spm
 
-matlab_cmd = '/opt/spm12-r7771/run_spm12.sh /opt/matlabmcr-2010a/v713/ script'
+matlab_cmd = '/opt/spm12-r7219/run_spm12.sh /opt/matlabmcr-2010a/v713/ script'
 
 spm.SPMCommand.set_mlab_paths(matlab_cmd=matlab_cmd, use_mcr=True)
 ```

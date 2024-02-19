@@ -43,7 +43,7 @@ datalad get data/original/ds001734/derivatives/fmriprep/sub-00[1-4] -J 12
 [Install Docker](https://docs.docker.com/engine/install/) then pull the nipype Docker image :
 
 ```bash
-docker pull nipype/nipype
+docker pull nipype/nipype:py38
 ```
 
 Once it's done you can check the image is available on your system :
@@ -51,7 +51,7 @@ Once it's done you can check the image is available on your system :
 ```bash
 docker images
    REPOSITORY                 TAG       IMAGE ID        CREATED         SIZE
-   docker.io/nipype/nipype    latest    0f3c74d28406    9 months ago    22.7 GB
+   docker.io/nipype/nipype    py38      0f3c74d28406    9 months ago    22.7 GB
 ```
 
 > [!NOTE]  
@@ -63,10 +63,11 @@ Start a Docker container from the Docker image :
 
 ```bash
 # Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
-docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype
+docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype:py38
 ```
 
-Optionally edit the configuration file `narps_open/utils/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
+Optionally edit the configuration file `narps_open/utils/configuration/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
+
 ```toml
 # default_config.toml
 # ...

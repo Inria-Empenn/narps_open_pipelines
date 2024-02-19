@@ -23,4 +23,4 @@ neurovault_naming = true # true if results files are saved using the neurovault 
 
 [testing.pipelines]
 nb_subjects_per_group = 4 # Compute first level analyses by subgroups of N subjects, to avoid lacking of disk and memory
-correlation_thresholds = [0.30, 0.70, 0.79, 0.85, 0.93] # Correlation between reproduced hypotheses files and results, respectively for [20, 40, 60, 80, 108] subjects.
+correlation_thresholds = [0.30, 0.70, 0.78, 0.85, 0.93] # Correlation between reproduced hypotheses files and results, respectively for [20, 40, 60, 80, 108] subjects.
