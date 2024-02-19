@@ -378,7 +378,9 @@ class PipelineTeam98BT(Pipeline):
         return None
 
     def get_parameters_file(
-        parameters_file: str, wc2_file: str, func_file: str, subject_id: str, run_id: str, working_dir: str):
+        parameters_file: str,
+        wc2_file: str,
+        func_file: str, subject_id: str, run_id: str, working_dir: str):
         """
         Create a new tsv file, by adding the mean signal in white matter to other parameters
             in parameters_file.
