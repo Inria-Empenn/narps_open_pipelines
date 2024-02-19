@@ -18,18 +18,18 @@ requires = [
     'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
     'nilearn>=0.10.0,<0.11',
-    'nipype',
-    'pandas'
+    'nipype>=1.8.6,<1.9',
+    'pandas>=1.5.2,<1.6'
 ]
 extras_require = {
     'tests': [
-        'pathvalidate',
-        'pylint',
-        'pytest',
-        'pytest-cov',
-        'pytest-helpers-namespace',
-        'pytest-mock',
-        'checksumdir'
+        'pathvalidate>=3.2.0,<3.3',
+        'pylint>=3.0.3,<3.1',
+        'pytest>=7.2.0,<7.3',
+        'pytest-cov>=2.10.1,<2.11',
+        'pytest-helpers-namespace>=2021.12.29,<2021.13',
+        'pytest-mock>=3.12.0,<3.13',
+        'checksumdir>=1.2.0,<1.3'
         ]
 }
 
