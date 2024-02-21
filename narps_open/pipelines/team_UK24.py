@@ -8,13 +8,17 @@ from itertools import product
 
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility.base import Select, Merge, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.spm import (
+    Coregister, Segment, Reslice, Realign,
     Smooth, Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
     EstimateModel, EstimateContrast, Threshold
     )
+from nipype.algorithms.confounds import FramewiseDisplacement
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.algorithms.misc import Gunzip, SimpleThreshold
+from nipype.interfaces.fsl.maths import BinaryMaths
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -33,6 +37,62 @@ class PipelineTeamUK24(Pipeline):
         self.contrast_list = []
         self.subject_level_contrasts = []
 
+    def get_average_values(
+        in_file: str,
+        mask: str,
+        subject_id: str,
+        run_id: str,
+        out_file_suffix: str,
+        working_dir: str
+        ) -> str:
+        """
+        Compute the average value of each frame of a 4D image, while applying a mask.
+        Write the values in a text file.
+
+        Parameters:
+            - in_file: str, path to the input file (4D)
+            - mask: str, path to the mask file (3D)
+            - subject_id: str, related subject id
+            - run_id: str, related run id
+            - out_file_suffix: str, string to append at the end of the file name
+            - working_dir: str, name of the directory for intermediate results
+
+        Returns:
+            - preprocessing : nipype.WorkFlow
+        """
+        from os import makedirs
+        from os.path import join
+
+        from nilearn.image import load_img, math_img, index_img, get_data
+
+        # Load input images
+        mask_img = load_img(mask)
+        in_file_img = load_img(in_file)
+
+        # Loop through time points
+        average_values = []
+        for frame_index in range(in_file_img.shape[3]):
+            average_values.append(
+                get_data(math_img(
+                    'np.mean(image * mask)',
+                    image = index_img(in_file_img, frame_index),
+                    mask = index_img(mask_img, 0)
+                ))
+            )
+
+        # Write confounds to a file
+        out_file_name = join(working_dir, 'regressors',
+            f'sub-{subject_id}_run-{run_id}_' + out_file_suffix)
+
+        makedirs(join(working_dir, 'regressors'), exist_ok = True)
+
+        # Write output file
+        with open(out_file_name, 'w', encoding = 'utf-8') as writer:
+            for value in average_values:
+                writer.write(f'{value}\n')
+
+        return out_file_name
+
     def get_preprocessing(self):
         """
         Create the preprocessing workflow.
@@ -50,18 +110,18 @@ class PipelineTeamUK24(Pipeline):
             fields = ['subject_id']),
             name = 'information_source')
         information_source.iterables = [('subject_id', self.subject_list)]
-        preprocessing.connect(information_source, 'subject_id', select_files, 'subject_id')
 
         # SELECT FILES - to select necessary files
         templates = {
             'anat' : join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
-            'func' : join('sub-{subject_id}', 'func', 'sub-{subject_id}',
+            'func' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold.nii.gz'),
-            'sbref' : join('sub-{subject_id}', 'func', 'sub-{subject_id}',
+            'sbref' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_sbref.nii.gz'),
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(information_source, 'subject_id', select_files, 'subject_id')
 
         # GUNZIP - gunzip files because SPM do not use .nii.gz files
         gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
@@ -70,13 +130,18 @@ class PipelineTeamUK24(Pipeline):
         preprocessing.connect(select_files, 'anat', gunzip_anat, 'in_file')
         preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
         preprocessing.connect(select_files, 'sbref', gunzip_sbref, 'in_file')
-            
+
+        # SELECT - Select the first sbref file from the selected (and gunzipped) files.
+        select_first_sbref = Node(Select(), name = 'select_first_sbref')
+        select_first_sbref.inputs.index = [0]
+        preprocessing.connect(gunzip_sbref, 'out_file', select_first_sbref, 'inlist')
+
         # COREGISTER - Coregistration of the structural T1w image to the reference functional image
         #   (defined as the single volume 'sbref' image acquired before the first functional run).
         coregistration = Node(Coregister(), name = 'coregistration')
         coregistration.inputs.cost_function = 'nmi'
         preprocessing.connect(gunzip_anat, 'out_file', coregistration, 'source')
-        preprocessing.connect(gunzip_sbref, 'out_file', coregistration, 'target')
+        preprocessing.connect(select_first_sbref, 'out', coregistration, 'target')
 
         # SEGMENT - Segmentation of the coregistered T1w image into grey matter, white matter and
         #   cerebrospinal fluid tissue maps.
@@ -86,7 +151,7 @@ class PipelineTeamUK24(Pipeline):
         segmentation.inputs.csf_output_type = [False,False,True] # Output maps in native space only
         segmentation.inputs.gm_output_type = [False,False,True] # Output maps in native space only
         segmentation.inputs.wm_output_type = [False,False,True] # Output maps in native space only
-        preprocessing.connect(coregistration, 'coregistered_source', segmentation)
+        preprocessing.connect(coregistration, 'coregistered_source', segmentation, 'data')
 
         # MERGE - Merge files for the reslicing node into one input.
         merge_before_reslicing = Node(Merge(4), name = 'merge_before_reslicing')
@@ -95,16 +160,11 @@ class PipelineTeamUK24(Pipeline):
         preprocessing.connect(segmentation, 'native_wm_image', merge_before_reslicing, 'in3')
         preprocessing.connect(segmentation, 'native_gm_image', merge_before_reslicing, 'in4')
 
-        # SELECT - Select the first sbref file from the selected (and gunzipped) files.
-        select_first_sbref = Node(Select(), name = 'select_first_sbref')
-        select_first_sbref.inputs.index = [0]
-        preprocessing.connect(gunzip_sbref, 'out_file', select_first_sbref, 'inlist')
-
         # RESLICE - Reslicing of coregistered T1w image and segmentations to the same voxel space
         #   of the reference (sbref) image.
         reslicing = MapNode(Reslice(), name = 'reslicing', iterfield = 'in_file')
-        preprocessing.connect(merge_before_reslicing, 'out', reslicing_anat, 'in_file')
-        preprocessing.connect(select_first_sbref, 'out', reslicing_anat, 'space_defining')
+        preprocessing.connect(merge_before_reslicing, 'out', reslicing, 'in_file')
+        preprocessing.connect(select_first_sbref, 'out', reslicing, 'space_defining')
 
         # REALIGN - Realigning all 4 sbref files images to the one acquired before the first run
         #   Realigns to the first image of the list by default. TODO : check
@@ -115,12 +175,13 @@ class PipelineTeamUK24(Pipeline):
 
         # REALIGN - Realigning all volumes in a particular run to the first image in that run.
         #   Realigns to the first image of the run by default.
-        #   Note : gunzip_func.out_file is a list of files, but we wand to realign run by run.
-        realign_func = MapNode(Realign(), name = 'realign_func')
+        #   Note : gunzip_func.out_file is a list of files, but we want to realign run by run,
+        #   therefore, passing one func file at a time.
+        realign_func = MapNode(Realign(), name = 'realign_func', iterfield = 'in_files')
         realign_func.inputs.register_to_mean = False
         preprocessing.connect(gunzip_func, 'out_file', realign_func, 'in_files')
 
-        # Smooth - Spatial smoothing of fMRI data.
+        # SMOOTH - Spatial smoothing of fMRI data.
         #   Note : realign_func.realigned_files will be a list(list(files)) :
         #   we need a MapNode to process it.
         smoothing = MapNode(Smooth(), name = 'smoothing', iterfield = 'in_files')
@@ -129,7 +190,7 @@ class PipelineTeamUK24(Pipeline):
 
         # SELECT - Select the segmentation probability maps.
         select_maps = Node(Select(), name = 'select_maps')
-        select_maps.inputs.index = [1, 2, 3]
+        select_maps.inputs.index = [1, 2] # csf and wm only
         preprocessing.connect(reslicing, 'out_file', select_maps, 'inlist')
 
         # SIMPLE THRESHOLD - Apply a threshold to proability maps
@@ -137,55 +198,71 @@ class PipelineTeamUK24(Pipeline):
         threshold.inputs.threshold = 0.5
         preprocessing.connect(select_maps, 'out', threshold, 'volumes')
 
+        # BINARY MATHS - Transform proability maps to binary masks
+        binarize = MapNode(BinaryMaths(), name = 'binarize', iterfield = 'in_file')
+        binarize.inputs.operand_value = 1.0
+        binarize.inputs.operation = 'max'
+        binarize.inputs.output_type = 'NIFTI'
+        preprocessing.connect(threshold, 'thresholded_volumes', binarize, 'in_file')
 
+        # FRAMEWISE DISPLACEMENT - Compute framewise displacement from realignment parameters.
+        displacement = MapNode(
+            FramewiseDisplacement(),
+            name = 'displacement',
+            iterfield = 'in_file'
+            )
+        displacement.inputs.parameter_source = 'SPM'
+        preprocessing.connect(realign_func, 'realignment_parameters', displacement, 'in_file')
 
+        # SPLIT - Select the WM and CSF masks.
+        split_masks = Node(Split(), name = 'split_masks')
+        split_masks.inputs.splits = [1, 1]
+        preprocessing.connect(binarize, 'out_file', split_masks, 'inlist')
 
-        thresholded_volumes
-        """
-        % 6 - Calculation of several quality metrics based on preprocessed data, 
-        % including framewise displacement derived from motion correction 
-        % (realignment) parameters.
-        % The method was adapted from Power et al. (2012), 
-        % using 50mm as the assumed radius for translating rotation parameters 
-        % into displacements, assuming small angle approximations. A threshold of 
-        % 0.5 mm was set to define so-called 'motion outlier' volumes, which after 
-        % application to the FD timeseries yielded a binary 'scrubbing' regressor 
-        % per run.
+        # FUNCTION - Create text files with average values in WM at each timepoint
+        #   to be later used as regressor.
+        average_values_wm = MapNode(
+            Function(
+                function = self.get_average_values,
+                input_names = ['in_file', 'mask', 'subject_id', 'run_id',
+                    'out_file_suffix', 'working_dir'],
+                output_names = ['out_file']
+            ),
+            iterfield = ['run_id', 'in_file'],
+            name = 'average_values_wm')
+        average_values_wm.inputs.run_id = self.run_list
+        average_values_wm.inputs.out_file_suffix = join('reg_wm.txt')
+        average_values_wm.inputs.working_dir = self.directories.working_dir
+        preprocessing.connect(information_source, 'subject_id', average_values_wm, 'subject_id')
+        preprocessing.connect(smoothing, 'smoothed_files', average_values_wm, 'in_file')
+        preprocessing.connect(split_masks, 'out2', average_values_wm, 'mask')
 
-        % Note: here we can use FramewiseDisplacement from nipype that to compute
-        % the framewise displacement from the motion parameters that are available
-        % in the rp_ files generated after realignment.
-
-        % 7 - Generation of nuisance regressors for
-        % 1st level analysis, including motion scrubbing regressor defined using
-        % framewise displacement, and two tissue signal regressors (white matter
-        % and cerebrospinal fluid) derived from averaging the voxel values found
-        % within the segmentaed tissue maps.
-
-        % Scrubbing nuisance regressor: any functional volume that has a
-        % framewise displacement greater than 0.5mm is set to one in the scrubbing
-        % nuisance covariate (all other volumes are set to zero)
-
-        % --> Save as reg_scrubbing.txt
-
-        % white matter signal nuisance: average value of voxels in th functional
-        % volume that are part of white matter (as computed using the segmentation,
-        % threshold>0.5?)
-
-        % --> Save as reg_wm.txt
-
-        % CSF signal nuisance: average value of voxels in th functional
-        % volume that are part of white matter (as computed using the segmentation,
-        % threshold>0.5?)
-
-        % --> Save as reg_csf.txt
-        """
+        # FUNCTION - Create text files with average values in CSF at each timepoint
+        #   to be later used as regressor.
+        average_values_csf = MapNode(
+            Function(
+                function = self.get_average_values,
+                input_names = ['in_file', 'mask', 'subject_id', 'run_id',
+                    'out_file_suffix', 'working_dir'],
+                output_names = ['out_file']
+            ),
+            iterfield = ['run_id', 'in_file'],
+            name = 'average_values_csf')
+        average_values_csf.inputs.run_id = self.run_list
+        average_values_csf.inputs.out_file_suffix = join('reg_csf.txt')
+        average_values_csf.inputs.working_dir = self.directories.working_dir
+        preprocessing.connect(information_source, 'subject_id', average_values_csf, 'subject_id')
+        preprocessing.connect(smoothing, 'smoothed_files', average_values_csf, 'in_file')
+        preprocessing.connect(split_masks, 'out1', average_values_csf, 'mask')
 
         # DATA SINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        preprocessing.connect(segmentation, 'transformation_mat', data_sink, '@tf_to_mni')
-        preprocessing.connect(realign_func, 'realignment_parameters', data_sink, '@rp')
+        preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocessing.@smoothed')
+        preprocessing.connect(segmentation, 'transformation_mat', data_sink, 'preprocessing.@tf_to_mni')
+        preprocessing.connect(displacement, 'out_file', data_sink, 'preprocessing.@reg_scrubbing')
+        preprocessing.connect(average_values_csf, 'out_file', data_sink, 'preprocessing.@reg_csf')
+        preprocessing.connect(average_values_wm, 'out_file', data_sink, 'preprocessing.@reg_wm')
 
         return preprocessing
 
@@ -212,10 +289,10 @@ class PipelineTeamUK24(Pipeline):
         onsets_no_gain_no_loss = []
         durations_no_gain_no_loss = []
         gain_value = []
-        gain_RT = []
+        gain_rt = []
         loss_value = []
-        loss_RT = []
-        no_gain_no_loss_RT = []
+        loss_rt = []
+        no_gain_no_loss_rt = []
 
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
@@ -228,19 +305,19 @@ class PipelineTeamUK24(Pipeline):
                     durations.append(float(info[1]))
                     gain_value.append(float(info[2]))
                     loss_value.append(float(info[3]))
-                    gain_RT.append(float(info[4]))
-                    loss_RT.append(float(info[4]))
+                    gain_rt.append(float(info[4]))
+                    loss_rt.append(float(info[4]))
                 else:
                     onsets_no_gain_no_loss.append(float(info[0]))
                     durations_no_gain_no_loss.append(float(info[1]))
-                    no_gain_no_loss_RT.append(float(info[4]))
+                    no_gain_no_loss_rt.append(float(info[4]))
 
         # Mean center regressors
         gain_value = gain_value - mean(gain_value)
         loss_value = loss_value - mean(loss_value)
-        gain_RT = gain_RT - mean(gain_RT)
-        loss_RT = loss_RT - mean(loss_RT)
-        no_gain_no_loss_RT = no_gain_no_loss_RT - mean(no_gain_no_loss_RT)
+        gain_rt = gain_rt - mean(gain_rt)
+        loss_rt = loss_rt - mean(loss_rt)
+        no_gain_no_loss_rt = no_gain_no_loss_rt - mean(no_gain_no_loss_rt)
 
         # Fill Bunch
         return Bunch(
@@ -251,19 +328,19 @@ class PipelineTeamUK24(Pipeline):
                 tmod = None,
                 pmod = [
                     Bunch(
-                        name = ['gain_value', 'gain_RT'],
+                        name = ['gain_value', 'gain_rt'],
                         poly = [1, 1],
-                        param = [gain_value, gain_RT]
+                        param = [gain_value, gain_rt]
                     ),
                     Bunch(
-                        name = ['loss_value', 'loss_RT'],
+                        name = ['loss_value', 'loss_rt'],
                         poly = [1, 1],
-                        param = [loss_value, loss_RT]
+                        param = [loss_value, loss_rt]
                     ),
                     Bunch(
-                        name = ['no_gain_no_loss_RT'],
+                        name = ['no_gain_no_loss_rt'],
                         poly = [1],
-                        param = [no_gain_no_loss_RT]
+                        param = [no_gain_no_loss_rt]
                     )
                 ],
                 regressor_names = None,
@@ -317,6 +394,9 @@ class PipelineTeamUK24(Pipeline):
         Returns:
             - subject_level_analysis : nipype.WorkFlow
         """
+
+        return None
+
         # Infosource Node - To iterate on subjects
         information_source = Node(IdentityInterface(
             fields = ['subject_id']),
