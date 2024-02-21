@@ -33,8 +33,16 @@ class PipelineTeamUK24(Pipeline):
         super().__init__()
         self.fwhm = 4.0
         self.team_id = 'UK24'
-        self.contrast_list = []
-        self.subject_level_contrasts = []
+        self.contrast_list = ['0001', '0002']
+        condition_names = [
+            'gain', 'gainxgain_value^1', 'gainxgain_rt^1',
+            'loss', 'lossxloss_value^1', 'lossxloss_rt^1',
+            'no_gain_no_loss', 'no_gain_no_lossxno_gain_no_loss_rt^1'
+            ]
+        self.subject_level_contrasts = [
+            ['gain_param', 'T', condition_names, [0, 1, 1, 0, 0, 0, 0, 0]],
+            ['loss_param', 'T', condition_names, [0, 0, 0, 0, 1, 1, 0, 0]]
+            ]
 
     def get_average_values(
         in_file: str,
@@ -245,6 +253,9 @@ class PipelineTeamUK24(Pipeline):
         preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocessing.@smoothed')
         preprocessing.connect(segmentation, 'transformation_mat', data_sink, 'preprocessing.@tf_to_mni')
         preprocessing.connect(displacement, 'out_file', data_sink, 'preprocessing.@reg_scrubbing')
+        preprocessing.connect(
+            realign_func, 'realignment_parameters',
+            data_sink, 'preprocessing.@realignment_parameters')
         preprocessing.connect(average_values_csf, 'out_file', data_sink, 'preprocessing.@reg_csf')
         preprocessing.connect(average_values_wm, 'out_file', data_sink, 'preprocessing.@reg_wm')
 
@@ -255,7 +266,7 @@ class PipelineTeamUK24(Pipeline):
 
         output_dir = join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}')
 
-        # Regressor values
+        # WM and CSF average values
         templates = [join(output_dir, f'_average_values_wm{index}',
             'sub-{subject_id}'+f'_run-{run_id}_reg_wm.txt')\
             for index, run_id in zip(range(len(self.run_list)), self.run_list)]
@@ -263,15 +274,21 @@ class PipelineTeamUK24(Pipeline):
             'sub-{subject_id}'+f'_run-{run_id}_reg_csf.txt')\
             for index, run_id in zip(range(len(self.run_list)), self.run_list)]
 
+        # Framewise displacement values
+        templates += [join(output_dir, f'_displacement{index}',
+            'fd_power_2012.txt')\
+            for index in range(len(self.run_list))]
+
+        # Realignement parameters
+        templates += [join(output_dir, f'_realign_func{index}',
+            'rp_sub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.txt')\
+            for index, run_id in zip(range(len(self.run_list)), self.run_list)]
+
         # Smoothing outputs
         templates += [join(output_dir, f'_smoothing{index}',
             'srsub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.nii')\
             for index, run_id in zip(range(len(self.run_list)), self.run_list)]
 
-        # Framewise displacement values
-        templates += [join(output_dir, f'_displacement{index}',
-            'fd_power_2012.txt')\
-            for index in range(len(self.run_list))]
 
         # Transformation matrix to MNI
         templates.append(join(output_dir, 'rsub-{subject_id}_T1w_seg_sn.mat'))
@@ -364,40 +381,53 @@ class PipelineTeamUK24(Pipeline):
                 regressors = None
             )
 
-    def get_confounds_file(filepath, subject_id, run_id, working_dir):
+    def get_confounds_file(
+        framewise_displacement_file: str,
+        wm_average_file: str,
+        csf_average_file: str,
+        realignement_parameters: str,
+        subject_id: str,
+        run_id: str) -> str:
         """
-        Create a new tsv files with only desired confounds per subject per run.
+        Create a tsv file with only desired confounds per subject per run.
 
         Parameters :
-        - filepath : path to the subject confounds file
+        - framewise_displacement_file: str, path to the framewise displacement file
+        - wm_average_file: str, path to the WM average values file
+        - csf_average_file: str, path to the CSF average values file
+        - realignement_parameters : path to the realignment parameters file
         - subject_id : related subject id
         - run_id : related run id
-        - working_dir: str, name of the directory for intermediate results
 
         Return :
         - confounds_file : path to new file containing only desired confounds
         """
-        from os import makedirs
-        from os.path import join
+        from os.path import abspath
 
         from pandas import DataFrame, read_csv
         from numpy import array, transpose
 
-        # Open original confounds file
-        data_frame = read_csv(filepath, sep = '\t', header=0)
+        # Get the dataframe containing the 6 head motion parameter regressors
+        realign_data_frame = read_csv(realignement_parameters, sep = '\t', header = 0)
 
-        # Extract confounds we want to use for the model
+        # Get the dataframes containing the 2 tissue signal regressors
+        regressor_csf_data_frame = read_csv(csf_average_file, sep = '\t', header = None)
+        regressor_wm_data_frame = read_csv(wm_average_file, sep = '\t', header = None)
+
+        # Get the dataframe containing framewise displacement
+        # and transform it as a scrubbing regressor.
+        scrubbing_data_frame = read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5
+
+        # Extract all parameters
         retained_parameters = DataFrame(transpose(array([
-            data_frame['X'], data_frame['Y'], data_frame['Z'],
-            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
-            data_frame['CSF'], data_frame['WhiteMatter'], data_frame['GlobalSignal']])))
+            realign_data_frame['X'], realign_data_frame['Y'], realign_data_frame['Z'],
+            realign_data_frame['RotX'], realign_data_frame['RotY'], realign_data_frame['RotZ'],
+            regressor_csf_data_frame, regressor_wm_data_frame,
+            scrubbing_data_frame['FramewiseDisplacement'].astype(int)
+            ])))
 
         # Write confounds to a file
-        confounds_file = join(working_dir, 'confounds_files',
-            f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
-
-        makedirs(join(working_dir, 'confounds_files'), exist_ok = True)
-
+        confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
         with open(confounds_file, 'w', encoding = 'utf-8') as writer:
             writer.write(retained_parameters.to_csv(
                 sep = '\t', index = False, header = False, na_rep = '0.0'))
@@ -409,108 +439,110 @@ class PipelineTeamUK24(Pipeline):
         Create the subject level analysis workflow.
 
         Returns:
-            - subject_level_analysis : nipype.WorkFlow
+            - subject_level : nipype.WorkFlow
+                WARNING: the name attribute of the workflow is 'subject_level_analysis'
         """
+        # Create subject level analysis workflow
+        subject_level = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'subject_level_analysis')
 
-        return None
-
-        # Infosource Node - To iterate on subjects
+        # IDENTITY INTERFACE - To iterate on subjects
         information_source = Node(IdentityInterface(
             fields = ['subject_id']),
             name = 'information_source')
         information_source.iterables = [('subject_id', self.subject_list)]
 
-        # SelectFiles - to select necessary files
+        # SELECT FILES - to select necessary files
         templates = {
-            'confounds' : join(),
-            'func' : join(),
-            'event' : join()
+            'framewise_displacement_files' : join(self.directories.output_dir, 'preprocessing',
+                '_subject_id_{subject_id}', '_displacement*',
+                'fd_power_2012.txt'),
+            'wm_average_files' : join(self.directories.output_dir, 'preprocessing',
+                '_subject_id_{subject_id}', '_average_values_wm*',
+                'sub-{subject_id}_run-*_reg_wm.txt'),
+            'csf_average_files' : join(self.directories.output_dir, 'preprocessing',
+                '_subject_id_{subject_id}', '_average_values_csf*',
+                'sub-{subject_id}_run-*_reg_csf.txt'),
+            'realignement_parameters' : join(self.directories.output_dir, 'preprocessing',
+                '_subject_id_{subject_id}', '_realign_func*',
+                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt'),
+            'func' : join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
+                '_smoothing*', 'srsub-{subject_id}_task-MGT_run-*_bold.nii'),
+            'event' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_events.tsv'),
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
+        subject_level.connect(information_source, 'subject_id', select_files, 'subject_id')
 
-        # DataSink - store the wanted results in the wanted repository
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
-
-        # Function node get_subject_information - get subject specific condition information
+        # FUNCTION get_subject_information - generate files with event data
         subject_information = MapNode(Function(
             function = self.get_subject_information,
             input_names = ['event_file'],
             output_names = ['subject_info']),
             iterfield = 'event_file',
             name = 'subject_information')
+        subject_level.connect(select_files, 'event', subject_information, 'event_files')
 
-        # SpecifyModel - generates SPM-specific Model
+        # FUNCTION node get_confounds_file - generate files with confounds data
+        confounds = MapNode(
+            Function(
+                function = self.get_confounds_file,
+                input_names = ['framewise_displacement_file', 'wm_average_file',
+                    'csf_average_file', 'realignement_parameters', 'subject_id', 'run_id'],
+                output_names = ['confounds_file']
+            ),
+            name = 'confounds',
+            iterfield = ['framewise_displacement_file', 'wm_average_file',
+                'csf_average_file', 'realignement_parameters', 'run_id'])
+        confounds.inputs.run_id = self.run_list
+        subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
+        subject_level.connect(
+            select_files, 'framewise_displacement_files', confounds, 'framewise_displacement_file')
+        subject_level.connect(select_files, 'wm_average_files', confounds, 'wm_average_file')
+        subject_level.connect(select_files, 'csf_average_files', confounds, 'csf_average_file')
+        subject_level.connect(
+            select_files, 'realignement_parameters', confounds, 'realignement_parameters')
+
+        # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
-        specify_model.inputs.concatenate_runs = True
+        specify_model.inputs.concatenate_runs = True # TODO : actually concatenate runs ????
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.output_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
         specify_model.inputs.high_pass_filter_cutoff = 128
+        subject_level.connect(select_files, 'func', specify_model, 'functional_runs')
+        subject_level.connect(confounds, 'confounds_file', specify_model, 'realignment_parameters')
+        subject_level.connect(subject_information, 'subject_info', specify_model, 'subject_info')
 
-        # Level1Design - Generates an SPM design matrix
+        # LEVEL 1 DESIGN - Generates an SPM design matrix
         model_design = Node(Level1Design(), name = 'model_design')
         model_design.inputs.bases = {'hrf': {'derivs': [0, 0]}}
         model_design.inputs.timing_units = 'secs'
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        subject_level.connect(specify_model, 'session_info', model_design, 'session_info')
 
-        # EstimateModel - estimate the parameters of the model
+        # ESTIMATE MODEL - estimate the parameters of the model
         model_estimate = Node(EstimateModel(), name = 'model_estimate')
         model_estimate.inputs.estimation_method = {'Classical': 1}
+        subject_level.connect(model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
 
-        # Function node get_confounds_file - get confounds files
-        confounds = MapNode(Function(
-            function = self.get_confounds_file,
-            input_names = ['filepath', 'subject_id', 'run_id', 'working_dir'],
-            output_names = ['confounds_file']),
-            name = 'confounds', iterfield = ['filepath', 'run_id'])
-        confounds.inputs.working_dir = self.directories.working_dir
-        confounds.inputs.run_id = self.run_list
-
-        # EstimateContrast - estimates contrasts
+        # ESTIMATE CONTRAST - estimates contrasts
         contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
         contrast_estimate.inputs.contrasts = self.subject_level_contrasts
-
-        # Function node remove_gunzip_files - remove output of the gunzip node
-        remove_gunzip_files = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []),
-            name = 'remove_gunzip_files', iterfield = 'file_name')
-
-        # Function node remove_smoothed_files - remove output of the smoothing node
-        remove_smoothed_files = MapNode(Function(
-            function = remove_file,
-            input_names = ['_', 'file_name'],
-            output_names = []),
-            name = 'remove_smoothed_files', iterfield = 'file_name')
-
-        # Create l1 analysis workflow and connect its nodes
-        subject_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = 'subject_level_analysis'
-            )
-        subject_level_analysis.connect([
-            (information_source, select_files, [('subject_id', 'subject_id')]),
-            (subject_information, specify_model, [('subject_info', 'subject_info')]),
-            (select_files, confounds, [('confounds', 'filepath')]),
-            (select_files, subject_information, [('event', 'event_files')]),
-            (information_source, confounds, [('subject_id', 'subject_id')]),
-            (select_files, gunzip_func, [('func', 'in_file')]),
-            (gunzip_func, smoothing, [('out_file', 'in_files')]),
-            (gunzip_func, remove_gunzip_files, [('out_file', 'file_name')]),
-            (smoothing, remove_gunzip_files, [('smoothed_files', '_')]),
-            (smoothing, remove_smoothed_files, [('smoothed_files', 'file_name')]),
-            (smoothing, specify_model, [('smoothed_files', 'functional_runs')]),
-            (specify_model, remove_smoothed_files, [('session_info', '_')]),
-            (confounds, specify_model, [('confounds_file', 'realignment_parameters')]),
-            (specify_model, model_design, [('session_info', 'session_info')]),
-            (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
+        subject_level.connect([
             (model_estimate, contrast_estimate, [
                 ('spm_mat_file', 'spm_mat_file'),
                 ('beta_images', 'beta_images'),
-                ('residual_image', 'residual_image')]),
+                ('residual_image', 'residual_image')
+            ])
+        ])
+
+        # DATA SINK - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        subject_level.connect([
             (contrast_estimate, data_sink, [
                 ('con_images', 'subject_level_analysis.@con_images'),
                 ('spmT_images', 'subject_level_analysis.@spmT_images'),
@@ -518,7 +550,7 @@ class PipelineTeamUK24(Pipeline):
             ])
         ])
 
-        return subject_level_analysis
+        return subject_level
 
     def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
