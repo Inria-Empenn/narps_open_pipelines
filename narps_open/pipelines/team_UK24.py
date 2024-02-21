@@ -18,7 +18,6 @@ from nipype.interfaces.spm import (
 from nipype.algorithms.confounds import FramewiseDisplacement
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.algorithms.misc import Gunzip, SimpleThreshold
-from nipype.interfaces.fsl.maths import BinaryMaths
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -42,8 +41,7 @@ class PipelineTeamUK24(Pipeline):
         mask: str,
         subject_id: str,
         run_id: str,
-        out_file_suffix: str,
-        working_dir: str
+        out_file_suffix: str
         ) -> str:
         """
         Compute the average value of each frame of a 4D image, while applying a mask.
@@ -51,17 +49,17 @@ class PipelineTeamUK24(Pipeline):
 
         Parameters:
             - in_file: str, path to the input file (4D)
-            - mask: str, path to the mask file (3D)
+            - mask: str, path to the mask file (3D) Zeroes in mask are considered as 0,
+                other values are 1
             - subject_id: str, related subject id
             - run_id: str, related run id
             - out_file_suffix: str, string to append at the end of the file name
-            - working_dir: str, name of the directory for intermediate results
 
         Returns:
             - preprocessing : nipype.WorkFlow
         """
         from os import makedirs
-        from os.path import join
+        from os.path import join, abspath
 
         from nilearn.image import load_img, math_img, index_img, get_data
 
@@ -74,17 +72,14 @@ class PipelineTeamUK24(Pipeline):
         for frame_index in range(in_file_img.shape[3]):
             average_values.append(
                 get_data(math_img(
-                    'np.mean(image * mask)',
+                    'np.mean(image * (mask > 0.0))',
                     image = index_img(in_file_img, frame_index),
                     mask = index_img(mask_img, 0)
                 ))
             )
 
         # Write confounds to a file
-        out_file_name = join(working_dir, 'regressors',
-            f'sub-{subject_id}_run-{run_id}_' + out_file_suffix)
-
-        makedirs(join(working_dir, 'regressors'), exist_ok = True)
+        out_file_name = abspath(f'sub-{subject_id}_run-{run_id}_' + out_file_suffix)
 
         # Write output file
         with open(out_file_name, 'w', encoding = 'utf-8') as writer:
@@ -198,13 +193,6 @@ class PipelineTeamUK24(Pipeline):
         threshold.inputs.threshold = 0.5
         preprocessing.connect(select_maps, 'out', threshold, 'volumes')
 
-        # BINARY MATHS - Transform proability maps to binary masks
-        binarize = MapNode(BinaryMaths(), name = 'binarize', iterfield = 'in_file')
-        binarize.inputs.operand_value = 1.0
-        binarize.inputs.operation = 'max'
-        binarize.inputs.output_type = 'NIFTI'
-        preprocessing.connect(threshold, 'thresholded_volumes', binarize, 'in_file')
-
         # FRAMEWISE DISPLACEMENT - Compute framewise displacement from realignment parameters.
         displacement = MapNode(
             FramewiseDisplacement(),
@@ -217,22 +205,20 @@ class PipelineTeamUK24(Pipeline):
         # SPLIT - Select the WM and CSF masks.
         split_masks = Node(Split(), name = 'split_masks')
         split_masks.inputs.splits = [1, 1]
-        preprocessing.connect(binarize, 'out_file', split_masks, 'inlist')
+        preprocessing.connect(threshold, 'thresholded_volumes', split_masks, 'inlist')
 
         # FUNCTION - Create text files with average values in WM at each timepoint
         #   to be later used as regressor.
         average_values_wm = MapNode(
             Function(
                 function = self.get_average_values,
-                input_names = ['in_file', 'mask', 'subject_id', 'run_id',
-                    'out_file_suffix', 'working_dir'],
+                input_names = ['in_file', 'mask', 'subject_id', 'run_id', 'out_file_suffix'],
                 output_names = ['out_file']
             ),
             iterfield = ['run_id', 'in_file'],
             name = 'average_values_wm')
         average_values_wm.inputs.run_id = self.run_list
         average_values_wm.inputs.out_file_suffix = join('reg_wm.txt')
-        average_values_wm.inputs.working_dir = self.directories.working_dir
         preprocessing.connect(information_source, 'subject_id', average_values_wm, 'subject_id')
         preprocessing.connect(smoothing, 'smoothed_files', average_values_wm, 'in_file')
         preprocessing.connect(split_masks, 'out2', average_values_wm, 'mask')
@@ -242,15 +228,13 @@ class PipelineTeamUK24(Pipeline):
         average_values_csf = MapNode(
             Function(
                 function = self.get_average_values,
-                input_names = ['in_file', 'mask', 'subject_id', 'run_id',
-                    'out_file_suffix', 'working_dir'],
+                input_names = ['in_file', 'mask', 'subject_id', 'run_id', 'out_file_suffix'],
                 output_names = ['out_file']
             ),
             iterfield = ['run_id', 'in_file'],
             name = 'average_values_csf')
         average_values_csf.inputs.run_id = self.run_list
         average_values_csf.inputs.out_file_suffix = join('reg_csf.txt')
-        average_values_csf.inputs.working_dir = self.directories.working_dir
         preprocessing.connect(information_source, 'subject_id', average_values_csf, 'subject_id')
         preprocessing.connect(smoothing, 'smoothed_files', average_values_csf, 'in_file')
         preprocessing.connect(split_masks, 'out1', average_values_csf, 'mask')
@@ -265,6 +249,39 @@ class PipelineTeamUK24(Pipeline):
         preprocessing.connect(average_values_wm, 'out_file', data_sink, 'preprocessing.@reg_wm')
 
         return preprocessing
+
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+
+        output_dir = join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}')
+
+        # Regressor values
+        templates = [join(output_dir, f'_average_values_wm{index}',
+            'sub-{subject_id}'+f'_run-{run_id}_reg_wm.txt')\
+            for index, run_id in zip(range(len(self.run_list)), self.run_list)]
+        templates += [join(output_dir, f'_average_values_csf{index}',
+            'sub-{subject_id}'+f'_run-{run_id}_reg_csf.txt')\
+            for index, run_id in zip(range(len(self.run_list)), self.run_list)]
+
+        # Smoothing outputs
+        templates += [join(output_dir, f'_smoothing{index}',
+            'srsub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.nii')\
+            for index, run_id in zip(range(len(self.run_list)), self.run_list)]
+
+        # Framewise displacement values
+        templates += [join(output_dir, f'_displacement{index}',
+            'fd_power_2012.txt')\
+            for index in range(len(self.run_list))]
+
+        # Transformation matrix to MNI
+        templates.append(join(output_dir, 'rsub-{subject_id}_T1w_seg_sn.mat'))
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
 
     def get_run_level_analysis(self):
         """ No run level analysis has been done by team UK24 """
