@@ -347,11 +347,11 @@ class PipelineTeamUK24(Pipeline):
                     no_gain_no_loss_rt.append(float(info[4]))
 
         # Mean center regressors
-        gain_value = gain_value - mean(gain_value)
-        loss_value = loss_value - mean(loss_value)
-        gain_rt = gain_rt - mean(gain_rt)
-        loss_rt = loss_rt - mean(loss_rt)
-        no_gain_no_loss_rt = no_gain_no_loss_rt - mean(no_gain_no_loss_rt)
+        gain_value = list(gain_value - mean(gain_value))
+        loss_value = list(loss_value - mean(loss_value))
+        gain_rt = list(gain_rt - mean(gain_rt))
+        loss_rt = list(loss_rt - mean(loss_rt))
+        no_gain_no_loss_rt = list(no_gain_no_loss_rt - mean(no_gain_no_loss_rt))
 
         # Fill Bunch
         return Bunch(
@@ -405,26 +405,30 @@ class PipelineTeamUK24(Pipeline):
         from os.path import abspath
 
         from pandas import DataFrame, read_csv
-        from numpy import array, transpose
+        from numpy import array, transpose, concatenate, insert
 
         # Get the dataframe containing the 6 head motion parameter regressors
-        realign_data_frame = read_csv(realignement_parameters, sep = '\t', header = 0)
+        realign_data_frame = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
 
         # Get the dataframes containing the 2 tissue signal regressors
-        regressor_csf_data_frame = read_csv(csf_average_file, sep = '\t', header = None)
-        regressor_wm_data_frame = read_csv(wm_average_file, sep = '\t', header = None)
+        regressor_csf_data_frame = array(read_csv(csf_average_file, sep = '\t', header = None))
+        regressor_wm_data_frame = array(read_csv(wm_average_file, sep = '\t', header = None))
 
         # Get the dataframe containing framewise displacement
         # and transform it as a scrubbing regressor.
-        scrubbing_data_frame = read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5
+        scrubbing_data_frame = insert(
+            array(
+            (read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5).astype(int)
+            ),
+            0, 0, axis=0) # Add a value of 0 at the begining (first frame)
 
         # Extract all parameters
-        retained_parameters = DataFrame(transpose(array([
-            realign_data_frame['X'], realign_data_frame['Y'], realign_data_frame['Z'],
-            realign_data_frame['RotX'], realign_data_frame['RotY'], realign_data_frame['RotZ'],
-            regressor_csf_data_frame, regressor_wm_data_frame,
-            scrubbing_data_frame['FramewiseDisplacement'].astype(int)
-            ])))
+        retained_parameters = DataFrame(
+            concatenate(
+                (realign_data_frame,
+                 regressor_csf_data_frame, regressor_wm_data_frame, scrubbing_data_frame),
+                axis = 1)
+        )
 
         # Write confounds to a file
         confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
@@ -483,7 +487,7 @@ class PipelineTeamUK24(Pipeline):
             output_names = ['subject_info']),
             iterfield = 'event_file',
             name = 'subject_information')
-        subject_level.connect(select_files, 'event', subject_information, 'event_files')
+        subject_level.connect(select_files, 'event', subject_information, 'event_file')
 
         # FUNCTION node get_confounds_file - generate files with confounds data
         confounds = MapNode(
@@ -507,7 +511,7 @@ class PipelineTeamUK24(Pipeline):
 
         # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
-        specify_model.inputs.concatenate_runs = True # TODO : actually concatenate runs ????
+        #specify_model.inputs.concatenate_runs = True # TODO : actually concatenate runs ????
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.output_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
