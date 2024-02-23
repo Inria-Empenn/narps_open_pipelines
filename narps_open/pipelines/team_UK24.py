@@ -82,7 +82,7 @@ class PipelineTeamUK24(Pipeline):
                 get_data(math_img(
                     'np.mean(image * (mask > 0.0))',
                     image = index_img(in_file_img, frame_index),
-                    mask = index_img(mask_img, 0)
+                    mask = mask_img
                 ))
             )
 
@@ -213,6 +213,7 @@ class PipelineTeamUK24(Pipeline):
         # SPLIT - Select the WM and CSF masks.
         split_masks = Node(Split(), name = 'split_masks')
         split_masks.inputs.splits = [1, 1]
+        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list.
         preprocessing.connect(threshold, 'thresholded_volumes', split_masks, 'inlist')
 
         # FUNCTION - Create text files with average values in WM at each timepoint
@@ -314,8 +315,8 @@ class PipelineTeamUK24(Pipeline):
         Returns :
         - subject_information: Bunch, relevant event information for subject level analysis.
         """
-        from numpy import mean, ravel
         from nipype.interfaces.base import Bunch
+        from nipype.algorithms.modelgen import orth
 
         # Init empty lists inside directiries
         onsets = []
@@ -346,12 +347,16 @@ class PipelineTeamUK24(Pipeline):
                     durations_no_gain_no_loss.append(float(info[1]))
                     no_gain_no_loss_rt.append(float(info[4]))
 
-        # Mean center regressors
-        gain_value = list(gain_value - mean(gain_value))
-        loss_value = list(loss_value - mean(loss_value))
-        gain_rt = list(gain_rt - mean(gain_rt))
-        loss_rt = list(loss_rt - mean(loss_rt))
-        no_gain_no_loss_rt = list(no_gain_no_loss_rt - mean(no_gain_no_loss_rt))
+        # NOTE : SPM automatically mean-centers regressors
+        #gain_value = list(gain_value - mean(gain_value))
+        #loss_value = list(loss_value - mean(loss_value))
+        #gain_rt = list(gain_rt - mean(gain_rt))
+        #loss_rt = list(loss_rt - mean(loss_rt))
+        #no_gain_no_loss_rt = list(no_gain_no_loss_rt - mean(no_gain_no_loss_rt))
+
+        # Othogonalize
+        #gain_rt = orth(gain_value, gain_rt)
+        #loss_rt = orth(loss_value, loss_rt)
 
         # Fill Bunch
         return Bunch(
@@ -409,10 +414,13 @@ class PipelineTeamUK24(Pipeline):
 
         # Get the dataframe containing the 6 head motion parameter regressors
         realign_data_frame = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
+        print(realign_data_frame)
 
         # Get the dataframes containing the 2 tissue signal regressors
         regressor_csf_data_frame = array(read_csv(csf_average_file, sep = '\t', header = None))
         regressor_wm_data_frame = array(read_csv(wm_average_file, sep = '\t', header = None))
+        print(regressor_csf_data_frame)
+        print(regressor_wm_data_frame)
 
         # Get the dataframe containing framewise displacement
         # and transform it as a scrubbing regressor.
@@ -420,7 +428,8 @@ class PipelineTeamUK24(Pipeline):
             array(
             (read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5).astype(int)
             ),
-            0, 0, axis=0) # Add a value of 0 at the begining (first frame)
+            0, 0, axis = 0) # Add a value of 0 at the begining (first frame)
+        print(scrubbing_data_frame)
 
         # Extract all parameters
         retained_parameters = DataFrame(
