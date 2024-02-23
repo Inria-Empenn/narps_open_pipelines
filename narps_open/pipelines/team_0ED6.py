@@ -115,7 +115,7 @@ class PipelineTeam0ED6(Pipeline):
         preprocessing.connect(gunzip_func, 'out_file', merge_func_sbref, 'in2')
 
         # REALIGN UNWARP
-        realign_unwarp = Node(RealignUnwarp(), name = 'realign_unwarp')
+        realign_unwarp = MapNode(RealignUnwarp(), name = 'realign_unwarp', iterfield = 'in_files')
         realign_unwarp.inputs.quality = 0.95
         realign_unwarp.inputs.separation = 3
         realign_unwarp.inputs.register_to_mean = True
