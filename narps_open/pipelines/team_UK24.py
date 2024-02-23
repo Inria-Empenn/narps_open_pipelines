@@ -108,7 +108,7 @@ class PipelineTeamUK24(Pipeline):
             base_dir = self.directories.working_dir,
             name = 'preprocessing')
 
-        # IDENTITIY INTERFACE - To iterate on subjects
+        # IDENTITY INTERFACE - To iterate on subjects
         information_source = Node(IdentityInterface(
             fields = ['subject_id']),
             name = 'information_source')
@@ -428,7 +428,7 @@ class PipelineTeamUK24(Pipeline):
             array(
             (read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5).astype(int)
             ),
-            0, 0, axis = 0) # Add a value of 0 at the begining (first frame)
+            0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
         print(scrubbing_data_frame)
 
         # Extract all parameters
