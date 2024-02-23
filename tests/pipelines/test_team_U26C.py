@@ -10,13 +10,10 @@ Usage:
     pytest -q test_team_U26C.py
     pytest -q test_team_U26C.py -k <selected_test>
 """
-from os import mkdir
 from os.path import join, exists
-from shutil import rmtree
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
-from numpy import isclose
+from pytest import helpers, mark
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -74,28 +71,28 @@ class TestPipelinesTeamU26C:
         assert bunch.conditions == ['gamble_run1']
         helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
         helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes == None
-        assert bunch.tmod == None
+        assert bunch.amplitudes is None
+        assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run1', 'loss_run1']
         assert bunch.pmod[0].poly == [1, 1]
         helpers.compare_float_2d_arrays(bunch.pmod[0].param,
             [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
         bunch = info[1]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['gamble_run2']
         helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
         helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes == None
-        assert bunch.tmod == None
+        assert bunch.amplitudes is None
+        assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run2', 'loss_run2']
         assert bunch.pmod[0].poly == [1, 1]
         helpers.compare_float_2d_arrays(bunch.pmod[0].param,
             [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test

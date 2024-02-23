@@ -14,8 +14,7 @@ Usage:
 from os.path import join, exists, abspath
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
-from numpy import isclose
+from pytest import helpers, mark
 from nipype import Workflow, Node
 from nipype.interfaces.utility import Function
 from nipype.interfaces.base import Bunch
@@ -105,7 +104,7 @@ class TestPipelinesTeamUK24:
     @mark.unit_test
     def test_confounds_file(temporary_data_dir):
         """ Test the get_confounds_file method """
-        
+
         # Test files
         test_average_values_csf = abspath(join(Configuration()['directories']['test_data'],
             'pipelines', 'team_UK24', 'average_values_csf.txt'))

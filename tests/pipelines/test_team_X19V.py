@@ -10,13 +10,10 @@ Usage:
     pytest -q test_team_X19V.py
     pytest -q test_team_X19V.py -k <selected_test>
 """
-from os import mkdir
 from os.path import join, exists
-from shutil import rmtree
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
-from numpy import isclose
+from pytest import helpers, mark
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -88,8 +85,8 @@ class TestPipelinesTeamX19V:
             [1.0, 1.0, 1.0, 1.0, 1.0],
             [-8.4, 11.6, 15.6, -12.4, -6.4],
             [-8.2, -0.2, 4.8, 0.8, 2.8]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test
