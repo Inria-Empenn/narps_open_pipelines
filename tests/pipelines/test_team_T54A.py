@@ -21,17 +21,6 @@ from nipype.interfaces.base import Bunch
 from narps_open.pipelines.team_T54A import PipelineTeamT54A
 from narps_open.utils.configuration import Configuration
 
-TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_T54A')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-
 class TestPipelinesTeamT54A:
     """ A class that contains all the unit tests for the PipelineTeamT54A class."""
 
@@ -148,7 +137,7 @@ class TestPipelinesTeamT54A:
 
     @staticmethod
     @mark.unit_test
-    def test_parameters_file(remove_test_dir):
+    def test_parameters_file(temporary_data_dir):
         """ Test the get_parameters_file method """
 
         confounds_file_path = join(
@@ -158,12 +147,12 @@ class TestPipelinesTeamT54A:
             confounds_file_path,
             'fake_subject_id',
             'fake_run_id',
-            TEMPORARY_DIR
+            temporary_data_dir
             )
 
         # Check parameter file was created
         assert exists(join(
-            TEMPORARY_DIR,
+            temporary_data_dir,
             'parameters_file',
             'parameters_file_sub-fake_subject_id_run-fake_run_id.tsv')
         )
