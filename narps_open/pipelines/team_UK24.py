@@ -414,13 +414,10 @@ class PipelineTeamUK24(Pipeline):
 
         # Get the dataframe containing the 6 head motion parameter regressors
         realign_data_frame = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
-        print(realign_data_frame)
 
         # Get the dataframes containing the 2 tissue signal regressors
         regressor_csf_data_frame = array(read_csv(csf_average_file, sep = '\t', header = None))
         regressor_wm_data_frame = array(read_csv(wm_average_file, sep = '\t', header = None))
-        print(regressor_csf_data_frame)
-        print(regressor_wm_data_frame)
 
         # Get the dataframe containing framewise displacement
         # and transform it as a scrubbing regressor.
@@ -429,7 +426,6 @@ class PipelineTeamUK24(Pipeline):
             (read_csv(framewise_displacement_file, sep = '\t', header = 0) > 0.5).astype(int)
             ),
             0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
-        print(scrubbing_data_frame)
 
         # Extract all parameters
         retained_parameters = DataFrame(
