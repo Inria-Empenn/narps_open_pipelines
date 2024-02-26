@@ -36,8 +36,8 @@ class PipelineTeamR9K3(Pipeline):
         self.contrast_list = ['0001', '0002']
         conditions = ['trialxgain^1', 'trialxloss^1']
         self.subject_level_contrasts = [
-            ['effect_of_gain', 'T', conditions, [0, 1, 0]],
-            ['effect_of_loss', 'T', conditions, [0, 0, 1]]
+            ['effect_of_gain', 'T', conditions, [1, 0]],
+            ['effect_of_loss', 'T', conditions, [0, 1]]
             ]
 
     def get_preprocessing(self):
@@ -139,7 +139,7 @@ class PipelineTeamR9K3(Pipeline):
         weights_gain = []
         weights_loss = []
 
-        with open(event_file, "rt") as file:
+        with open(event_file, 'rt') as file:
             next(file)  # skip the header
 
             for line in file:
