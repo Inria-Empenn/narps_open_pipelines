@@ -22,6 +22,7 @@ from nipype.algorithms.confounds import ComputeDVARS
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
+from narps_open.utils.configuration import Configuration
 from narps_open.core.common import (
     list_intersection, elements_in_string, clean_list
     )
