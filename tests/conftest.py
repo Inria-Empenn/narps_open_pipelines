@@ -11,8 +11,9 @@ from os.path import join, isfile
 from shutil import rmtree
 
 from numpy import isclose
-from pytest import helpers
+from pytest import helpers, fixture
 from pathvalidate import is_valid_filepath
+from numpy import isclose
 
 from narps_open.pipelines import Pipeline
 from narps_open.runner import PipelineRunner
@@ -23,6 +24,15 @@ from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
+
+@fixture
+def remove_test_dir(directory_path):
+    """ A fixture to remove temporary directory created by tests """
+
+    rmtree(directory_path, ignore_errors = True)
+    mkdir(directory_path)
+    yield # test runs here
+    rmtree(directory_path, ignore_errors = True)
 
 @helpers.register
 def compare_float_2d_arrays(array_1, array_2):

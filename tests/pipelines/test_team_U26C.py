@@ -10,13 +10,10 @@ Usage:
     pytest -q test_team_U26C.py
     pytest -q test_team_U26C.py -k <selected_test>
 """
-from os import mkdir
 from os.path import join, exists
-from shutil import rmtree
 from filecmp import cmp
 
-from pytest import helpers, mark, fixture
-from numpy import isclose
+from pytest import helpers, mark
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
@@ -24,23 +21,6 @@ from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_U26C import PipelineTeamU26C
 
 TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_U26C')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    #rmtree(TEMPORARY_DIR, ignore_errors = True)
-
-def compare_float_2d_arrays(array_1, array_2):
-    """ Assert array_1 and array_2 are close enough """
-
-    assert len(array_1) == len(array_2)
-    for reference_array, test_array in zip(array_1, array_2):
-        assert len(reference_array) == len(test_array)
-        assert isclose(reference_array, test_array).all()
 
 class TestPipelinesTeamU26C:
     """ A class that contains all the unit tests for the PipelineTeamU26C class."""
@@ -91,31 +71,34 @@ class TestPipelinesTeamU26C:
         bunch = info[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['gamble_run1']
-        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
-        compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes == None
-        assert bunch.tmod == None
+        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
+        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
+        assert bunch.amplitudes is None
+        assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run1', 'loss_run1']
         assert bunch.pmod[0].poly == [1, 1]
-        compare_float_2d_arrays(bunch.pmod[0].param, [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        helpers.compare_float_2d_arrays(bunch.pmod[0].param, [
+            [14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
         bunch = info[1]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['gamble_run2']
-        compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
-        compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes == None
-        assert bunch.tmod == None
+        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
+        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
+        assert bunch.amplitudes is None
+        assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run2', 'loss_run2']
         assert bunch.pmod[0].poly == [1, 1]
-        compare_float_2d_arrays(bunch.pmod[0].param, [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names == None
-        assert bunch.regressors == None
+        helpers.compare_float_2d_arrays(bunch.pmod[0].param, [
+            [14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
+        assert bunch.regressor_names is None
+        assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test
+    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
     def test_confounds_file(remove_test_dir):
         """ Test the get_confounds_file method """
 
