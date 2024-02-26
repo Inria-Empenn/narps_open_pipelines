@@ -159,8 +159,8 @@ class PipelineTeam0ED6(Pipeline):
 
         # MERGE - Merge func + func mean image files for the coregister_sbref_to_anat node into one input.
         merge_func_before_coregister = Node(Merge(2), name = 'merge_func_before_coregister')
-        preprocessing.connect(realign_unwarp, 'mean_image', merge_func_before_coregister, 'in1')
-        preprocessing.connect(split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in2')
+        preprocessing.connect(split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in1')
+        preprocessing.connect(split_realign_unwarp_means, 'out2', merge_func_before_coregister, 'in2')
 
         # COREGISTER - Coregister sbref to anat
         coregister_sbref_to_anat = Node(Coregister(), name = 'coregister_sbref_to_anat')
