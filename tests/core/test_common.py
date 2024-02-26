@@ -10,38 +10,25 @@ Usage:
     pytest -q test_common.py
     pytest -q test_common.py -k <selected_test>
 """
-from os import mkdir, makedirs
+from os import makedirs
 from os.path import join, exists, abspath
-from shutil import rmtree
 from pathlib import Path
 
-from pytest import mark, fixture
+from pytest import mark
 from nipype import Node, Function, Workflow
 
-from narps_open.utils.configuration import Configuration
 import narps_open.core.common as co
-
-TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_common')
-
-@fixture
-def remove_test_dir():
-    """ A fixture to remove temporary directory created by tests """
-
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
-    mkdir(TEMPORARY_DIR)
-    yield # test runs here
-    rmtree(TEMPORARY_DIR, ignore_errors = True)
 
 class TestCoreCommon:
     """ A class that contains all the unit tests for the common module."""
 
     @staticmethod
     @mark.unit_test
-    def test_remove_file(remove_test_dir):
+    def test_remove_file(temporary_data_dir):
         """ Test the remove_file function """
 
         # Create a single file
-        test_file_path = abspath(join(TEMPORARY_DIR, 'file1.txt'))
+        test_file_path = abspath(join(temporary_data_dir, 'file1.txt'))
         Path(test_file_path).touch()
 
         # Check file exist
@@ -62,15 +49,15 @@ class TestCoreCommon:
 
     @staticmethod
     @mark.unit_test
-    def test_remove_directory(remove_test_dir):
+    def test_remove_directory(temporary_data_dir):
         """ Test the remove_directory function """
 
         # Create a single inside dir tree
-        dir_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2'))
+        dir_path = abspath(join(temporary_data_dir, 'dir_1', 'dir_2'))
         makedirs(dir_path)
-        file_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2', 'file1.txt'))
+        file_path = abspath(join(temporary_data_dir, 'dir_1', 'dir_2', 'file1.txt'))
         Path(file_path).touch()
-        test_dir_path = abspath(join(TEMPORARY_DIR, 'dir_1'))
+        test_dir_path = abspath(join(temporary_data_dir, 'dir_1'))
 
         # Check file exist
         assert exists(file_path)
@@ -90,13 +77,13 @@ class TestCoreCommon:
 
     @staticmethod
     @mark.unit_test
-    def test_remove_parent_directory(remove_test_dir):
+    def test_remove_parent_directory(temporary_data_dir):
         """ Test the remove_parent_directory function """
 
         # Create a single inside dir tree
-        dir_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2'))
+        dir_path = abspath(join(temporary_data_dir, 'dir_1', 'dir_2'))
         makedirs(dir_path)
-        file_path = abspath(join(TEMPORARY_DIR, 'dir_1', 'dir_2', 'file1.txt'))
+        file_path = abspath(join(temporary_data_dir, 'dir_1', 'dir_2', 'file1.txt'))
         Path(file_path).touch()
 
         # Check file exist
@@ -151,7 +138,7 @@ class TestCoreCommon:
 
     @staticmethod
     @mark.unit_test
-    def test_connect_elements_in_string(remove_test_dir):
+    def test_connect_elements_in_string(temporary_data_dir):
         """ Test the elements_in_string function as evaluated in a connect """
 
         # Inputs
@@ -180,7 +167,7 @@ class TestCoreCommon:
 
         # Create Workflow
         test_workflow = Workflow(
-            base_dir = TEMPORARY_DIR,
+            base_dir = temporary_data_dir,
             name = 'test_workflow'
             )
         test_workflow.connect([
@@ -193,11 +180,13 @@ class TestCoreCommon:
 
         test_workflow.run()
 
-        test_file_t = join(TEMPORARY_DIR, 'test_workflow', 'node_true', '_report', 'report.rst')
+        test_file_t = join(temporary_data_dir,
+            'test_workflow', 'node_true', '_report', 'report.rst')
         with open(test_file_t, 'r', encoding = 'utf-8') as file:
             assert '* out_value : test_string' in file.read()
 
-        test_file_f = join(TEMPORARY_DIR, 'test_workflow', 'node_false', '_report', 'report.rst')
+        test_file_f = join(temporary_data_dir,
+            'test_workflow', 'node_false', '_report', 'report.rst')
         with open(test_file_f, 'r', encoding = 'utf-8') as file:
             assert '* out_value : None' in file.read()
 
@@ -238,7 +227,7 @@ class TestCoreCommon:
 
     @staticmethod
     @mark.unit_test
-    def test_connect_clean_list(remove_test_dir):
+    def test_connect_clean_list(temporary_data_dir):
         """ Test the clean_list function as evaluated in a connect """
 
         # Inputs
@@ -269,7 +258,7 @@ class TestCoreCommon:
 
         # Create Workflow
         test_workflow = Workflow(
-            base_dir = TEMPORARY_DIR,
+            base_dir = temporary_data_dir,
             name = 'test_workflow'
             )
         test_workflow.connect([
@@ -279,11 +268,13 @@ class TestCoreCommon:
             ])
         test_workflow.run()
 
-        test_file_1 = join(TEMPORARY_DIR, 'test_workflow', 'node_1', '_report', 'report.rst')
+        test_file_1 = join(temporary_data_dir,
+            'test_workflow', 'node_1', '_report', 'report.rst')
         with open(test_file_1, 'r', encoding = 'utf-8') as file:
             assert f'* out_value : {output_list_1}' in file.read()
 
-        test_file_2 = join(TEMPORARY_DIR, 'test_workflow', 'node_2', '_report', 'report.rst')
+        test_file_2 = join(temporary_data_dir,
+            'test_workflow', 'node_2', '_report', 'report.rst')
         with open(test_file_2, 'r', encoding = 'utf-8') as file:
             assert f'* out_value : {output_list_2}' in file.read()
 
@@ -324,7 +315,7 @@ class TestCoreCommon:
 
     @staticmethod
     @mark.unit_test
-    def test_connect_list_intersection(remove_test_dir):
+    def test_connect_list_intersection(temporary_data_dir):
         """ Test the list_intersection function as evaluated in a connect """
 
         # Inputs / outputs
@@ -355,7 +346,7 @@ class TestCoreCommon:
 
         # Create Workflow
         test_workflow = Workflow(
-            base_dir = TEMPORARY_DIR,
+            base_dir = temporary_data_dir,
             name = 'test_workflow'
             )
         test_workflow.connect([
@@ -365,11 +356,13 @@ class TestCoreCommon:
             ])
         test_workflow.run()
 
-        test_file_1 = join(TEMPORARY_DIR, 'test_workflow', 'node_1', '_report', 'report.rst')
+        test_file_1 = join(temporary_data_dir,
+            'test_workflow', 'node_1', '_report', 'report.rst')
         with open(test_file_1, 'r', encoding = 'utf-8') as file:
             assert f'* out_value : {output_list_1}' in file.read()
 
-        test_file_2 = join(TEMPORARY_DIR, 'test_workflow', 'node_2', '_report', 'report.rst')
+        test_file_2 = join(temporary_data_dir,
+            'test_workflow', 'node_2', '_report', 'report.rst')
         with open(test_file_2, 'r', encoding = 'utf-8') as file:
             assert f'* out_value : {output_list_2}' in file.read()
 
