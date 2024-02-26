@@ -20,8 +20,6 @@ from nipype.interfaces.base import Bunch
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_U26C import PipelineTeamU26C
 
-TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_U26C')
-
 class TestPipelinesTeamU26C:
     """ A class that contains all the unit tests for the PipelineTeamU26C class."""
 
@@ -77,8 +75,8 @@ class TestPipelinesTeamU26C:
         assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run1', 'loss_run1']
         assert bunch.pmod[0].poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.pmod[0].param, [
-            [14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
+        helpers.compare_float_2d_arrays(bunch.pmod[0].param,
+            [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
         assert bunch.regressor_names is None
         assert bunch.regressors is None
 
@@ -91,15 +89,14 @@ class TestPipelinesTeamU26C:
         assert bunch.tmod is None
         assert bunch.pmod[0].name == ['gain_run2', 'loss_run2']
         assert bunch.pmod[0].poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.pmod[0].param, [
-            [14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
+        helpers.compare_float_2d_arrays(bunch.pmod[0].param,
+            [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
         assert bunch.regressor_names is None
         assert bunch.regressors is None
 
     @staticmethod
     @mark.unit_test
-    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
-    def test_confounds_file(remove_test_dir):
+    def test_confounds_file(temporary_data_dir):
         """ Test the get_confounds_file method """
 
         confounds_file = join(
@@ -108,11 +105,11 @@ class TestPipelinesTeamU26C:
             Configuration()['directories']['test_data'], 'pipelines', 'team_U26C', 'confounds.tsv')
 
         # Get new confounds file
-        PipelineTeamU26C.get_confounds_file(confounds_file, 'sid', 'rid', TEMPORARY_DIR)
+        PipelineTeamU26C.get_confounds_file(confounds_file, 'sid', 'rid', temporary_data_dir)
 
         # Check confounds file was created
         created_confounds_file = join(
-            TEMPORARY_DIR, 'confounds_files', 'confounds_file_sub-sid_run-rid.tsv')
+            temporary_data_dir, 'confounds_files', 'confounds_file_sub-sid_run-rid.tsv')
         assert exists(created_confounds_file)
 
         # Check contents
