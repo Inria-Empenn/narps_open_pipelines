@@ -105,9 +105,9 @@ class PipelineTeamR9K3(Pipeline):
 
         output_dir = join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}')
 
-        # Smoothing outputs # TODO
+        # Smoothing outputs
         templates = [join(output_dir, f'_smoothing{index}',
-            'srsub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.nii')\
+            'ssub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.nii')\
             for index, run_id in zip(range(len(self.run_list)), self.run_list)]
 
         # Format with subject_ids
@@ -229,7 +229,7 @@ class PipelineTeamR9K3(Pipeline):
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
             'func' : join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
-                '_smoothing*', 'srsub-{subject_id}_task-MGT_run-*_bold.nii'), # TODO
+                '_smoothing*', 'ssub-{subject_id}_task-MGT_run-*_bold.nii'),
             'event' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv'),
         }
