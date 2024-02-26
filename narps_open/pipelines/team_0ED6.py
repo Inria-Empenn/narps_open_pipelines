@@ -211,13 +211,18 @@ class PipelineTeam0ED6(Pipeline):
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
 
-            # MERGE - Merge all gunzip outputs
-            merge_gunziped = Node(Merge(5), name = 'merge_gunziped')
-            preprocessing.connect(gunzip_anat, 'out_file', merge_gunziped, 'in1')
-            preprocessing.connect(gunzip_func, 'out_file', merge_gunziped, 'in2')
-            preprocessing.connect(gunzip_sbref, 'out_file', merge_gunziped, 'in3')
-            preprocessing.connect(gunzip_magnitude, 'out_file', merge_gunziped, 'in4')
-            preprocessing.connect(gunzip_phase, 'out_file', merge_gunziped, 'in5')
+            # MERGE - Merge all temporary outputs once they are no longer needed
+            merge_temp_files = Node(Merge(8), name = 'merge_temp_files')
+            preprocessing.connect(gunzip_anat, 'out_file', merge_temp_files, 'in1')
+            preprocessing.connect(gunzip_func, 'out_file', merge_temp_files, 'in2')
+            preprocessing.connect(gunzip_sbref, 'out_file', merge_temp_files, 'in3')
+            preprocessing.connect(gunzip_magnitude, 'out_file', merge_temp_files, 'in4')
+            preprocessing.connect(gunzip_phase, 'out_file', merge_temp_files, 'in5')
+            preprocessing.connect(
+                realign_unwarp, 'realigned_unwarped_files',
+                merge_temp_files, 'in6')
+            preprocessing.connect(normalize, 'normalized_files', merge_temp_files, 'in7')
+            preprocessing.connect(coregister_sbref_to_anat, 'coregistered_files', merge_temp_files, 'in8')
 
             # FUNCTION - Remove gunziped files once they are no longer needed
             remove_gunziped = MapNode(
@@ -225,28 +230,8 @@ class PipelineTeam0ED6(Pipeline):
                 name = 'remove_gunziped',
                 iterfield = 'file_name'
                 )
-            preprocessing.connect(merge_gunziped, 'out', remove_gunziped, 'file_name')
-
-            # FUNCTION - Remove smoothed files once they are no longer needed
-            remove_smooth = Node(
-                InterfaceFactory.create('remove_parent_directory'),
-                name = 'remove_smooth'
-                )
-
-1.3G    ./realign_unwarp
-2.4G    ./normalize
-7.1G    ./coregisters_sbref_to_anat
-1.3G    ./gunzip_func
-
-
-            # Add connections
-            preprocessing.connect([
-                (data_sink, remove_gunziped, [('out_file', '_')]),
-                (intensity_normalization, remove_gunziped, [
-                    ('out_file', 'file_name')]),
-                (data_sink, remove_smooth, [('out_file', '_')]),
-                (smoothing, remove_smooth, [('smoothed_file', 'file_name')]),
-                ])
+            preprocessing.connect(merge_temp_files, 'out', remove_gunziped, 'file_name')
+            preprocessing.connect(data_sink, 'out_file', remove_gunziped, '_')
 
         return preprocessing
 
