@@ -229,9 +229,10 @@ class PipelineTeamR9K3(Pipeline):
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_bold_confounds.tsv'),
             'func' : join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
-                '_smoothing*', 'ssub-{subject_id}_task-MGT_run-*_bold.nii'),
+                '_smoothing*',
+                'ssub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc.nii'),
             'event' : join('sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv'),
+                'sub-{subject_id}_task-MGT_run-*_events.tsv')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
