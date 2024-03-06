@@ -706,6 +706,11 @@ class PipelineTeam98BT(Pipeline):
         get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
         get_equal_indifference_subjects.inputs.list_2 = self.subject_list
 
+        # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
+        #   If not complete, subject id '001' in search patterns
+        #   would match all contrast files with 'con_0001.nii'.
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+
         # Function Node elements_in_string
         #   Get contrast files for required subjects
         # Note : using a MapNode with elements_in_string requires using clean_list to remove
@@ -778,14 +783,16 @@ class PipelineTeam98BT(Pipeline):
                 ])
 
         if method == 'equalRange':
-            group_level_analysis.connect([
-                (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')])
-                ])
+            group_level_analysis.connect(
+                get_equal_range_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
 
         elif method == 'equalIndifference':
-            group_level_analysis.connect([
-                (get_equal_indifference_subjects, get_contrasts, [('out_list', 'elements')])
-                ])
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
 
         elif method == 'groupComp':
             estimate_contrast.inputs.contrasts = [
@@ -812,8 +819,12 @@ class PipelineTeam98BT(Pipeline):
 
             group_level_analysis.connect([
                 (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
-                (get_equal_range_subjects, get_contrasts, [('out_list', 'elements')]),
-                (get_equal_indifference_subjects, get_contrasts_2, [('out_list', 'elements')]),
+                (get_equal_range_subjects, get_contrasts, [
+                    (('out_list', complete_subject_ids), 'elements')
+                    ]),
+                (get_equal_indifference_subjects, get_contrasts_2, [
+                    (('out_list', complete_subject_ids), 'elements')
+                    ]),
                 (get_contrasts, two_sample_t_test_design, [
                     (('out_list', clean_list), 'group1_files')
                     ]),
