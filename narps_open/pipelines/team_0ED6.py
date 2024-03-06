@@ -13,10 +13,11 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.spm import (
     Coregister, Segment, RealignUnwarp, FieldMap, Normalize,
     Smooth, Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
-    EstimateModel, EstimateContrast, Threshold
+    EstimateModel, EstimateContrast, Threshold, Reslice
     )
+from nipype.interfaces.fsl.maths import MathsCommand
 from nipype.algorithms.modelgen import SpecifySPMModel
-from nipype.algorithms.misc import Gunzip
+from nipype.algorithms.misc import Gunzip, SimpleThreshold
 from nipype.algorithms.confounds import ComputeDVARS
 
 from narps_open.pipelines import Pipeline
@@ -76,7 +77,8 @@ class PipelineTeam0ED6(Pipeline):
         }
         select_subject_files = Node(SelectFiles(templates), name = 'select_subject_files')
         select_subject_files.inputs.base_directory = self.directories.dataset_dir
-        preprocessing.connect(information_source_subjects, 'subject_id', select_subject_files, 'subject_id')
+        preprocessing.connect(
+            information_source_subjects, 'subject_id', select_subject_files, 'subject_id')
 
         # SELECT FILES - Select run related files
         templates = {
@@ -88,7 +90,8 @@ class PipelineTeam0ED6(Pipeline):
         select_run_files = Node(SelectFiles(templates), name = 'select_run_files')
         select_run_files.inputs.base_directory = self.directories.dataset_dir
         preprocessing.connect(information_source_runs, 'run_id', select_run_files, 'run_id')
-        preprocessing.connect(information_source_subjects, 'subject_id', select_run_files, 'subject_id')
+        preprocessing.connect(
+            information_source_subjects, 'subject_id', select_run_files, 'subject_id')
 
         # GUNZIP - gunzip files because SPM do not use .nii.gz files
         gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
@@ -131,7 +134,7 @@ class PipelineTeam0ED6(Pipeline):
         #   * realigned+unwarped func mean
         split_realign_unwarp_means = Node(Split(), name = 'split_realign_unwarp_means')
         split_realign_unwarp_means.inputs.splits = [1, 1] # out1 is sbref; out2 is func
-        split_realign_unwarp_means.inputs.squeeze = True # Unfold one-element splits removing the list.
+        split_realign_unwarp_means.inputs.squeeze = True # Unfold one-element splits
         preprocessing.connect(realign_unwarp, 'mean_image', split_realign_unwarp_means, 'inlist')
 
         # SPLIT - Split the output of realign_unwarp
@@ -139,14 +142,20 @@ class PipelineTeam0ED6(Pipeline):
         #   * realigned+unwarped func
         split_realign_unwarp_outputs = Node(Split(), name = 'split_realign_unwarp_outputs')
         split_realign_unwarp_outputs.inputs.splits = [1, 1] # out1 is sbref; out2 is func
-        split_realign_unwarp_outputs.inputs.squeeze = True # Unfold one-element splits removing the list.
-        preprocessing.connect(realign_unwarp, 'realigned_unwarped_files', split_realign_unwarp_outputs, 'inlist')
+        split_realign_unwarp_outputs.inputs.squeeze = True # Unfold one-element splits
+        preprocessing.connect(
+            realign_unwarp, 'realigned_unwarped_files',
+            split_realign_unwarp_outputs, 'inlist')
 
         # COREGISTER - Coregister sbref to realigned and unwarped mean image of func
         coregister_sbref_to_func = Node(Coregister(), name = 'coregister_sbref_to_func')
         coregister_sbref_to_func.inputs.cost_function = 'nmi'
-        preprocessing.connect(split_realign_unwarp_means, 'out2', coregister_sbref_to_func, 'target')
-        preprocessing.connect(split_realign_unwarp_outputs, 'out1', coregister_sbref_to_func, 'source')
+        preprocessing.connect(
+            split_realign_unwarp_means, 'out2',  # mean func
+            coregister_sbref_to_func, 'target')
+        preprocessing.connect(
+            split_realign_unwarp_outputs, 'out1', # sbref
+            coregister_sbref_to_func, 'source')
 
         # SEGMENT - Segmentation of the T1w image into grey matter tissue map.
         segmentation_anat = Node(Segment(), name = 'segmentation_anat')
@@ -157,32 +166,42 @@ class PipelineTeam0ED6(Pipeline):
         segmentation_anat.inputs.wm_output_type = [False,False,False] # No output for WM
         preprocessing.connect(gunzip_anat, 'out_file', segmentation_anat, 'data')
 
-        # MERGE - Merge func + func mean image files for the coregister_sbref_to_anat node into one input.
+        # MERGE - Merge func + func mean image files for the coregister_sbref_to_anat
+        #   node into one input.
         merge_func_before_coregister = Node(Merge(2), name = 'merge_func_before_coregister')
-        preprocessing.connect(split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in1')
-        preprocessing.connect(split_realign_unwarp_means, 'out2', merge_func_before_coregister, 'in2')
+        preprocessing.connect( # out2 is func
+            split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in1')
+        preprocessing.connect( # out2 is func mean
+            split_realign_unwarp_means, 'out2', merge_func_before_coregister, 'in2')
 
         # COREGISTER - Coregister sbref to anat
         coregister_sbref_to_anat = Node(Coregister(), name = 'coregister_sbref_to_anat')
         coregister_sbref_to_anat.inputs.cost_function = 'nmi'
-        preprocessing.connect(segmentation_anat, 'native_gm_image', coregister_sbref_to_anat, 'target')
-        preprocessing.connect(coregister_sbref_to_func, 'coregistered_source', coregister_sbref_to_anat, 'source')
-        preprocessing.connect(merge_func_before_coregister, 'out', coregister_sbref_to_anat, 'apply_to_files')
+        preprocessing.connect(
+            segmentation_anat, 'native_gm_image', coregister_sbref_to_anat, 'target')
+        preprocessing.connect(
+            coregister_sbref_to_func, 'coregistered_source', coregister_sbref_to_anat, 'source')
+        preprocessing.connect(# out[0] is func, out[1] is func mean
+            merge_func_before_coregister, 'out', coregister_sbref_to_anat, 'apply_to_files')
 
         # SEGMENT - First step of sbref normalization.
         segmentation_sbref = Node(Segment(), name = 'segmentation_sbref')
         segmentation_sbref.inputs.csf_output_type = [False,False,False] # No output for CSF
-        segmentation_sbref.inputs.gm_output_type = [False,False,False] # No output for GM
+        segmentation_sbref.inputs.gm_output_type = [False,True,False] # Output map in normalized space only
         segmentation_sbref.inputs.wm_output_type = [False,False,False] # No output for WM
         segmentation_sbref.inputs.sampling_distance = 2.0
-        preprocessing.connect(coregister_sbref_to_anat, 'coregistered_source', segmentation_sbref, 'data')
+        preprocessing.connect(
+            coregister_sbref_to_anat, 'coregistered_source', segmentation_sbref, 'data')
 
-        # NORMALIZE - Deformation computed by the segmentation_sbref step is applied to the func, mean func, and sbref.
+        # NORMALIZE - Deformation computed by the segmentation_sbref step is applied to
+        #   the func, mean func, and sbref.
         normalize = Node(Normalize(), name = 'normalize')
         normalize.inputs.DCT_period_cutoff = 45.0
         normalize.inputs.jobtype = 'write' # Estimation was done on previous step
-        preprocessing.connect(segmentation_sbref, 'transformation_mat', normalize, 'parameter_file')
-        preprocessing.connect(coregister_sbref_to_anat, 'coregistered_files', normalize, 'apply_to_files')
+        preprocessing.connect(
+            segmentation_sbref, 'transformation_mat', normalize, 'parameter_file')
+        preprocessing.connect(# coregistered_files[0] is func, coregistered_files[1] is func mean
+            coregister_sbref_to_anat, 'coregistered_files', normalize, 'apply_to_files')
 
         # SMOOTH - Spatial smoothing of fMRI data
         smoothing = Node(Smooth(), name = 'smoothing')
@@ -191,14 +210,28 @@ class PipelineTeam0ED6(Pipeline):
 
         # SELECT - Select the smoothed func.
         select_func = Node(Select(), name = 'select_func')
-        select_func.inputs.index = [1] # func file
+        select_func.inputs.index = [0] # func file
         preprocessing.connect(smoothing, 'smoothed_files', select_func, 'inlist')
+
+        # MATHS COMMAND - Apply threshold to sbref normalized GM probalility map
+        #   and binarise result
+        # TODO : add wm in the mask ?
+        threshold = Node(MathsCommand(), name = 'threshold')
+        threshold.inputs.args = '-thr 0.5 -bin'
+        threshold.inputs.output_type = 'NIFTI'
+        threshold.inputs.output_datatype = 'int'
+        preprocessing.connect(segmentation_sbref, 'normalized_gm_image', threshold, 'in_file')
+
+        # RESLICE - Reslice mask into func space
+        reslice_mask = Node(Reslice(), name ='reslice_mask')
+        preprocessing.connect(threshold, 'out_file', reslice_mask, 'in_file')
+        preprocessing.connect(select_func, 'out', reslice_mask, 'space_defining')
 
         # COMPUTE DVARS - Identify corrupted time-points from func
         compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
         compute_dvars.inputs.series_tr = TaskInformation()['RepetitionTime']
         preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
-        preprocessing.connect(segmentation_anat, 'native_gm_image', compute_dvars, 'in_mask') # TODO : use an actual mask
+        preprocessing.connect(reslice_mask, 'out_file', compute_dvars, 'in_mask')
 
         # DATA SINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
@@ -223,7 +256,8 @@ class PipelineTeam0ED6(Pipeline):
                 realign_unwarp, 'realigned_unwarped_files',
                 merge_temp_files, 'in6')
             preprocessing.connect(normalize, 'normalized_files', merge_temp_files, 'in7')
-            preprocessing.connect(coregister_sbref_to_anat, 'coregistered_files', merge_temp_files, 'in8')
+            preprocessing.connect(
+                coregister_sbref_to_anat, 'coregistered_files', merge_temp_files, 'in8')
 
             # FUNCTION - Remove gunziped files once they are no longer needed
             remove_gunziped = MapNode(
@@ -243,7 +277,7 @@ class PipelineTeam0ED6(Pipeline):
             '_run_id_{run_id}', '_subject_id_{subject_id}')
 
         # Smoothing outputs
-        template = join(output_dir, f'_smoothing1',
+        template = join(output_dir, '_smoothing1',
             'swrusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
 
         # Realignement parameters TODO
@@ -253,7 +287,7 @@ class PipelineTeam0ED6(Pipeline):
 
         # Format with subject_ids and run_ids
         return [template.format(subject_id = s, run_id = r)
-            for s in self.subject_list for s in self.run_list]
+            for s in self.subject_list for r in self.run_list]
 
     def get_run_level_analysis(self):
         """ No run level analysis has been done by team 0ED6 """
@@ -270,7 +304,6 @@ class PipelineTeam0ED6(Pipeline):
         - subject_information: Bunch, relevant event information for subject level analysis.
         """
         from nipype.interfaces.base import Bunch
-        from nipype.algorithms.modelgen import orth
 
         # Init empty lists inside directiries
         onsets = []
@@ -289,7 +322,7 @@ class PipelineTeam0ED6(Pipeline):
                 durations.append(float(info[1]))
                 gain_value.append(float(info[2]))
                 loss_value.append(float(info[3]))
-                response_time.append(float(info[4]))
+                reaction_time.append(float(info[4]))
 
         # TODO : SPM automatically mean-centers regressors ???
         # TODO : SPM automatically orthoganalizes regressors ???
@@ -303,9 +336,9 @@ class PipelineTeam0ED6(Pipeline):
                 tmod = None,
                 pmod = [
                     Bunch(
-                        name = ['gain', 'loss', 'response_time'],
+                        name = ['gain', 'loss', 'reaction_time'],
                         poly = [1, 1, 1],
-                        param = [gain_value, loss_value, response_time]
+                        param = [gain_value, loss_value, reaction_time]
                     )
                 ],
                 regressor_names = None,
@@ -338,11 +371,8 @@ class PipelineTeam0ED6(Pipeline):
         realign_data_frame = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
 
         # Get the dataframe containing dvars values
-        # and transform it as a regressor.
         dvars_data_frame = insert(
-            array(
-            (read_csv(dvars_file, sep = '\t', header = 0) > 0.5).astype(int)
-            ),
+            array(read_csv(dvars_file, sep = '\t', header = None)),
             0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
 
         # Extract all parameters
@@ -381,22 +411,16 @@ class PipelineTeam0ED6(Pipeline):
 
         # SELECT FILES - to select necessary files
         templates = {
-            'framewise_displacement_files' : join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', '_displacement*',
-                'fd_power_2012.txt'),
-            'wm_average_files' : join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', '_average_values_wm*',
-                'sub-{subject_id}_run-*_reg_wm.txt'),
-            'csf_average_files' : join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', '_average_values_csf*',
-                'sub-{subject_id}_run-*_reg_csf.txt'),
+            'dvars_file' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_*', '_subject_id_{subject_id}',
+                'swrusub-{subject_id}_task-MGT_run-*_bold_dvars_std.tsv'),
             'realignement_parameters' : join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', '_realign_func*',
+                '_run_id_*', '_subject_id_{subject_id}', '_realign_unwarp1',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt'),
-            'func' : join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
-                '_smoothing*', 'srsub-{subject_id}_task-MGT_run-*_bold.nii'),
+            'func' : join(self.directories.output_dir, 'preprocessing', '_run_id_*',
+                '_subject_id_{subject_id}', 'swrusub-{subject_id}_task-MGT_run-*_bold.nii'),
             'event' : join('sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv'),
+                'sub-{subject_id}_task-MGT_run-*_events.tsv')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -415,25 +439,20 @@ class PipelineTeam0ED6(Pipeline):
         confounds = MapNode(
             Function(
                 function = self.get_confounds_file,
-                input_names = ['framewise_displacement_file', 'wm_average_file',
-                    'csf_average_file', 'realignement_parameters', 'subject_id', 'run_id'],
+                input_names = ['dvars_file', 'realignement_parameters',
+                    'subject_id', 'run_id'],
                 output_names = ['confounds_file']
             ),
             name = 'confounds',
-            iterfield = ['framewise_displacement_file', 'wm_average_file',
-                'csf_average_file', 'realignement_parameters', 'run_id'])
+            iterfield = ['dvars_file', 'realignement_parameters', 'run_id'])
         confounds.inputs.run_id = self.run_list
         subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
-        subject_level.connect(
-            select_files, 'framewise_displacement_files', confounds, 'framewise_displacement_file')
-        subject_level.connect(select_files, 'wm_average_files', confounds, 'wm_average_file')
-        subject_level.connect(select_files, 'csf_average_files', confounds, 'csf_average_file')
+        subject_level.connect(select_files, 'dvars_file', confounds, 'dvars_file')
         subject_level.connect(
             select_files, 'realignement_parameters', confounds, 'realignement_parameters')
 
         # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
-        #specify_model.inputs.concatenate_runs = True # TODO : actually concatenate runs ????
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.output_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
