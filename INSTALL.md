@@ -63,7 +63,7 @@ Start a Docker container from the Docker image :
 
 ```bash
 # Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
-docker run -it -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ nipype/nipype:py38
+docker run -it -v PATH_TO_THE_REPOSITORY:/work/ nipype/nipype:py38
 ```
 
 Optionally edit the configuration file `narps_open/utils/configuration/default_config.toml` so that the referred paths match the ones inside the container. E.g.: if using the previous command line, the `directories` part of the configuration file should be :
@@ -73,9 +73,9 @@ Optionally edit the configuration file `narps_open/utils/configuration/default_c
 # ...
 
 [directories]
-dataset = "/home/neuro/code/data/original/ds001734/"
-reproduced_results = "/home/neuro/code/data/reproduced/"
-narps_results = "/home/neuro/code/data/results/"
+dataset = "/work/data/original/ds001734/"
+reproduced_results = "/work/data/reproduced/"
+narps_results = "/work/data/results/"
 
 # ...
 ```
@@ -87,7 +87,7 @@ Install NARPS Open Pipelines inside the container :
 
 ```bash
 source activate neuro
-cd /home/neuro/code/
+cd /work/
 pip install .
 ```
 

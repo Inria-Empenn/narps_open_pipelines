@@ -3,21 +3,21 @@
 
 """ This template can be use to test a pipeline.
 
-    - Replace all occurrences of XXXX by the actual id of the team.
+    - Replace all occurrences of 2T6S by the actual id of the team.
     - All lines starting with [INFO], are meant to help you during the reproduction,
     these can be removed eventually.
     - Also remove lines starting with [TODO], once you did what they suggested.
     - Remove this docstring once you are done with coding the tests.
 """
 
-""" Tests of the 'narps_open.pipelines.team_XXXX' module.
+""" Tests of the 'narps_open.pipelines.team_2T6S' module.
 
 Launch this test with PyTest
 
 Usage:
 ======
-    pytest -q test_team_XXXX.py
-    pytest -q test_team_XXXX.py -k <selected_test>
+    pytest -q test_team_2T6S.py
+    pytest -q test_team_2T6S.py -k <selected_test>
 """
 
 # [INFO] About these imports :
@@ -28,12 +28,12 @@ from pytest import helpers, mark
 # [INFO] Only for type testing
 from nipype import Workflow
 
-# [INFO] Of course, import the class you want to test, here the Pipeline class for the team XXXX
-from narps_open.pipelines.team_XXXX import PipelineTeamXXXX
+# [INFO] Of course, import the class you want to test, here the Pipeline class for the team 2T6S
+from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
 
 # [INFO] All tests should be contained in the following class, in order to sort them.
-class TestPipelinesTeamXXXX:
-    """ A class that contains all the unit tests for the PipelineTeamXXXX class."""
+class TestPipelinesTeam2T6S:
+    """ A class that contains all the unit tests for the PipelineTeam2T6S class."""
 
     # [TODO] Write one or several unit_test (and mark them as such)
     # [TODO]    ideally for each method of the class you test.
@@ -42,19 +42,19 @@ class TestPipelinesTeamXXXX:
     @staticmethod
     @mark.unit_test
     def test_create():
-        """ Test the creation of a PipelineTeamXXXX object """
+        """ Test the creation of a PipelineTeam2T6S object """
 
-        pipeline = PipelineTeamXXXX()
+        pipeline = PipelineTeam2T6S()
         assert pipeline.fwhm == 8.0
-        assert pipeline.team_id == 'XXXX'
+        assert pipeline.team_id == '2T6S'
 
     # [INFO] Here is one example for the methods returning workflows
     @staticmethod
     @mark.unit_test
     def test_workflows():
-        """ Test the workflows of a PipelineTeamXXXX object """
+        """ Test the workflows of a PipelineTeam2T6S object """
 
-        pipeline = PipelineTeamXXXX()
+        pipeline = PipelineTeam2T6S()
         assert pipeline.get_preprocessing() is None
         assert pipeline.get_run_level_analysis() is None
         assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
@@ -68,24 +68,16 @@ class TestPipelinesTeamXXXX:
     @staticmethod
     @mark.unit_test
     def test_outputs():
-        """ Test the expected outputs of a PipelineTeamXXXX object """
-        pipeline = PipelineTeamXXXX()
+        """ Test the expected outputs of a PipelineTeam2T6S object """
+        pipeline = PipelineTeam2T6S()
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 7
-        assert len(pipeline.get_group_level_outputs()) == 63
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 7, 63, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        assert len(pipeline.get_preprocessing_outputs()) == 0
-        assert len(pipeline.get_run_level_outputs()) == 0
-        assert len(pipeline.get_subject_level_outputs()) == 28
-        assert len(pipeline.get_group_level_outputs()) == 63
-        assert len(pipeline.get_hypotheses_outputs()) == 18
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 28, 63, 18])
 
     # [TODO] Feel free to add other methods, e.g. to test the custom node functions of the pipeline
 
@@ -95,8 +87,8 @@ class TestPipelinesTeamXXXX:
     @staticmethod
     @mark.pipeline_test
     def test_execution():
-        """ Test the execution of a PipelineTeamXXXX and compare results """
+        """ Test the execution of a PipelineTeam2T6S and compare results """
 
         # [INFO] We use the `test_pipeline_evaluation` helper which is responsible for running the
         # [INFO]    pipeline, iterating over subjects and comparing output with expected results.
-        helpers.test_pipeline_evaluation('XXXX')
+        helpers.test_pipeline_evaluation('2T6S')

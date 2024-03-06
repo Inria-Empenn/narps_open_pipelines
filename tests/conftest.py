@@ -6,13 +6,15 @@ conftest.py file will be automatically launched before running
 pytest on (a) test file(s) in the same directory.
 """
 
-from os import remove
+from os import remove, mkdir
 from os.path import join, isfile
+from tempfile import mkdtemp
 from shutil import rmtree
 
 from numpy import isclose
-from pytest import helpers
+from pytest import helpers, fixture
 from pathvalidate import is_valid_filepath
+from numpy import isclose
 
 from narps_open.pipelines import Pipeline
 from narps_open.runner import PipelineRunner
@@ -23,6 +25,13 @@ from narps_open.data.results import ResultsCollection
 
 # Init configuration, to ensure it is in testing mode
 Configuration(config_type='testing')
+
+@fixture
+def temporary_data_dir():
+    """ A fixture to create and remove a temporary directory for the tests """
+    data_dir = mkdtemp()
+    yield data_dir
+    rmtree(data_dir, ignore_errors = True)
 
 @helpers.register
 def compare_float_2d_arrays(array_1, array_2):

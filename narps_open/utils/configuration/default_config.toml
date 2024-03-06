@@ -3,9 +3,9 @@ title = "Default configuration for the NARPS open pipelines project"
 config_type = "default"
 
 [directories]
-dataset = "data/original/ds001734/"
-reproduced_results = "data/reproduced/"
-narps_results = "data/results/"
+dataset = "/work/data/original/ds001734/"
+reproduced_results = "/work/run/reproduced/"
+narps_results = "/work/data/results/"
 
 [runner]
 nb_procs = 8 # Maximum number of threads executed by the runner
