@@ -14,6 +14,7 @@ from shutil import rmtree
 from numpy import isclose
 from pytest import helpers, fixture
 from pathvalidate import is_valid_filepath
+from numpy import isclose
 
 from narps_open.pipelines import Pipeline
 from narps_open.runner import PipelineRunner
