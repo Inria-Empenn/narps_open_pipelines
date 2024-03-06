@@ -15,7 +15,7 @@ From this command line, you need to add volumes to be able to link with your loc
 ```bash
 # Replace PATH_TO_THE_REPOSITORY in the following command (e.g.: with /home/user/dev/narps_open_pipelines/)
 docker run -it \
-           -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ \
+           -v PATH_TO_THE_REPOSITORY:/work/ \
            nipype/nipype:py38
 ``` 
 
@@ -25,7 +25,7 @@ If you wish to use [Jupyter](https://jupyter.org/) to run the code, a port forwa
 
 ```bash
 docker run -it \
-           -v PATH_TO_THE_REPOSITORY:/home/neuro/code/ \
+           -v PATH_TO_THE_REPOSITORY:/work/ \
            -p 8888:8888 \
            nipype/nipype:py38
 ``` 
