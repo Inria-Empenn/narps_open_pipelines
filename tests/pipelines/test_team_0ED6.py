@@ -33,7 +33,7 @@ class TestPipelinesTeam0ED6:
         pipeline = PipelineTeam0ED6()
 
         # 1 - check the parameters
-        assert pipeline.fwhm == 4.0
+        assert pipeline.fwhm == 5.0
         assert pipeline.team_id == '0ED6'
 
         # 2 - check workflows
@@ -52,11 +52,11 @@ class TestPipelinesTeam0ED6:
         pipeline = PipelineTeam0ED6()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [21, 0, 5, 42, 18])
+        helpers.test_pipeline_outputs(pipeline, [20, 0, 9, 84, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [84, 0, 20, 42, 18])
+        helpers.test_pipeline_outputs(pipeline, [80, 0, 36, 84, 18])
 
     @staticmethod
     @mark.unit_test
@@ -65,24 +65,23 @@ class TestPipelinesTeam0ED6:
 
         # Test files
         test_dvars = abspath(join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_0ED6', 'realignment_parameters.txt')) # TODO
+            'pipelines', 'team_0ED6', 'swrusub-001_task-MGT_run-01_bold_dvars_std.tsv'))
         test_realignment_parameters = abspath(join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_0ED6', 'realignment_parameters.txt'))
+            'pipelines', 'team_0ED6', 'rp_sub-001_task-MGT_run-01_bold.txt'))
 
         # Reference file
         ref_file = abspath(join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_0ED6', 'confounds.tsv'))
+            'pipelines', 'team_0ED6', 'confounds_file_sub-sid_run-rid.tsv'))
 
         # Create average values file
         confounds_node = Node(Function(
-            input_names = [
-                'realignement_parameters', 'subject_id', 'run_id'
-                ],
+            input_names = ['dvars_file', 'realignement_parameters', 'subject_id', 'run_id'],
             output_names = ['out_file'],
             function = PipelineTeam0ED6.get_confounds_file),
             name = 'confounds_node')
         confounds_node.base_dir = temporary_data_dir
         confounds_node.inputs.realignement_parameters = test_realignment_parameters
+        confounds_node.inputs.dvars_file = test_dvars
         confounds_node.inputs.subject_id = 'sid'
         confounds_node.inputs.run_id = 'rid'
         confounds_node.run()
@@ -119,12 +118,12 @@ class TestPipelinesTeam0ED6:
 
         paramateric_modulation = information.pmod[0]
         assert isinstance(paramateric_modulation, Bunch)
-        assert paramateric_modulation.name == ['gain', 'loss', 'response_time']
+        assert paramateric_modulation.name == ['gain', 'loss', 'reaction_time']
         assert paramateric_modulation.poly == [1, 1, 1]
         helpers.compare_float_2d_arrays([
-            [14.0, 34.0, 0.0, 2.388, 2.289],
-            [14.0, 34.0, 0.0, 2.388, 2.289],
-            [14.0, 34.0, 0.0, 2.388, 2.289]
+            [14.0, 34.0, 38.0, 10.0, 16.0],
+            [6.0, 14.0, 19.0, 15.0, 17.0],
+            [2.388, 2.289, 0.0, 2.08, 2.288]
             ],
             paramateric_modulation.param)
 

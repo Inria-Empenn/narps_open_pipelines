@@ -277,17 +277,27 @@ class PipelineTeam0ED6(Pipeline):
             '_run_id_{run_id}', '_subject_id_{subject_id}')
 
         # Smoothing outputs
-        template = join(output_dir, '_smoothing1',
-            'swrusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
+        templates = [
+            join(output_dir, 'swrusub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            join(output_dir, 'swrmeanusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
+            ]
 
-        # Realignement parameters TODO
-        templates += [join(output_dir, f'_realign_unwarp{index}',
-            'rp_sub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.txt')\
-            for index, run_id in zip(range(len(self.run_list)), self.run_list)]
+        # DVARS output
+        templates += [
+            join(output_dir, 'swrusub-{subject_id}_task-MGT_run-{run_id}_bold_dvars_std.tsv')
+            ]
+
+        # Realignement parameters
+        templates += [
+            join(output_dir, '_realign_unwarp0',
+                'rp_sub-{subject_id}_task-MGT_run-{run_id}_sbref.txt'),
+            join(output_dir, '_realign_unwarp1',
+                'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')
+            ]
 
         # Format with subject_ids and run_ids
-        return [template.format(subject_id = s, run_id = r)
-            for s in self.subject_list for r in self.run_list]
+        return [t.format(subject_id = s, run_id = r)
+            for t in templates for s in self.subject_list for r in self.run_list]
 
     def get_run_level_analysis(self):
         """ No run level analysis has been done by team 0ED6 """
