@@ -20,8 +20,6 @@ from nipype.interfaces.base import Bunch
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_X19V import PipelineTeamX19V
 
-TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_X19V')
-
 class TestPipelinesTeamX19V:
     """ A class that contains all the unit tests for the PipelineTeamX19V class."""
 
@@ -92,8 +90,7 @@ class TestPipelinesTeamX19V:
 
     @staticmethod
     @mark.unit_test
-    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
-    def test_confounds_file(remove_test_dir):
+    def test_confounds_file(temporary_data_dir):
         """ Test the get_confounds_file method """
 
         confounds_file = join(
@@ -102,11 +99,11 @@ class TestPipelinesTeamX19V:
             Configuration()['directories']['test_data'], 'pipelines', 'team_X19V', 'confounds.tsv')
 
         # Get new confounds file
-        PipelineTeamX19V.get_confounds_file(confounds_file, 'sid', 'rid', TEMPORARY_DIR)
+        PipelineTeamX19V.get_confounds_file(confounds_file, 'sid', 'rid', temporary_data_dir)
 
         # Check confounds file was created
         created_confounds_file = join(
-            TEMPORARY_DIR, 'confounds_files', 'confounds_file_sub-sid_run-rid.tsv')
+            temporary_data_dir, 'confounds_files', 'confounds_file_sub-sid_run-rid.tsv')
         assert exists(created_confounds_file)
 
         # Check contents
