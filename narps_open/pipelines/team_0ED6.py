@@ -21,6 +21,7 @@ from nipype.algorithms.misc import Gunzip, SimpleThreshold
 from nipype.algorithms.confounds import ComputeDVARS
 
 from narps_open.pipelines import Pipeline
+from narps_open.core.interfaces.confounds import ComputeDVARS
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.utils.configuration import Configuration
@@ -213,6 +214,7 @@ class PipelineTeam0ED6(Pipeline):
         select_func.inputs.index = [0] # func file
         preprocessing.connect(smoothing, 'smoothed_files', select_func, 'inlist')
 
+        """
         # MATHS COMMAND - Apply threshold to sbref normalized GM probalility map
         #   and binarise result
         # TODO : add wm in the mask ?
@@ -226,12 +228,19 @@ class PipelineTeam0ED6(Pipeline):
         reslice_mask = Node(Reslice(), name ='reslice_mask')
         preprocessing.connect(threshold, 'out_file', reslice_mask, 'in_file')
         preprocessing.connect(select_func, 'out', reslice_mask, 'space_defining')
+        """
+
+        # COMPUTE DVARS - Identify corrupted time-points from func
+        """compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
+        compute_dvars.inputs.series_tr = TaskInformation()['RepetitionTime']
+        preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
+        preprocessing.connect(reslice_mask, 'out_file', compute_dvars, 'in_mask')"""
 
         # COMPUTE DVARS - Identify corrupted time-points from func
         compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
-        compute_dvars.inputs.series_tr = TaskInformation()['RepetitionTime']
+        compute_dvars.inputs.nb_time_points = 453
+        compute_dvars.inputs.out_file_name = 'corrupted_points'
         preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
-        preprocessing.connect(reslice_mask, 'out_file', compute_dvars, 'in_mask')
 
         # DATA SINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
@@ -240,7 +249,7 @@ class PipelineTeam0ED6(Pipeline):
         preprocessing.connect(
             realign_unwarp, 'realignment_parameters',
             data_sink, 'preprocessing.@realignement_parameters')
-        preprocessing.connect(compute_dvars, 'out_std', data_sink, 'preprocessing.@dvars_file')
+        preprocessing.connect(compute_dvars, 'out_file', data_sink, 'preprocessing.@dvars_file')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
