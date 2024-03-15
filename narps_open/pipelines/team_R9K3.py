@@ -589,38 +589,47 @@ class PipelineTeamR9K3(Pipeline):
         """
         nb_sub = len(self.subject_list)
         files = [
+            # Hypothesis 1
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 2
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 3
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 4
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 5
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 6
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold1', 'spmT_0001_thr.nii'),
+                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 7
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 8
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0002_thr.nii'),
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0002.nii'),
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
