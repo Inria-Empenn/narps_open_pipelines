@@ -48,7 +48,7 @@ class ComputeDVARS(BaseInterface):
         """ Run the DVARS computation and identify corrupted points """
 
         # Compute DVARS
-         = DVARS_Calc(self.inputs.in_file)
+        dvars = DVARS_Calc(self.inputs.in_file)
 
         # Identify corrupted points
         #%   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
