@@ -48,12 +48,12 @@ class ComputeDVARS(BaseInterface):
         """ Run the DVARS computation and identify corrupted points """
 
         # Compute DVARS
-        dvars_output = DVARS_Calc(self.inputs.in_file)
+         = DVARS_Calc(self.inputs.in_file)
 
         # Identify corrupted points
         #%   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
-        pvalues = [e < (0.05/(nb_time_points-1)) for e in dvars_output['Inference']['Pval']]
-        deltapdvar = [e > 5 for e in dvars_output['DVARS']['DeltapDvar']]
+        pvalues = [e < (0.05/(self.inputs.nb_time_points-1)) for e in dvars['Inference']['Pval']]
+        deltapdvar = [e > 5 for e in dvars['DVARS']['DeltapDvar']]
 
         # Write result to file
         with open(abspath(self.inputs.out_file_name + '.txt'), 'w') as file:
