@@ -418,7 +418,10 @@ class PipelineTeam0ED6(Pipeline):
         templates = {
             'dvars_file' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*', '_subject_id_{subject_id}',
-                'swrusub-{subject_id}_task-MGT_run-*_bold_dvars_std.tsv'),
+                'dvars_out_DVARS.tsv'),
+            'dvars_inference_file' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_*', '_subject_id_{subject_id}',
+                'dvars_out_Inference.tsv'),
             'realignement_parameters' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*', '_subject_id_{subject_id}', '_realign_unwarp1',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt'),
@@ -444,7 +447,7 @@ class PipelineTeam0ED6(Pipeline):
         confounds = MapNode(
             Function(
                 function = self.get_confounds_file,
-                input_names = ['dvars_file', 'realignement_parameters',
+                input_names = ['dvars_file', 'dvars_inference_file', 'realignement_parameters',
                     'subject_id', 'run_id'],
                 output_names = ['confounds_file']
             ),
@@ -452,7 +455,9 @@ class PipelineTeam0ED6(Pipeline):
             iterfield = ['dvars_file', 'realignement_parameters', 'run_id'])
         confounds.inputs.run_id = self.run_list
         subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
-        subject_level.connect(select_files, 'dvars_file', confounds, 'dvars_file')
+        subject_level.connect(select_files, 'dvars_inference_file', confounds, 'dvars_file')
+        subject_level.connect(
+            select_files, 'dvars_inference_file', confounds, 'dvars_inference_file')
         subject_level.connect(
             select_files, 'realignement_parameters', confounds, 'realignement_parameters')
 
