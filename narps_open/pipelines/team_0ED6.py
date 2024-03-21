@@ -394,6 +394,11 @@ class PipelineTeam0ED6(Pipeline):
             array(read_csv(dvars_file, sep = '\t', header = None)),
             0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
 
+        # Identify corrupted points
+        #%   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
+        #pvalues = [e < (0.05/(self.inputs.nb_time_points-1)) for e in dvars['Inference']['Pval']]
+        #deltapdvar = [e > 5 for e in dvars['DVARS']['DeltapDvar']]
+
         # Extract all parameters
         retained_parameters = DataFrame(
             concatenate(
