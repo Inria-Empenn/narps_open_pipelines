@@ -52,11 +52,11 @@ class TestPipelinesTeam0ED6:
         pipeline = PipelineTeam0ED6()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [20, 0, 9, 84, 18])
+        helpers.test_pipeline_outputs(pipeline, [24, 0, 9, 84, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [80, 0, 36, 84, 18])
+        helpers.test_pipeline_outputs(pipeline, [96, 0, 36, 84, 18])
 
     @staticmethod
     @mark.unit_test
@@ -65,7 +65,9 @@ class TestPipelinesTeam0ED6:
 
         # Test files
         test_dvars = abspath(join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_0ED6', 'swrusub-001_task-MGT_run-01_bold_dvars_std.tsv'))
+            'pipelines', 'team_0ED6', 'dvars_results_DVARS.tsv'))
+        test_inference_dvars = abspath(join(Configuration()['directories']['test_data'],
+            'pipelines', 'team_0ED6', 'dvars_results_Inference.tsv'))
         test_realignment_parameters = abspath(join(Configuration()['directories']['test_data'],
             'pipelines', 'team_0ED6', 'rp_sub-001_task-MGT_run-01_bold.txt'))
 
@@ -75,13 +77,15 @@ class TestPipelinesTeam0ED6:
 
         # Create average values file
         confounds_node = Node(Function(
-            input_names = ['dvars_file', 'realignement_parameters', 'subject_id', 'run_id'],
+            input_names = ['dvars_file', 'dvars_inference_file',
+                'realignement_parameters', 'subject_id', 'run_id'],
             output_names = ['out_file'],
             function = PipelineTeam0ED6.get_confounds_file),
             name = 'confounds_node')
         confounds_node.base_dir = temporary_data_dir
         confounds_node.inputs.realignement_parameters = test_realignment_parameters
         confounds_node.inputs.dvars_file = test_dvars
+        confounds_node.inputs.dvars_inference_file = test_inference_dvars
         confounds_node.inputs.subject_id = 'sid'
         confounds_node.inputs.run_id = 'rid'
         confounds_node.run()

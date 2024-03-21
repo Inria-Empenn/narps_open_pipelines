@@ -214,32 +214,9 @@ class PipelineTeam0ED6(Pipeline):
         select_func.inputs.index = [0] # func file
         preprocessing.connect(smoothing, 'smoothed_files', select_func, 'inlist')
 
-        """
-        # MATHS COMMAND - Apply threshold to sbref normalized GM probalility map
-        #   and binarise result
-        # TODO : add wm in the mask ?
-        threshold = Node(MathsCommand(), name = 'threshold')
-        threshold.inputs.args = '-thr 0.5 -bin'
-        threshold.inputs.output_type = 'NIFTI'
-        threshold.inputs.output_datatype = 'int'
-        preprocessing.connect(segmentation_sbref, 'normalized_gm_image', threshold, 'in_file')
-
-        # RESLICE - Reslice mask into func space
-        reslice_mask = Node(Reslice(), name ='reslice_mask')
-        preprocessing.connect(threshold, 'out_file', reslice_mask, 'in_file')
-        preprocessing.connect(select_func, 'out', reslice_mask, 'space_defining')
-        """
-
-        # COMPUTE DVARS - Identify corrupted time-points from func
-        """compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
-        compute_dvars.inputs.series_tr = TaskInformation()['RepetitionTime']
-        preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
-        preprocessing.connect(reslice_mask, 'out_file', compute_dvars, 'in_mask')"""
-
         # COMPUTE DVARS - Identify corrupted time-points from func
         compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
-        compute_dvars.inputs.nb_time_points = 453
-        compute_dvars.inputs.out_file_name = 'corrupted_points'
+        compute_dvars.inputs.out_file_name = 'dvars_out'
         preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
 
         # DATA SINK - store the wanted results in the wanted repository
@@ -249,7 +226,10 @@ class PipelineTeam0ED6(Pipeline):
         preprocessing.connect(
             realign_unwarp, 'realignment_parameters',
             data_sink, 'preprocessing.@realignement_parameters')
-        preprocessing.connect(compute_dvars, 'out_file', data_sink, 'preprocessing.@dvars_file')
+        preprocessing.connect(
+            compute_dvars, 'dvars_out_file', data_sink, 'preprocessing.@dvars_out_file')
+        preprocessing.connect(
+            compute_dvars, 'inference_out_file', data_sink, 'preprocessing.@inference_out_file')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
@@ -293,7 +273,8 @@ class PipelineTeam0ED6(Pipeline):
 
         # DVARS output
         templates += [
-            join(output_dir, 'swrusub-{subject_id}_task-MGT_run-{run_id}_bold_dvars_std.tsv')
+            join(output_dir, 'dvars_out_DVARS.tsv'),
+            join(output_dir, 'dvars_out_Inference.tsv')
             ]
 
         # Realignement parameters
@@ -366,6 +347,7 @@ class PipelineTeam0ED6(Pipeline):
 
     def get_confounds_file(
         dvars_file: str,
+        dvars_inference_file: str,
         realignement_parameters: str,
         subject_id: str,
         run_id: str) -> str:
@@ -374,6 +356,7 @@ class PipelineTeam0ED6(Pipeline):
 
         Parameters :
         - dvars_file: str, path to the output values of DVARS computation
+        - dvars_inference_file: str, path to the output values of DVARS computation (inference)
         - realignement_parameters : path to the realignment parameters file
         - subject_id : related subject id
         - run_id : related run id
@@ -384,27 +367,25 @@ class PipelineTeam0ED6(Pipeline):
         from os.path import abspath
 
         from pandas import DataFrame, read_csv
-        from numpy import array, transpose, concatenate, insert
+        from numpy import array, insert, c_, apply_along_axis
 
         # Get the dataframe containing the 6 head motion parameter regressors
-        realign_data_frame = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
+        realign_array = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
+        nb_time_points = realign_array.shape[0]
 
-        # Get the dataframe containing dvars values
-        dvars_data_frame = insert(
-            array(read_csv(dvars_file, sep = '\t', header = None)),
+        # Get the dataframes containing dvars values
+        dvars_data_frame = read_csv(dvars_file, sep = '\t', header = 0)
+        dvars_inference_data_frame = read_csv(dvars_inference_file, sep = '\t', header = 0)
+
+        # Create a "corrupted points" regressor as indicated in the DVARS repo
+        #   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
+        dvars_regressor = insert(array(
+            (dvars_inference_data_frame['Pval'] < (0.05/(nb_time_points-1))) \
+            & (dvars_data_frame['DeltapDvar'] > 5.0)),
             0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
 
-        # Identify corrupted points
-        #%   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
-        #pvalues = [e < (0.05/(self.inputs.nb_time_points-1)) for e in dvars['Inference']['Pval']]
-        #deltapdvar = [e > 5 for e in dvars['DVARS']['DeltapDvar']]
-
-        # Extract all parameters
-        retained_parameters = DataFrame(
-            concatenate(
-                (realign_data_frame, dvars_data_frame),
-                axis = 1)
-        )
+        # Concatenate all parameters
+        retained_parameters = DataFrame(c_[realign_array, dvars_regressor])
 
         # Write confounds to a file
         confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
