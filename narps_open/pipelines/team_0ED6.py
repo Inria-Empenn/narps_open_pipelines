@@ -452,7 +452,8 @@ class PipelineTeam0ED6(Pipeline):
                 output_names = ['confounds_file']
             ),
             name = 'confounds',
-            iterfield = ['dvars_file', 'realignement_parameters', 'run_id'])
+            iterfield = ['dvars_file', 'dvars_inference_file', 'realignement_parameters',
+                'run_id'])
         confounds.inputs.run_id = self.run_list
         subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
         subject_level.connect(select_files, 'dvars_inference_file', confounds, 'dvars_file')
