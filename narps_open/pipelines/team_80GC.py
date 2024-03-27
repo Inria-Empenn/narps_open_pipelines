@@ -365,6 +365,7 @@ class PipelineTeam80GC(Pipeline):
 
         # Create a function to complete the subject ids out from the get_equal*_subjects node
         complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+        complete_sub_ids = lambda l : [f'sub-{a}' for a in l]
 
         # Function Node list_intersection - Get subjects from the subject_list
         #   that are in the `method` group
@@ -402,7 +403,7 @@ class PipelineTeam80GC(Pipeline):
             name = 'masks', iterfield = 'input_str'
         )
         group_level.connect(select_files, 'masks', masks, 'input_str')
-        group_level.connect(subjects, ('out_list', complete_subject_ids), masks, 'elements')
+        group_level.connect(subjects, ('out_list', complete_sub_ids), masks, 'elements')
 
         # MASK TOOL - Create mask intersection
         mask_intersection = Node(MaskTool(), name = 'mask_intersection')
@@ -489,6 +490,7 @@ class PipelineTeam80GC(Pipeline):
 
         # Create a function to complete the subject ids out from the get_equal*_subjects node
         complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+        complete_sub_ids = lambda l : [f'sub-{a}' for a in l]
 
         # Function Node list_intersection - Get subjects from the subject_list
         #   that are in the `equalRange` group
@@ -582,7 +584,7 @@ class PipelineTeam80GC(Pipeline):
             name = 'masks', iterfield = 'input_str'
         )
         group_level.connect(select_files, 'masks', masks, 'input_str')
-        group_level.connect(info_source, ('subject_list', complete_subject_ids), masks, 'elements')
+        group_level.connect(info_source, ('subject_list', complete_sub_ids), masks, 'elements')
 
         # MASK TOOL - Create mask intersection
         mask_intersection = Node(MaskTool(), name = 'mask_intersection')
