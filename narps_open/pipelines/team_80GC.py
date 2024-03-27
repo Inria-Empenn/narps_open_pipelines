@@ -408,6 +408,7 @@ class PipelineTeam80GC(Pipeline):
         # MASK TOOL - Create mask intersection
         mask_intersection = Node(MaskTool(), name = 'mask_intersection')
         mask_intersection.inputs.inter = True
+        mask_intersection.inputs.outputtype = 'NIFTI'
         group_level.connect(
             masks, ('out_list', clean_list), mask_intersection, 'in_file')
 
@@ -589,6 +590,7 @@ class PipelineTeam80GC(Pipeline):
         # MASK TOOL - Create mask intersection
         mask_intersection = Node(MaskTool(), name = 'mask_intersection')
         mask_intersection.inputs.inter = True
+        mask_intersection.inputs.outputtype = 'NIFTI'
         group_level.connect(
             masks, ('out_list', clean_list), mask_intersection, 'in_file')
 
