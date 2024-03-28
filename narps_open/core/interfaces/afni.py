@@ -207,8 +207,8 @@ class SelectDataset(AFNICommand):
     """
 
     _cmd = 'nifti_tool -copy_brick_list'
-    input_spec = TtestppInputSpec
-    output_spec = TtestppOutputSpec
+    input_spec = SelectDatasetInputSpec
+    output_spec = SelectDatasetOutputSpec
 
     def _format_arg(self, name, trait_spec, value):
         """ Format arguments before actually building the command line """
