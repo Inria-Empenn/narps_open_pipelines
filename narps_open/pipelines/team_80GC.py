@@ -628,7 +628,7 @@ class PipelineTeam80GC(Pipeline):
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = Node(SelectDataset(), name = 'select_output')
-        group_level.connect(t_test, 'out_file', select_output, ('in_files', file_with_index))
+        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_files')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
