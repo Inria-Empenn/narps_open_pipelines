@@ -16,7 +16,7 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     remove_file, list_intersection, elements_in_string, clean_list
     )
-from narps_open.core.interfaces.afni import Ttestpp
+from narps_open.core.interfaces.afni import Ttestpp, SelectDataset
 
 class PipelineTeam80GC(Pipeline):
     """ A class that defines the pipeline of team 80GC. """
@@ -443,6 +443,9 @@ class PipelineTeam80GC(Pipeline):
         #          computed separately (not pooled together).
         # -zskip [n]= Do not include voxel values that are zero in the analysis.
 
+        # Output dataset from t_test consists in 1 sub-brick :
+        # #0  SetA_Tstat
+
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
@@ -615,13 +618,23 @@ class PipelineTeam80GC(Pipeline):
         #          computed separately (not pooled together).
         # -zskip [n]= Do not include voxel values that are zero in the analysis.
 
-        # 3DTTEST++ - Perform a one sample t-test
+        # Output dataset from t_test consists in 3 sub-bricks :
+        # #0  SetA-SetB_Tstat
+        # #1  SetA_Tstat
+        # #2  SetB_Tstat
+
+        # Create a function to build a tuple with input file and index corresponding to the Tstats
+        file_with_index = lambda f : (f, 0)
+
+        # SELECT DATASET - Split output of 3dttest++
+        select_output = Node(SelectDataset(), name = 'select_output')
+        group_level.connect(t_test, 'out_file', select_output, ('in_files', file_with_index))
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect(
-            t_test, 'out_file',
+            select_output, 'out_file',
             data_sink, f'group_level_analysis_groupComp_nsub_{nb_subjects}.@out')
 
         return group_level

@@ -3,7 +3,9 @@
 
 """ AFNI interfaces for Nipype """
 
-from nipype.interfaces.base import traits, File, Str, InputMultiPath
+from os.path import abspath
+
+from nipype.interfaces.base import traits, File, Str, InputMultiPath, isdefined
 from nipype.interfaces.afni.base import (
     AFNICommand,
     AFNICommandInputSpec,
@@ -150,7 +152,7 @@ class Ttestpp(AFNICommand):
     <https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dttest++.html>`_
     """
 
-    _cmd = "3dttest++"
+    _cmd = '3dttest++'
     input_spec = TtestppInputSpec
     output_spec = TtestppOutputSpec
 
@@ -173,6 +175,60 @@ class Ttestpp(AFNICommand):
 
         for key in outputs.keys():
             if isdefined(self.inputs.get()[key]):
-                outputs[key] = os.path.abspath(self.inputs.get()[key])
+                outputs[key] = abspath(self.inputs.get()[key])
+
+        return outputs
+
+class SelectDatasetInputSpec(AFNICommandInputSpec):
+    """ The input specification of the nifti_tool -copy_brick_list interface """
+    in_files = InputMultiPath(
+        traits.Tuple(
+            File(desc='4D dataset', exists=True),
+            traits.Int(desc='Index of the data in the dataset'),
+        ),
+        desc='specifies a set of input datasets for to extract data from.',
+        argstr='-infiles %s ' # Data tuples will be formatted in the _format_arg method
+    )
+    out_file = Str(
+        desc='the name of the output dataset file.',
+        argstr='-prefix %s ',
+        position=-1
+    )
+
+class SelectDatasetOutputSpec(AFNICommandOutputSpec):
+    """ The output specification of the nifti_tool -copy_brick_list interface """
+    out_file = File(desc='output dataset', exists=True)
+
+class SelectDataset(AFNICommand):
+    """ Use the nifti_tool command to create a new dataset from several input 4D datasets.
+
+    For complete details, see the nifti_tool Documentation.
+    https://afni.nimh.nih.gov/pub/dist/doc/program_help/nifti1_tool.html
+    """
+
+    _cmd = 'nifti_tool -copy_brick_list'
+    input_spec = TtestppInputSpec
+    output_spec = TtestppOutputSpec
+
+    def _format_arg(self, name, trait_spec, value):
+        """ Format arguments before actually building the command line """
+        out_value = value
+
+        # We want to pair -infiles and ..., such as :
+        #      dataset1'[index]'
+        if name in ['infiles']:
+            out_value = ''
+            for set_tuple in value:
+                out_value += f'{set_tuple[0]}\'[{set_tuple[1]}]\' '
+            out_value = [out_value] # Return a list as the input value
+
+        return super()._format_arg(name, trait_spec, out_value)
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        for key in outputs.keys():
+            if isdefined(self.inputs.get()[key]):
+                outputs[key] = abspath(self.inputs.get()[key])
 
         return outputs
