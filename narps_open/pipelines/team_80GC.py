@@ -429,7 +429,7 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.set_a_label = method
         t_test.inputs.toz = False
         t_test.inputs.clustsim = True
-        t_test.inputs.seed = (1, 2000) # TODO change value
+        t_test.inputs.seed = (1, 1) # 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
         t_test.inputs.nomeans = True
         t_test.inputs.out_file = 'ttestpp_out.nii'
@@ -604,7 +604,7 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.set_b_label = 'equalIndifference'
         t_test.inputs.toz = False
         t_test.inputs.clustsim = True
-        t_test.inputs.seed = (1, 2000) # TODO change value
+        t_test.inputs.seed = (1, 1)# 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
         t_test.inputs.nomeans = True
         t_test.inputs.out_file = 'ttestpp_out.nii'
@@ -642,6 +642,25 @@ class PipelineTeam80GC(Pipeline):
     def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
 
+        parameters = {
+            'contrast_dir': [
+                f'_contrast_id_{c}_contrast_index_{i}' for c, i \
+                in zip(self.contrast_list, self.contrast_indices)],
+            'method': ['equalRange', 'equalIndifference', 'groupComp'],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '{contrast_dir}', 'ttestpp_out.nii'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+
+
 
     def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names.
@@ -650,41 +669,50 @@ class PipelineTeam80GC(Pipeline):
         """
         nb_sub = len(self.subject_list)
         files = [
+            # Hypothesis 1
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_gain_contrast_index_5'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
+                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            # Hypothesis 2
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_gain_contrast_index_5'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
+                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            # Hypothesis 3
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_gain_contrast_index_5'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
+                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            # Hypothesis 4
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_gain_contrast_index_5'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
+                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            # Hypothesis 5
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold1', 'spmT_0002_thr.nii'),
+                '_contrast_id_loss_contrast_index_6'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0002.nii'),
+                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            # Hypothesis 6
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold1', 'spmT_0001_thr.nii'),
+                '_contrast_id_loss_contrast_index_6'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
+                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            # Hypothesis 7
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_loss_contrast_index_6'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
+                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            # Hypothesis 8
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0002_thr.nii'),
+                '_contrast_id_loss_contrast_index_6'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0002.nii'),
+                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_contrast_id_loss_contrast_index_6'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii')
+                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]
