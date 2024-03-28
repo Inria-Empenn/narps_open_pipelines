@@ -427,11 +427,12 @@ class PipelineTeam80GC(Pipeline):
         # 3DTTEST++ - Perform a one sample t-test
         t_test = Node(Ttestpp(), name = 't_test')
         t_test.inputs.set_a_label = method
-        t_test.inputs.toz = True
+        t_test.inputs.toz = False
         t_test.inputs.clustsim = True
         t_test.inputs.seed = (1, 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
         t_test.inputs.nomeans = True
+        t_test.inputs.out_file = 'ttestpp_out.nii'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
 
@@ -598,12 +599,13 @@ class PipelineTeam80GC(Pipeline):
         t_test = Node(Ttestpp(), name = 't_test')
         t_test.inputs.set_a_label = 'equalRange'
         t_test.inputs.set_b_label = 'equalIndifference'
-        t_test.inputs.toz = True
+        t_test.inputs.toz = False
         t_test.inputs.clustsim = True
         t_test.inputs.seed = (1, 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
         t_test.inputs.nomeans = True
-        #group_level.connect(_, 'out_file', t_test, 'mask')
+        t_test.inputs.out_file = 'ttestpp_out.nii'
+        group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
 
         # -covariates ???
@@ -612,6 +614,8 @@ class PipelineTeam80GC(Pipeline):
         # -unpooled ??? variance estimates for setA and setB be
         #          computed separately (not pooled together).
         # -zskip [n]= Do not include voxel values that are zero in the analysis.
+
+        # 3DTTEST++ - Perform a one sample t-test
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')

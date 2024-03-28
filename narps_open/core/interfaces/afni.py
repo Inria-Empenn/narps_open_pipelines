@@ -167,3 +167,12 @@ class Ttestpp(AFNICommand):
             out_value = [out_value] # Return a list as the input value
 
         return super()._format_arg(name, trait_spec, out_value)
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        for key in outputs.keys():
+            if isdefined(self.inputs.get()[key]):
+                outputs[key] = os.path.abspath(self.inputs.get()[key])
+
+        return outputs
