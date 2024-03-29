@@ -318,8 +318,8 @@ class PipelineTeam80GC(Pipeline):
         """
 
         return [
-            self.get_group_level_analysis_single_group('equalRange'),
-            self.get_group_level_analysis_single_group('equalIndifference'),
+            #self.get_group_level_analysis_single_group('equalRange'),
+            #self.get_group_level_analysis_single_group('equalIndifference'),
             self.get_group_level_analysis_group_comparison()
         ]
 
@@ -610,6 +610,7 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.out_file = 'ttestpp_out.nii'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
+        group_level.connect(set_b_arguments, 'out_files', t_test, 'set_b')
 
         # -covariates ???
         # -center ???
@@ -658,9 +659,6 @@ class PipelineTeam80GC(Pipeline):
 
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
-
-
-
 
     def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names.
