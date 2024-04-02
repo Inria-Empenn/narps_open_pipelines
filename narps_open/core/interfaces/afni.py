@@ -181,11 +181,9 @@ class Ttestpp(AFNICommand):
 
 class SelectDatasetInputSpec(AFNICommandInputSpec):
     """ The input specification of the nifti_tool -copy_brick_list interface """
-    in_files = InputMultiPath(
-        traits.Tuple(
-            File(desc='4D dataset', exists=True),
-            traits.Int(desc='Index of the data in the dataset'),
-        ),
+    in_files = traits.Tuple(
+        File(desc='4D dataset', exists=True),
+        traits.Int(desc='Index of the data in the dataset'),
         desc='specifies a set of input datasets for to extract data from.',
         argstr='-infiles %s ' # Data tuples will be formatted in the _format_arg method
     )
