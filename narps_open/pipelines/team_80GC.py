@@ -209,9 +209,10 @@ class PipelineTeam80GC(Pipeline):
         # FUNCTION get_events_file - generate files with event data
         events_information = Node(Function(
             function = self.get_events_files,
-            input_names = ['event_files', 'subject_id'],
+            input_names = ['event_files', 'nb_events', 'subject_id'],
             output_names = ['gain_file', 'loss_file']),
             name = 'events_information')
+        events_information.inputs.nb_events = 64
         subject_level.connect(select_files, 'event', events_information, 'event_files')
         subject_level.connect(information_source, 'subject_id', events_information, 'subject_id')
 
@@ -227,9 +228,10 @@ class PipelineTeam80GC(Pipeline):
         # FUNCTION get_confounds_file - generate files with event data
         confounds_information = Node(Function(
             function = self.get_confounds_file,
-            input_names = ['confounds_files', 'subject_id'],
+            input_names = ['confounds_files', 'nb_time_points', 'subject_id'],
             output_names = ['confounds_file']),
             name = 'confounds_information')
+        confounds_information.inputs.nb_time_points = 453
         subject_level.connect(select_files, 'confounds', confounds_information, 'confounds_files')
         subject_level.connect(
             information_source, 'subject_id', confounds_information, 'subject_id')
@@ -317,6 +319,33 @@ class PipelineTeam80GC(Pipeline):
         - arguments: str, formatted arguments for AFNI's 3dttest++ args input
         """
         return [(file, contrast_index) for file in contrast_files]
+
+    def split_3dttest_output(in_file: str, prefix: str):
+        """
+        Split the output of AFNI's 3dttest++ (4D file) into separated 3D files
+
+        Parameters :
+        - in_file: str, 4D file : output of AFNI's 3dttest++
+        - prefix: str, prefix for the outputs
+
+        Returns :
+        - out_files: list of str, AFNI's 3dttest++ outputs as individual files
+        """
+        from os.path import abspath
+
+        from nibabel import load, save
+        from nilearn.image import index_img
+
+        input_image = load(in_file)
+
+        if len(input_image.shape) < 4:
+            return [in_file]
+
+        out_files = []
+        for index in range(input_image.shape[3]):
+            save(index_img(input_image, index), abspath('{prefix}_{index}.nii'))
+
+        return out_files
 
     def get_group_level_analysis(self):
         """
@@ -633,13 +662,16 @@ class PipelineTeam80GC(Pipeline):
         # #1  SetA_Tstat
         # #2  SetB_Tstat
 
-        # Create a function to build a tuple with input file and index corresponding to the Tstats
-        file_with_index = lambda f : (f, 0)
-
-        # SELECT DATASET - Split output of 3dttest++
-        select_output = Node(SelectDataset(), name = 'select_output')
-        select_output.inputs.out_file = 'group_comp_tsat.nii'
-        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file')
+        # Function split_3dttest_output - Split output of 3dttest++
+        split_ttest_output = Node(Function(
+            function = split_3dttest_output,
+            input_names = ['in_file', 'prefix'],
+            output_names = ['out_files']
+            ),
+            name = 'split_ttest_output'
+        )
+        select_output.inputs.prefix = 'group_comp_tsat'
+        group_level.connect(t_test, 'out_file', select_output, 'in_file')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')

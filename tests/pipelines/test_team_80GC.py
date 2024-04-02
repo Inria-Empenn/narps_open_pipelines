@@ -63,9 +63,9 @@ class TestPipelinesTeam80GC:
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
         reference_file_gain = join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_80GC', 'events_gain.txt')
+            'pipelines', 'team_80GC', 'events_sub-sid_timesxgain.txt')
         reference_file_loss = join(Configuration()['directories']['test_data'],
-            'pipelines', 'team_80GC', 'events_loss.txt')
+            'pipelines', 'team_80GC', 'events_sub-sid_timesxloss.txt')
 
         # Create a Nipype Node using get_events_files
         test_get_events_files = Node(Function(
@@ -73,19 +73,17 @@ class TestPipelinesTeam80GC:
             input_names = ['event_files', 'nb_events', 'subject_id'],
             output_names = ['event_files']
             ), name = 'test_get_events_files')
-        test_get_events_files.inputs.base_dir = temporary_data_dir
+        test_get_events_files.base_dir = temporary_data_dir
         test_get_events_files.inputs.event_files = [test_file, test_file]
         test_get_events_files.inputs.nb_events = 5
         test_get_events_files.inputs.subject_id = 'sid'
         test_get_events_files.run()
 
-        import shutil
-        shutil.copyfile(event_file_gain, '/home/bclenet/Downloads/events_gain.txt')
-        shutil.copyfile(event_file_loss, '/home/bclenet/Downloads/events_loss.txt')
-
         # Check event files were created
-        event_file_gain = join(temporary_data_dir, 'events_sub-sid_timesxgain.txt')
-        event_file_loss = join(temporary_data_dir, 'events_sub-sid_timesxloss.txt')
+        event_file_gain = join(
+            temporary_data_dir,  test_get_events_files.name, 'events_sub-sid_timesxgain.txt')
+        event_file_loss = join(
+            temporary_data_dir,  test_get_events_files.name, 'events_sub-sid_timesxloss.txt')
         assert exists(event_file_gain)
         assert exists(event_file_loss)
 
@@ -106,7 +104,8 @@ class TestPipelinesTeam80GC:
         confounds_file = join(
             Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
         reference_file = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'team_80GC', 'confounds.tsv')
+            Configuration()['directories']['test_data'], 'pipelines',
+            'team_80GC', 'confounds_file_sub-sid.tsv')
 
         # Create a Nipype Node using get_confounds_file
         test_get_confounds_file = Node(Function(
@@ -114,7 +113,7 @@ class TestPipelinesTeam80GC:
             input_names = ['confounds_files', 'nb_time_points', 'subject_id'],
             output_names = ['confounds_file']
             ), name = 'test_get_confounds_file')
-        test_get_confounds_file.inputs.base_dir = temporary_data_dir
+        test_get_confounds_file.base_dir = temporary_data_dir
         test_get_confounds_file.inputs.confounds_files = [confounds_file, confounds_file]
         test_get_confounds_file.inputs.nb_time_points = 3
         test_get_confounds_file.inputs.subject_id = 'sid'
@@ -122,7 +121,7 @@ class TestPipelinesTeam80GC:
 
         # Check confounds file was created
         created_confounds_file = join(
-            temporary_data_dir, 'confounds_file_sub-sid.tsv')
+            temporary_data_dir, test_get_confounds_file.name, 'confounds_file_sub-sid.tsv')
         assert exists(created_confounds_file)
 
         # Check contents
