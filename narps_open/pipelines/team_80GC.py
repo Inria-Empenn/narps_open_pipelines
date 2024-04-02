@@ -631,9 +631,9 @@ class PipelineTeam80GC(Pipeline):
         # -zskip [n]= Do not include voxel values that are zero in the analysis.
 
         # Output dataset from t_test consists in 3 sub-bricks :
-        # #0  SetA-SetB_Tstat
-        # #1  SetA_Tstat
-        # #2  SetB_Tstat
+        # #0  equalRange-equalIndiffe_Zscr
+        # #1  equalRange_Zscr
+        # #2  equalIndiffe_Zscr
 
         # Create a function to build a tuple with input file and index corresponding to the Tstats
         file_with_index = lambda f : (f, 0)
@@ -642,11 +642,15 @@ class PipelineTeam80GC(Pipeline):
         """select_output = Node(SelectDataset(), name = 'select_output')
         select_output.inputs.out_file = 'group_comp_tsat.nii'
         group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file')"""
-        select_output = Node(Calc(), name = 'select_output')
-        select_output.inputs.expr='a'
-        select_output.inputs.out_file =  'group_comp_tsat.nii'
+        select_output = MapNode(Calc(), name = 'select_output', iterfield = 'expr')
+        select_output.inputs.expr = [
+            'a\'[equalRange-equalIndiffe_Zscr]\'',
+            'a\'[equalRange_Zscr]\'',
+            'a\'[equalIndiffe_Zscr]\''
+            ]
+        select_output.inputs.out_file = 'group_comp_tsat.nii'
         select_output.inputs.outputtype = 'NIFTI'
-        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file_a')
+        group_level.connect(t_test, 'out_file', select_output, 'in_file_a')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
