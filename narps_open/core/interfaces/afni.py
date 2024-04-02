@@ -141,10 +141,6 @@ class TtestppInputSpec(AFNICommandInputSpec):
         position=-3
     )
 
-class TtestppOutputSpec(AFNICommandOutputSpec):
-    """ The output specification of the 3dttest++ interface """
-    out_file = File(desc='output dataset', exists=True)
-
 class Ttestpp(AFNICommand):
     """ Gosset (Student) t-test of sets of 3D datasets.
 
@@ -154,7 +150,7 @@ class Ttestpp(AFNICommand):
 
     _cmd = '3dttest++'
     input_spec = TtestppInputSpec
-    output_spec = TtestppOutputSpec
+    output_spec = AFNICommandOutputSpec
 
     def _format_arg(self, name, trait_spec, value):
         """ Format arguments before actually building the command line """
@@ -169,15 +165,6 @@ class Ttestpp(AFNICommand):
             out_value = [out_value] # Return a list as the input value
 
         return super()._format_arg(name, trait_spec, out_value)
-
-    def _list_outputs(self):
-        outputs = self.output_spec().get()
-
-        for key in outputs.keys():
-            if isdefined(self.inputs.get()[key]):
-                outputs[key] = abspath(self.inputs.get()[key])
-
-        return outputs
 
 class SelectDatasetInputSpec(AFNICommandInputSpec):
     """ The input specification of the nifti_tool -copy_brick_list interface """
