@@ -14,7 +14,7 @@ from os.path import join, exists
 from filecmp import cmp
 
 from pytest import helpers, mark
-from nipype import Workflow
+from nipype import Workflow, Node, Function
 from nipype.interfaces.base import Bunch
 
 from narps_open.utils.configuration import Configuration
@@ -62,36 +62,36 @@ class TestPipelinesTeam80GC:
 
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
-        info = PipelineTeam80GC.get_events_files([test_file, test_file])
+        reference_file_gain = join(Configuration()['directories']['test_data'],
+            'pipelines', 'team_80GC', 'events_gain.txt')
+        reference_file_loss = join(Configuration()['directories']['test_data'],
+            'pipelines', 'team_80GC', 'events_loss.txt')
 
-        # Compare bunches to expected
-        bunch = info[0]
-        assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['gamble_run1']
-        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
-        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes is None
-        assert bunch.tmod is None
-        assert bunch.pmod[0].name == ['gain_run1', 'loss_run1']
-        assert bunch.pmod[0].poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.pmod[0].param,
-            [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names is None
-        assert bunch.regressors is None
+        # Create a Nipype Node using get_events_files
+        test_get_events_files = Node(Function(
+            function = PipelineTeam80GC.get_events_files,
+            input_names = ['event_files', 'nb_events', 'subject_id'],
+            output_names = ['event_files']
+            ), name = 'test_get_events_files')
+        test_get_events_files.inputs.base_dir = temporary_data_dir
+        test_get_events_files.inputs.event_files = [test_file, test_file]
+        test_get_events_files.inputs.nb_events = 5
+        test_get_events_files.inputs.subject_id = 'sid'
+        test_get_events_files.run()
 
-        bunch = info[1]
-        assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['gamble_run2']
-        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
-        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes is None
-        assert bunch.tmod is None
-        assert bunch.pmod[0].name == ['gain_run2', 'loss_run2']
-        assert bunch.pmod[0].poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.pmod[0].param,
-            [[14.0, 34.0, 38.0, 10.0, 16.0], [6.0, 14.0, 19.0, 15.0, 17.0]])
-        assert bunch.regressor_names is None
-        assert bunch.regressors is None
+        import shutil
+        shutil.copyfile(event_file_gain, '/home/bclenet/Downloads/events_gain.txt')
+        shutil.copyfile(event_file_loss, '/home/bclenet/Downloads/events_loss.txt')
+
+        # Check event files were created
+        event_file_gain = join(temporary_data_dir, 'events_sub-sid_timesxgain.txt')
+        event_file_loss = join(temporary_data_dir, 'events_sub-sid_timesxloss.txt')
+        assert exists(event_file_gain)
+        assert exists(event_file_loss)
+
+        # Compare output files to expected
+        assert cmp(reference_file_gain, event_file_gain)
+        assert cmp(reference_file_loss, event_file_loss)
 
     @staticmethod
     @mark.unit_test
@@ -111,13 +111,14 @@ class TestPipelinesTeam80GC:
         # Create a Nipype Node using get_confounds_file
         test_get_confounds_file = Node(Function(
             function = PipelineTeam80GC.get_confounds_file,
-            input_names = ['confounds_file', 'subject_id'],
+            input_names = ['confounds_files', 'nb_time_points', 'subject_id'],
             output_names = ['confounds_file']
             ), name = 'test_get_confounds_file')
-        test_remove_dir_node.inputs.base_dir = temporary_data_dir
-        test_remove_dir_node.inputs.confounds_file = confounds_file
-        test_remove_dir_node.inputs.subject_id = 'sid'
-        test_remove_dir_node.run()
+        test_get_confounds_file.inputs.base_dir = temporary_data_dir
+        test_get_confounds_file.inputs.confounds_files = [confounds_file, confounds_file]
+        test_get_confounds_file.inputs.nb_time_points = 3
+        test_get_confounds_file.inputs.subject_id = 'sid'
+        test_get_confounds_file.run()
 
         # Check confounds file was created
         created_confounds_file = join(

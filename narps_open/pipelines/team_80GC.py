@@ -36,12 +36,14 @@ class PipelineTeam80GC(Pipeline):
         """ No run level analysis has been done by team 80GC """
         return None
 
-    def get_events_files(event_files, subject_id):
+    def get_events_files(event_files, nb_events, subject_id):
         """
         Create a stimuli file to be read by AFNI's 3DDeconvolve
 
         Parameters :
         - event_files: list of str, event files, on for each run of one subject
+        - nb_events : int, number of events (i.e.: number of data lines in each event file)
+            WARNING - We assume that all events files have the same number of lines
         - subject_id : related subject id
 
         Returns :
@@ -53,8 +55,8 @@ class PipelineTeam80GC(Pipeline):
         from pandas import DataFrame, read_csv
 
         # Init empty dataframes
-        gain_df = DataFrame(index=range(0,len(event_files)), columns=range(0,64))
-        loss_df = DataFrame(index=range(0,len(event_files)), columns=range(0,64))
+        gain_df = DataFrame(index=range(0,len(event_files)), columns=range(0,nb_events))
+        loss_df = DataFrame(index=range(0,len(event_files)), columns=range(0,nb_events))
 
         # Extract info from raw event files
         for file_id, event_file in enumerate(event_files):
@@ -62,10 +64,12 @@ class PipelineTeam80GC(Pipeline):
             events_df = events_df[['onset', 'gain', 'loss']].T
 
             gain_df.loc[file_id] = [
-                f"{events_df[i].loc['onset']}*{events_df[i].loc['gain']}" for i in range(0, 64)
+                f"{events_df[i].loc['onset']}*{events_df[i].loc['gain']}"\
+                for i in range(0, nb_events)
                 ]
             loss_df.loc[file_id] = [
-                f"{events_df[i].loc['onset']}*{events_df[i].loc['loss']}" for i in range(0, 64)
+                f"{events_df[i].loc['onset']}*{events_df[i].loc['loss']}"\
+                for i in range(0, nb_events)
                 ]
 
         # Create AFNI stimuli files
@@ -98,12 +102,15 @@ class PipelineTeam80GC(Pipeline):
 
         return arguments
 
-    def get_confounds_file(confounds_files, subject_id):
+    def get_confounds_file(confounds_files, nb_time_points, subject_id):
         """
         Create a new tsv file with only desired confounds for a subject
 
         Parameters :
         - confounds_files : list of str, paths to the subject confounds files
+        - nb_time_points : int, number of time points
+            (i.e.: number of data lines in each confounds file)
+            WARNING - We assume that all confounds files have the same number of lines
         - subject_id : related subject id
 
         Return :
@@ -115,14 +122,16 @@ class PipelineTeam80GC(Pipeline):
         from numpy import array, transpose
 
         # Init empty dataframe
-        parameters_df = DataFrame(index=range(0,453*len(confounds_files)), columns=range(0,6))
+        parameters_df = DataFrame(
+            index=range(0,nb_time_points*len(confounds_files)), columns=range(0,6))
 
         # Open original confounds file
         for file_id, file in enumerate(confounds_files):
             data_frame = read_csv(file, sep = '\t', header=0)
 
             # Extract confounds we want to use for the model
-            parameters_df[file_id*453:(file_id+1)*453] = DataFrame(transpose(array([
+            parameters_df[file_id*nb_time_points:(file_id+1)*nb_time_points] = DataFrame(
+                transpose(array([
                     data_frame['X'].sub(data_frame['X'].mean()),
                     data_frame['Y'].sub(data_frame['Y'].mean()),
                     data_frame['Z'].sub(data_frame['Z'].mean()),
@@ -629,6 +638,7 @@ class PipelineTeam80GC(Pipeline):
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = Node(SelectDataset(), name = 'select_output')
+        select_output.inputs.out_file = 'group_comp_tsat.nii'
         group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file')
 
         # DATA SINK - save important files
