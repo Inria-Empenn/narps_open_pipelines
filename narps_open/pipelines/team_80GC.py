@@ -664,7 +664,7 @@ class PipelineTeam80GC(Pipeline):
 
         # Function split_3dttest_output - Split output of 3dttest++
         split_ttest_output = Node(Function(
-            function = split_3dttest_output,
+            function = self.split_3dttest_output,
             input_names = ['in_file', 'prefix'],
             output_names = ['out_files']
             ),
