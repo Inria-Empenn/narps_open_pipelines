@@ -181,11 +181,11 @@ class Ttestpp(AFNICommand):
 
 class SelectDatasetInputSpec(AFNICommandInputSpec):
     """ The input specification of the nifti_tool -copy_brick_list interface """
-    in_files = traits.Tuple(
+    in_file = traits.Tuple(
         File(desc='4D dataset', exists=True),
         traits.Int(desc='Index of the data in the dataset'),
-        desc='specifies a set of input datasets for to extract data from.',
-        argstr='-infiles %s ' # Data tuples will be formatted in the _format_arg method
+        desc='specifies a dataset to extract data from.',
+        argstr='-infiles %s\'[%d]\' '
     )
     out_file = Str(
         desc='the name of the output dataset file.',
@@ -207,20 +207,6 @@ class SelectDataset(AFNICommand):
     _cmd = 'nifti_tool -copy_brick_list'
     input_spec = SelectDatasetInputSpec
     output_spec = SelectDatasetOutputSpec
-
-    def _format_arg(self, name, trait_spec, value):
-        """ Format arguments before actually building the command line """
-        out_value = value
-
-        # We want to pair -infiles and ..., such as :
-        #      dataset1'[index]'
-        if name in ['infiles']:
-            out_value = ''
-            for set_tuple in value:
-                out_value += f'{set_tuple[0]}\'[{set_tuple[1]}]\' '
-            out_value = [out_value] # Return a list as the input value
-
-        return super()._format_arg(name, trait_spec, out_value)
 
     def _list_outputs(self):
         outputs = self.output_spec().get()
