@@ -9,7 +9,7 @@ from itertools import product
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-from nipype.interfaces.afni import Deconvolve, MaskTool
+from nipype.interfaces.afni import Deconvolve, MaskTool, Calc
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.participants import get_group
@@ -320,33 +320,6 @@ class PipelineTeam80GC(Pipeline):
         """
         return [(file, contrast_index) for file in contrast_files]
 
-    def split_3dttest_output(in_file: str, prefix: str):
-        """
-        Split the output of AFNI's 3dttest++ (4D file) into separated 3D files
-
-        Parameters :
-        - in_file: str, 4D file : output of AFNI's 3dttest++
-        - prefix: str, prefix for the outputs
-
-        Returns :
-        - out_files: list of str, AFNI's 3dttest++ outputs as individual files
-        """
-        from os.path import abspath
-
-        from nibabel import load, save
-        from nilearn.image import index_img
-
-        input_image = load(in_file)
-
-        if len(input_image.shape) < 4:
-            return [in_file]
-
-        out_files = []
-        for index in range(input_image.shape[3]):
-            save(index_img(input_image, index), abspath('{prefix}_{index}.nii'))
-
-        return out_files
-
     def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
@@ -645,7 +618,7 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.seed = (1, 1)# 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
         t_test.inputs.nomeans = True
-        t_test.inputs.out_file = 'ttestpp_out.nii'
+        t_test.inputs.out_file = 'ttestpp_out'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
         group_level.connect(set_b_arguments, 'out_files', t_test, 'set_b')
@@ -662,22 +635,24 @@ class PipelineTeam80GC(Pipeline):
         # #1  SetA_Tstat
         # #2  SetB_Tstat
 
-        # Function split_3dttest_output - Split output of 3dttest++
-        split_ttest_output = Node(Function(
-            function = self.split_3dttest_output,
-            input_names = ['in_file', 'prefix'],
-            output_names = ['out_files']
-            ),
-            name = 'split_ttest_output'
-        )
-        split_ttest_output.inputs.prefix = 'group_comp_tsat'
-        group_level.connect(t_test, 'out_file', split_ttest_output, 'in_file')
+        # Create a function to build a tuple with input file and index corresponding to the Tstats
+        file_with_index = lambda f : (f, 0)
+
+        # SELECT DATASET - Split output of 3dttest++
+        """select_output = Node(SelectDataset(), name = 'select_output')
+        select_output.inputs.out_file = 'group_comp_tsat.nii'
+        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file')"""
+        select_output = Node(Calc(), name = 'select_output')
+        select_output.inputs.expr='a'
+        select_output.inputs.out_file =  'group_comp_tsat.nii'
+        select_output.inputs.outputtype = 'NIFTI'
+        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file_a')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect(
-            split_ttest_output, 'out_files',
+            select_output, 'out_file',
             data_sink, f'group_level_analysis_groupComp_nsub_{nb_subjects}.@out')
 
         return group_level
