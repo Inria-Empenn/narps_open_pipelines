@@ -670,14 +670,14 @@ class PipelineTeam80GC(Pipeline):
             ),
             name = 'split_ttest_output'
         )
-        select_output.inputs.prefix = 'group_comp_tsat'
-        group_level.connect(t_test, 'out_file', select_output, 'in_file')
+        split_ttest_output.inputs.prefix = 'group_comp_tsat'
+        group_level.connect(t_test, 'out_file', split_ttest_output, 'in_file')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect(
-            select_output, 'out_file',
+            split_ttest_output, 'out_files',
             data_sink, f'group_level_analysis_groupComp_nsub_{nb_subjects}.@out')
 
         return group_level
