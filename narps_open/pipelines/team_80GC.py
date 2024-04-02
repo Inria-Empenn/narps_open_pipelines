@@ -322,162 +322,17 @@ class PipelineTeam80GC(Pipeline):
 
     def get_group_level_analysis(self):
         """
-        Return all workflows for the group level analysis.
-
-        Returns;
-            - a list of nipype.WorkFlow
-        """
-
-        return [
-            #self.get_group_level_analysis_single_group('equalRange'),
-            #self.get_group_level_analysis_single_group('equalIndifference'),
-            self.get_group_level_analysis_group_comparison()
-        ]
-
-    def get_group_level_analysis_single_group(self, method):
-        """
-        Return a workflow for the group level analysis in the single group case.
-
-        Parameters:
-            - method: one of 'equalRange', 'equalIndifference'
+        Return a workflow for the group level analysis.
 
         Returns:
             - group_level: nipype.WorkFlow
         """
+
         # Init the workflow
         nb_subjects = len(self.subject_list)
         group_level = Workflow(
             base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
-
-        # IDENTITY INTERFACE - Iterate over the list of contrasts from the subject level
-        info_source = Node(
-            IdentityInterface(fields=['contrast_id', 'contrast_index']),
-            name = 'info_source'
-            )
-        info_source.iterables = [
-            ('contrast_id', self.contrast_list),
-            ('contrast_index', self.contrast_indices)
-            ]
-        info_source.synchronize = True
-
-        # SELECT FILES - Select necessary files
-        templates = {
-            'deconvolve_bucket' : join(self.directories.output_dir, 'subject_level_analysis',
-                '_subject_id_*', 'out_deconvolve.nii'),
-            'masks' : join('derivatives', 'fmriprep', 'sub-*', 'func',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
-        }
-        select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.dataset_dir
-        select_files.inputs.force_list = True
-
-        # SELECT SUBJECTS
-
-        # Create a function to complete the subject ids out from the get_equal*_subjects node
-        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
-        complete_sub_ids = lambda l : [f'sub-{a}' for a in l]
-
-        # Function Node list_intersection - Get subjects from the subject_list
-        #   that are in the `method` group
-        subjects = Node(Function(
-            function = list_intersection,
-            input_names = ['list_1', 'list_2'],
-            output_names = ['out_list']
-            ),
-            name = 'subjects'
-        )
-        subjects.inputs.list_1 = get_group(method)
-        subjects.inputs.list_2 = self.subject_list
-
-        # Function Node elements_in_string - Get contrast files for these subjects
-        # Note : using a MapNode with elements_in_string requires using clean_list to remove
-        #   None values from the out_list
-        contrasts = MapNode(Function(
-            function = elements_in_string,
-            input_names = ['input_str', 'elements'],
-            output_names = ['out_list']
-            ),
-            name = 'contrasts', iterfield = 'input_str'
-        )
-        group_level.connect(select_files, 'deconvolve_bucket', contrasts, 'input_str')
-        group_level.connect(subjects, ('out_list', complete_subject_ids), contrasts, 'elements')
-
-        # Function Node elements_in_string - Get masks files for these subjects
-        # Note : using a MapNode with elements_in_string requires using clean_list to remove
-        #   None values from the out_list
-        masks = MapNode(Function(
-            function = elements_in_string,
-            input_names = ['input_str', 'elements'],
-            output_names = ['out_list']
-            ),
-            name = 'masks', iterfield = 'input_str'
-        )
-        group_level.connect(select_files, 'masks', masks, 'input_str')
-        group_level.connect(subjects, ('out_list', complete_sub_ids), masks, 'elements')
-
-        # MASK TOOL - Create mask intersection
-        mask_intersection = Node(MaskTool(), name = 'mask_intersection')
-        mask_intersection.inputs.inter = True
-        mask_intersection.inputs.outputtype = 'NIFTI'
-        group_level.connect(
-            masks, ('out_list', clean_list), mask_intersection, 'in_file')
-
-        # Function Node get_contrast_set_arguments - Create setA list of input files for 3dttest++
-        set_a_arguments = Node(Function(
-            function = self.get_contrast_set_arguments,
-            input_names = ['contrast_files', 'contrast_index'],
-            output_names = ['out_files']
-            ),
-            name = 'set_a_arguments'
-        )
-        group_level.connect(info_source, 'contrast_index', set_a_arguments, 'contrast_index')
-        group_level.connect(
-            contrasts, ('out_list', clean_list), set_a_arguments, 'contrast_files')
-
-        # 3DTTEST++ - Perform a one sample t-test
-        t_test = Node(Ttestpp(), name = 't_test')
-        t_test.inputs.set_a_label = method
-        t_test.inputs.toz = False
-        t_test.inputs.clustsim = True
-        t_test.inputs.seed = (1, 1) # 2000) # TODO change value
-        t_test.inputs.exblur = 8.0 # TODO change value
-        t_test.inputs.nomeans = True
-        t_test.inputs.out_file = 'ttestpp_out.nii'
-        group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
-        group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
-
-        # -covariates ???
-        # -center ???
-        # -paired ??? paired-sample t-test to compare setA and setB.
-        # -unpooled ??? variance estimates for setA and setB be
-        #          computed separately (not pooled together).
-        # -zskip [n]= Do not include voxel values that are zero in the analysis.
-
-        # Output dataset from t_test consists in 1 sub-brick :
-        # #0  SetA_Tstat
-
-        # DATA SINK - save important files
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
-        group_level.connect(
-            t_test, 'out_file',
-            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@out')
-
-        return group_level
-
-    def get_group_level_analysis_group_comparison(self):
-        """
-        Return a workflow for the group level analysis in the group comparison case.
-
-        Returns:
-            - group_level: nipype.WorkFlow
-        """
-        # Init the workflow
-        nb_subjects = len(self.subject_list)
-        group_level = Workflow(
-            base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_groupComp_nsub_{nb_subjects}')
+            name = f'group_level_analysis_nsub_{nb_subjects}')
 
         # IDENTITY INTERFACE - Iterate over the list of contrasts from the subject level
         info_source = Node(
@@ -613,7 +468,7 @@ class PipelineTeam80GC(Pipeline):
         t_test = Node(Ttestpp(), name = 't_test')
         t_test.inputs.set_a_label = 'equalRange'
         t_test.inputs.set_b_label = 'equalIndifference'
-        t_test.inputs.toz = False
+        t_test.inputs.toz = True
         t_test.inputs.clustsim = True
         t_test.inputs.seed = (1, 1)# 2000) # TODO change value
         t_test.inputs.exblur = 8.0 # TODO change value
@@ -635,13 +490,7 @@ class PipelineTeam80GC(Pipeline):
         # #1  equalRange_Zscr
         # #2  equalIndiffe_Zscr
 
-        # Create a function to build a tuple with input file and index corresponding to the Tstats
-        file_with_index = lambda f : (f, 0)
-
         # SELECT DATASET - Split output of 3dttest++
-        """select_output = Node(SelectDataset(), name = 'select_output')
-        select_output.inputs.out_file = 'group_comp_tsat.nii'
-        group_level.connect(t_test, ('out_file', file_with_index), select_output, 'in_file')"""
         select_output = MapNode(Calc(), name = 'select_output', iterfield = 'expr')
         select_output.inputs.expr = [
             'a\'[equalRange-equalIndiffe_Zscr]\'',
@@ -657,7 +506,7 @@ class PipelineTeam80GC(Pipeline):
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect(
             select_output, 'out_file',
-            data_sink, f'group_level_analysis_groupComp_nsub_{nb_subjects}.@out')
+            data_sink, f'group_level_analysis_nsub_{nb_subjects}.@out')
 
         return group_level
 
@@ -668,18 +517,19 @@ class PipelineTeam80GC(Pipeline):
             'contrast_dir': [
                 f'_contrast_id_{c}_contrast_index_{i}' for c, i \
                 in zip(self.contrast_list, self.contrast_indices)],
-            'method': ['equalRange', 'equalIndifference', 'groupComp'],
             'nb_subjects' : [str(len(self.subject_list))]
         }
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            'group_level_analysis_nsub_{nb_subjects}',
             '{contrast_dir}', 'ttestpp_out.nii'
             )
 
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
+
+        return return_list
 
     def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names.
@@ -689,44 +539,44 @@ class PipelineTeam80GC(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             # Hypothesis 1
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
             # Hypothesis 2
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
             # Hypothesis 3
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
             # Hypothesis 4
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
             # Hypothesis 5
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
             # Hypothesis 6
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
             # Hypothesis 7
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
             # Hypothesis 8
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
             # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
