@@ -307,18 +307,19 @@ class PipelineTeam80GC(Pipeline):
 
         return return_list
 
-    def get_contrast_set_arguments(contrast_files: list, contrast_index: int):
+    def select_subbrick(in_file: str, index: int):
         """
-        Create a contrast set argument list to be passed to AFNI's 3dttest++
+        Create a tuple (file, index) for AFNI interfaces allowing to select a sub-brick
+            for input file.
 
         Parameters :
-        - contrast_files: list, files containing contrast of subject level analysis
-        - contrast_index: int, index of the desired contrast in the contrast_file
+        - in_file: str, files to select the sub-brick from
+        - index: int, index of the desired sub-brick in in_file
 
         Returns :
-        - arguments: str, formatted arguments for AFNI's 3dttest++ args input
+        - out: tuple, (in_file, index)
         """
-        return [(file, contrast_index) for file in contrast_files]
+        return (in_file, index)
 
     def get_group_level_analysis(self):
         """
@@ -418,31 +419,33 @@ class PipelineTeam80GC(Pipeline):
             equal_indifference_subjects, ('out_list', complete_subject_ids),
             equal_indifference_contrasts, 'elements')
 
-        # Function Node get_contrast_set_arguments - Create setA list of input files for 3dttest++
-        set_a_arguments = Node(Function(
-            function = self.get_contrast_set_arguments,
-            input_names = ['contrast_files', 'contrast_index'],
-            output_names = ['out_files']
+        # Function Node select_subbrick - Create setA list of input files for 3dttest++
+        set_a_arguments = MapNode(Function(
+            function = self.select_subbrick,
+            input_names = ['in_file', 'index'],
+            output_names = ['out']
             ),
-            name = 'set_a_arguments'
+            name = 'set_a_arguments',
+            iterfield = 'in_file'
         )
-        group_level.connect(info_source, 'contrast_index', set_a_arguments, 'contrast_index')
+        group_level.connect(info_source, 'contrast_index', set_a_arguments, 'index')
         group_level.connect(
             equal_range_contrasts, ('out_list', clean_list),
-            set_a_arguments, 'contrast_files')
+            set_a_arguments, 'in_file')
 
-        # Function Node get_contrast_set_arguments - Create setB list of input files for 3dttest++
-        set_b_arguments = Node(Function(
-            function = self.get_contrast_set_arguments,
-            input_names = ['contrast_files', 'contrast_index'],
-            output_names = ['out_files']
+        # Function Node select_subbrick - Create setB list of input files for 3dttest++
+        set_b_arguments = MapNode(Function(
+            function = self.select_subbrick,
+            input_names = ['in_file', 'index'],
+            output_names = ['out']
             ),
-            name = 'set_b_arguments'
+            name = 'set_b_arguments',
+            iterfield = 'in_file'
         )
-        group_level.connect(info_source, 'contrast_index', set_b_arguments, 'contrast_index')
+        group_level.connect(info_source, 'contrast_index', set_b_arguments, 'index')
         group_level.connect(
             equal_indifference_contrasts, ('out_list', clean_list),
-            set_b_arguments, 'contrast_files')
+            set_b_arguments, 'in_file')
 
         # Function Node elements_in_string - Get masks files for all subjects
         # Note : using a MapNode with elements_in_string requires using clean_list to remove
@@ -473,18 +476,25 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.nomeans = True
         t_test.inputs.out_file = 'ttestpp_out.nii'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
-        group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
-        group_level.connect(set_b_arguments, 'out_files', t_test, 'set_b')
+        group_level.connect(set_a_arguments, 'out', t_test, 'set_a')
+        group_level.connect(set_b_arguments, 'out', t_test, 'set_b')
 
         # Output dataset from t_test consists in 3 sub-bricks :
         # #0  equalRange-equalIndiffe_Zscr
         # #1  equalRange_Zscr
         # #2  equalIndiffe_Zscr
 
-        # Create a function to select the subbrick index of 3dttest++ output file
-        select_subbrick = MapNode(Merge(2), name = 'select_subbrick', iterfield = 'in2')
-        select_subbrick.inputs.in2 = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
-        group_level.connect(t_test, 'out_file', select_subbrick, 'in1')
+        # Function select_subbrick  - Select the subbrick index of 3dttest++ output file
+        select_subbrick = MapNode(Function(
+            function = self.select_subbrick,
+            input_names = ['in_file', 'index'],
+            output_names = ['out']
+            ),
+            name = 'select_subbrick',
+            iterfield = 'index'
+        )
+        select_subbrick.inputs.index = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
+        group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
