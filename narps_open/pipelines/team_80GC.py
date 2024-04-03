@@ -487,7 +487,7 @@ class PipelineTeam80GC(Pipeline):
         group_level.connect(t_test, 'out_file', select_subbrick, 'in1')
 
         # SELECT DATASET - Split output of 3dttest++
-        select_output = Node(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
+        select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
         select_output.inputs.out_file = 'group_level_tstat.nii'
         select_output.inputs.outputtype = 'NIFTI'
         group_level.connect(select_subbrick, 'out', select_output, 'in_files')
