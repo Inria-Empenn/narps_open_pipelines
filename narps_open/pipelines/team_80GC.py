@@ -497,7 +497,7 @@ class PipelineTeam80GC(Pipeline):
         group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
 
         # MERGE - Create a list of a single tuple to be passed to TCatSubBricj
-        subbrick_lists = MapNode(Merge(1), iterfield = 'in1')
+        subbrick_lists = MapNode(Merge(1), name = 'subbrick_lists', iterfield = 'in1')
         subbrick_lists.inputs.no_flatten = True
         group_level.connect(select_subbrick, 'out', subbrick_lists, 'in1')
 
