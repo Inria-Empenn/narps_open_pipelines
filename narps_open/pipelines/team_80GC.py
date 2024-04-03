@@ -14,9 +14,9 @@ from nipype.interfaces.afni import Deconvolve, MaskTool, Calc
 from narps_open.pipelines import Pipeline
 from narps_open.data.participants import get_group
 from narps_open.core.common import (
-    remove_file, list_intersection, elements_in_string, clean_list
+    list_intersection, elements_in_string, clean_list
     )
-from narps_open.core.interfaces.afni import Ttestpp, SelectDataset
+from narps_open.core.interfaces.afni import Ttestpp
 
 class PipelineTeam80GC(Pipeline):
     """ A class that defines the pipeline of team 80GC. """
@@ -483,11 +483,7 @@ class PipelineTeam80GC(Pipeline):
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = MapNode(Calc(), name = 'select_output', iterfield = 'expr')
-        select_output.inputs.expr = [
-            'a\'[equalRange-equalIndiffe_Zscr]\'',
-            'a\'[equalRange_Zscr]\'',
-            'a\'[equalIndiffe_Zscr]\''
-            ]
+        select_output.inputs.expr = ['a\'[0]\'', 'a\'[1]\'', 'a\'[2]\'']
         select_output.inputs.out_file = 'group_level_tsat.nii'
         select_output.inputs.outputtype = 'NIFTI'
         group_level.connect(t_test, 'out_file', select_output, 'in_file_a')
