@@ -493,7 +493,7 @@ class PipelineTeam80GC(Pipeline):
             name = 'select_subbrick',
             iterfield = 'index'
         )
-        select_subbrick.inputs.index = [0, 1, 2]
+        select_subbrick.inputs.index = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
         group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
 
         # MERGE - Create a list of a single tuple to be passed to TCatSubBricj
