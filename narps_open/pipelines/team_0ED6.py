@@ -151,6 +151,7 @@ class PipelineTeam0ED6(Pipeline):
         # COREGISTER - Coregister sbref to realigned and unwarped mean image of func
         coregister_sbref_to_func = Node(Coregister(), name = 'coregister_sbref_to_func')
         coregister_sbref_to_func.inputs.cost_function = 'nmi'
+        coregister_sbref_to_func.inputs.jobtype = 'estimate'
         preprocessing.connect(
             split_realign_unwarp_means, 'out2',  # mean func
             coregister_sbref_to_func, 'target')
@@ -178,6 +179,7 @@ class PipelineTeam0ED6(Pipeline):
         # COREGISTER - Coregister sbref to anat
         coregister_sbref_to_anat = Node(Coregister(), name = 'coregister_sbref_to_anat')
         coregister_sbref_to_anat.inputs.cost_function = 'nmi'
+        coregister_sbref_to_func.inputs.jobtype = 'estimate'
         preprocessing.connect(
             segmentation_anat, 'native_gm_image', coregister_sbref_to_anat, 'target')
         preprocessing.connect(
