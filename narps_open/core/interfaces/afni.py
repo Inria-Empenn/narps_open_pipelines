@@ -166,6 +166,15 @@ class Ttestpp(AFNICommand):
 
         return super()._format_arg(name, trait_spec, out_value)
 
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        for key in outputs.keys():
+            if isdefined(self.inputs.get()[key]):
+                outputs[key] = abspath(self.inputs.get()[key])
+
+        return outputs
+
 class SelectDatasetInputSpec(AFNICommandInputSpec):
     """ The input specification of the nifti_tool -copy_brick_list interface """
     in_file = traits.Tuple(

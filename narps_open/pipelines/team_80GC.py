@@ -470,10 +470,10 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.set_b_label = 'equalIndifference'
         t_test.inputs.toz = True
         t_test.inputs.clustsim = True
-        t_test.inputs.seed = (1, 1)# 2000) # TODO change value
-        t_test.inputs.exblur = 8.0 # TODO change value
+        t_test.inputs.seed = (1, 2000)
+        t_test.inputs.exblur = 8.0 # TODO check value
         t_test.inputs.nomeans = True
-        t_test.inputs.out_file = 'ttestpp_out'
+        t_test.inputs.out_file = 'ttestpp_out.nii'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
         group_level.connect(set_b_arguments, 'out_files', t_test, 'set_b')
@@ -497,7 +497,7 @@ class PipelineTeam80GC(Pipeline):
             'a\'[equalRange_Zscr]\'',
             'a\'[equalIndiffe_Zscr]\''
             ]
-        select_output.inputs.out_file = 'group_comp_tsat.nii'
+        select_output.inputs.out_file = 'group_level_tsat.nii'
         select_output.inputs.outputtype = 'NIFTI'
         group_level.connect(t_test, 'out_file', select_output, 'in_file_a')
 
