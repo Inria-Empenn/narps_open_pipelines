@@ -491,7 +491,7 @@ class PipelineTeam80GC(Pipeline):
             output_names = ['out']
             ),
             name = 'select_subbrick',
-            iterfield = 'index'
+            iterfield = 'b'
         )
         select_subbrick.inputs.b = [0, 1, 2]
         group_level.connect(t_test, 'out_file', select_subbrick, 'a')
