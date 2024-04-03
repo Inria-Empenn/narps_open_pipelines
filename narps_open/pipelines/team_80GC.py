@@ -486,15 +486,15 @@ class PipelineTeam80GC(Pipeline):
 
         # Function select_subbrick  - Select the subbrick index of 3dttest++ output file
         select_subbrick = MapNode(Function(
-            function = self.select_subbrick,
-            input_names = ['in_file', 'index'],
+            function = lambda a, b : f'{a}\'[{b}]\'',
+            input_names = ['a', 'b'],
             output_names = ['out']
             ),
             name = 'select_subbrick',
             iterfield = 'index'
         )
-        select_subbrick.inputs.index = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
-        group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
+        select_subbrick.inputs.b = [0, 1, 2]
+        group_level.connect(t_test, 'out_file', select_subbrick, 'a')
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
