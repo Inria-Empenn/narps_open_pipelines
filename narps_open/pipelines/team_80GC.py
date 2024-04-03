@@ -483,7 +483,7 @@ class PipelineTeam80GC(Pipeline):
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = MapNode(Calc(), name = 'select_output', iterfield = 'expr')
-        select_output.inputs.expr = ['a\'[0]\'', 'a\'[1]\'', 'a\'[2]\'']
+        select_output.inputs.expr = ['a[0]', 'a[1]', 'a[2]']
         select_output.inputs.out_file = 'group_level_tsat.nii'
         select_output.inputs.outputtype = 'NIFTI'
         group_level.connect(t_test, 'out_file', select_output, 'in_file_a')
