@@ -469,21 +469,12 @@ class PipelineTeam80GC(Pipeline):
         t_test.inputs.set_a_label = 'equalRange'
         t_test.inputs.set_b_label = 'equalIndifference'
         t_test.inputs.toz = True
-        t_test.inputs.clustsim = True
-        t_test.inputs.seed = (1, 2000)
-        t_test.inputs.exblur = 8.0 # TODO check value
+        t_test.inputs.clustsim = False
         t_test.inputs.nomeans = True
         t_test.inputs.out_file = 'ttestpp_out.nii'
         group_level.connect(mask_intersection, 'out_file', t_test, 'mask')
         group_level.connect(set_a_arguments, 'out_files', t_test, 'set_a')
         group_level.connect(set_b_arguments, 'out_files', t_test, 'set_b')
-
-        # -covariates ???
-        # -center ???
-        # -paired ??? paired-sample t-test to compare setA and setB.
-        # -unpooled ??? variance estimates for setA and setB be
-        #          computed separately (not pooled together).
-        # -zskip [n]= Do not include voxel values that are zero in the analysis.
 
         # Output dataset from t_test consists in 3 sub-bricks :
         # #0  equalRange-equalIndiffe_Zscr
