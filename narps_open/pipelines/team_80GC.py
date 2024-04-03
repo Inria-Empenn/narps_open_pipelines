@@ -321,6 +321,19 @@ class PipelineTeam80GC(Pipeline):
         """
         return (in_file, index)
 
+    def select_subbrick_str(in_file: str, index: int):
+        """
+        Create a string for AFNI interfaces allowing to select a sub-brick for input file.
+
+        Parameters :
+        - in_file: str, files to select the sub-brick from
+        - index: int, index of the desired sub-brick in in_file
+
+        Returns :
+        - out: str
+        """
+        return f'{in_file}\'[{index}]\''
+
     def get_group_level_analysis(self):
         """
         Return a workflow for the group level analysis.
@@ -486,15 +499,15 @@ class PipelineTeam80GC(Pipeline):
 
         # Function select_subbrick  - Select the subbrick index of 3dttest++ output file
         select_subbrick = MapNode(Function(
-            function = lambda a, b : f'{a}\'[{b}]\'',
-            input_names = ['a', 'b'],
+            function = self.select_subbrick_str,
+            input_names = ['in_file', 'index'],
             output_names = ['out']
             ),
             name = 'select_subbrick',
-            iterfield = 'b'
+            iterfield = 'index'
         )
-        select_subbrick.inputs.b = [0, 1, 2]
-        group_level.connect(t_test, 'out_file', select_subbrick, 'a')
+        select_subbrick.inputs.index = [0, 1, 2]
+        group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
