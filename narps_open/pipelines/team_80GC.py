@@ -496,7 +496,7 @@ class PipelineTeam80GC(Pipeline):
         select_output = Node(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
         select_output.inputs.out_file = 'group_level_tstat.nii'
         select_output.inputs.outputtype = 'NIFTI'
-        group_level.connect(select_subbrick.out, select_output, 'in_files')
+        group_level.connect(select_subbrick, 'out', select_output, 'in_files')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
