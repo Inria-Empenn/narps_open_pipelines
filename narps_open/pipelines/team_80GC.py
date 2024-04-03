@@ -321,19 +321,6 @@ class PipelineTeam80GC(Pipeline):
         """
         return (in_file, index)
 
-    def select_subbrick_str(in_file: str, index: int):
-        """
-        Create a string for AFNI interfaces allowing to select a sub-brick for input file.
-
-        Parameters :
-        - in_file: str, files to select the sub-brick from
-        - index: int, index of the desired sub-brick in in_file
-
-        Returns :
-        - out: str
-        """
-        return f'{in_file}\'[{index}]\''
-
     def get_group_level_analysis(self):
         """
         Return a workflow for the group level analysis.
@@ -499,7 +486,7 @@ class PipelineTeam80GC(Pipeline):
 
         # Function select_subbrick  - Select the subbrick index of 3dttest++ output file
         select_subbrick = MapNode(Function(
-            function = self.select_subbrick_str,
+            function = self.select_subbrick,
             input_names = ['in_file', 'index'],
             output_names = ['out']
             ),
@@ -509,11 +496,16 @@ class PipelineTeam80GC(Pipeline):
         select_subbrick.inputs.index = [0, 1, 2]
         group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
 
-        # SELECT DATASET - Split output of 3dttest++
+        # MERGE - Create a list of a single tuple to be passed to TCatSubBricj
+        subbrick_lists = MapNode(Merge(1), iterfield = 'in1')
+        subbrick_lists.inputs.no_flatten = True
+        group_level.connect(select_subbrick, 'out', subbrick_lists, 'in1')
+
+        # TCATSUBBRICK - Split output of 3dttest++
         select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
         select_output.inputs.out_file = 'group_level_tstat.nii'
         select_output.inputs.outputtype = 'NIFTI'
-        group_level.connect(select_subbrick, 'out', select_output, 'in_files')
+        group_level.connect(subbrick_lists, 'out', select_output, 'in_files')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
