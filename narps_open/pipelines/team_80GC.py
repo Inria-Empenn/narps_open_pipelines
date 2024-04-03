@@ -7,7 +7,7 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.afni import Deconvolve, MaskTool, TCatSubBrick
 
@@ -482,15 +482,9 @@ class PipelineTeam80GC(Pipeline):
         # #2  equalIndiffe_Zscr
 
         # Create a function to select the subbrick index of 3dttest++ output file
-        select_subbrick = MapNode(Function(
-            function = lambda a, b : (a, b),
-            input_names = ['a', 'b'],
-            output_names = ['out']
-            ),
-            name = 'select_subbrick', iterfield = 'b'
-        )
-        select_subbrick.inputs.b = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
-        group_level.connect(t_test, 'out_file', select_subbrick, 'a')
+        select_subbrick = MapNode(Merge(2), name = 'select_subbrick', iterfield = 'in2')
+        select_subbrick.inputs.in2 = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
+        group_level.connect(t_test, 'out_file', select_subbrick, 'in1')
 
         # SELECT DATASET - Split output of 3dttest++
         select_output = Node(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
