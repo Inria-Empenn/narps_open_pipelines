@@ -9,7 +9,7 @@ from itertools import product
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-from nipype.interfaces.afni import Deconvolve, MaskTool, Calc
+from nipype.interfaces.afni import Deconvolve, MaskTool, TCatSubBrick
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.participants import get_group
@@ -481,12 +481,22 @@ class PipelineTeam80GC(Pipeline):
         # #1  equalRange_Zscr
         # #2  equalIndiffe_Zscr
 
+        # Create a function to select the subbrick index of 3dttest++ output file
+        select_subbrick = MapNode(Function(
+            function = lambda a, b : (a, b),
+            input_names = ['a', 'b'],
+            output_names = ['out']
+            ),
+            name = 'select_subbrick', iterfield = 'b'
+        )
+        select_subbrick.inputs.b = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
+        group_level.connect(t_test, 'out_file', select_subbrick, 'a')
+
         # SELECT DATASET - Split output of 3dttest++
-        select_output = MapNode(Calc(), name = 'select_output', iterfield = 'expr')
-        select_output.inputs.expr = ['a[0]', 'a[1]', 'a[2]']
-        select_output.inputs.out_file = 'group_level_tsat.nii'
+        select_output = Node(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
+        select_output.inputs.out_file = 'group_level_tstat.nii'
         select_output.inputs.outputtype = 'NIFTI'
-        group_level.connect(t_test, 'out_file', select_output, 'in_file_a')
+        group_level.connect(select_subbrick.out, select_output, 'in_files')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
