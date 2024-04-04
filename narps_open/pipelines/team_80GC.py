@@ -7,9 +7,9 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Merge
+from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
-from nipype.interfaces.afni import Deconvolve, MaskTool, TCatSubBrick
+from nipype.interfaces.afni import Deconvolve, MaskTool
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.participants import get_group
@@ -514,7 +514,7 @@ class PipelineTeam80GC(Pipeline):
         template = join(
             self.directories.output_dir,
             'group_level_analysis_nsub_{nb_subjects}',
-            '{contrast_dir}', 'ttestpp_out.nii'
+            '{contrast_dir}', '_select_output{method}', 'group_level_tstat.nii'
             )
 
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
@@ -530,49 +530,40 @@ class PipelineTeam80GC(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             # Hypothesis 1
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
+                '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 2
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
+                '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 3
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
+                '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 4
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_gain_contrast_index_5', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
+                '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 5
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
+                '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 6
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
+                '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 7
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
+                '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 8
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii'),
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
+                '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 9
-            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6'),
-            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_loss_contrast_index_6', 'ttestpp_out.nii')
+            None,
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
+                '_select_output0', 'group_level_tstat.nii'),
         ]
         return [join(self.directories.output_dir, f) for f in files]
