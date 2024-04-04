@@ -174,3 +174,53 @@ class Ttestpp(AFNICommand):
                 outputs[key] = abspath(self.inputs.get()[key])
 
         return outputs
+
+class SelectSBInputSpec(AFNICommandInputSpec):
+    """ The input specification for SelectSubBrick """
+    in_file = File(
+        desc = 'File name to select a subbrick from.',
+        argstr = '%s',
+        position = -2,
+        mandatory = True,
+        copyfile = False,
+        exists = True
+    )
+    index = traits.Int(
+        desc = 'Index of the subbrick inside in_file.',
+        mandatory = True
+    )
+    out_file = File(desc = 'Output image file name.', argstr = '-prefix %s', genfile = True)
+
+class SelectSubBrick(AFNICommand):
+    """ Sub-brick selection from AFNI files.
+
+    For complete details, see the `3dTcat Documentation.
+    <https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTcat.html>
+    """
+
+    _cmd = '3dTcat'
+    input_spec = SelectSBInputSpec
+    output_spec = AFNICommandOutputSpec
+
+    #def _gen_filename(self, name):
+    #    if name == 'out_file':
+    #        return self._gen_fname(self.inputs.in_file, suffix = '_tcat')
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+
+        for key in outputs.keys():
+            if isdefined(self.inputs.get()[key]):
+                outputs[key] = abspath(self.inputs.get()[key])
+
+        return outputs
+
+    def _format_arg(self, name, trait_spec, value):
+        """ Format arguments before actually building the command line """
+        out_value = value
+
+        # For argument in_file, append index, such as : in_file'[index]'
+        if name == 'in_file':
+            out_value = f'{value}\'[{self.inputs.index}]\''
+
+        return super()._format_arg(name, trait_spec, out_value)

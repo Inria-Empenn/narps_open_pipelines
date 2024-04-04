@@ -16,7 +16,7 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     list_intersection, elements_in_string, clean_list
     )
-from narps_open.core.interfaces.afni import Ttestpp
+from narps_open.core.interfaces.afni import Ttestpp, SelectSubBrick
 
 class PipelineTeam80GC(Pipeline):
     """ A class that defines the pipeline of team 80GC. """
@@ -484,28 +484,12 @@ class PipelineTeam80GC(Pipeline):
         # #1  equalRange_Zscr
         # #2  equalIndiffe_Zscr
 
-        # Function select_subbrick  - Select the subbrick index of 3dttest++ output file
-        select_subbrick = MapNode(Function(
-            function = self.select_subbrick,
-            input_names = ['in_file', 'index'],
-            output_names = ['out']
-            ),
-            name = 'select_subbrick',
-            iterfield = 'index'
-        )
-        select_subbrick.inputs.index = ['\'[0]\'', '\'[1]\'', '\'[2]\'']
-        group_level.connect(t_test, 'out_file', select_subbrick, 'in_file')
-
-        # MERGE - Create a list of a single tuple to be passed to TCatSubBricj
-        subbrick_lists = MapNode(Merge(1), name = 'subbrick_lists', iterfield = 'in1')
-        subbrick_lists.inputs.no_flatten = True
-        group_level.connect(select_subbrick, 'out', subbrick_lists, 'in1')
-
-        # TCATSUBBRICK - Split output of 3dttest++
-        select_output = MapNode(TCatSubBrick(), name = 'select_output', iterfield = 'in_files')
+        # SELECT SUB BRICK - Split output of 3dttest++
+        select_output = MapNode(SelectSubBrick(), name = 'select_output', iterfield = 'index')
         select_output.inputs.out_file = 'group_level_tstat.nii'
         select_output.inputs.outputtype = 'NIFTI'
-        group_level.connect(subbrick_lists, 'out', select_output, 'in_files')
+        select_output.inputs.index = [0, 1, 2]
+        group_level.connect(t_test, 'out_file', select_output, 'in_file')
 
         # DATA SINK - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
@@ -523,7 +507,8 @@ class PipelineTeam80GC(Pipeline):
             'contrast_dir': [
                 f'_contrast_id_{c}_contrast_index_{i}' for c, i \
                 in zip(self.contrast_list, self.contrast_indices)],
-            'nb_subjects' : [str(len(self.subject_list))]
+            'nb_subjects' : [str(len(self.subject_list))],
+            'method' : ['0', '1', '2']
         }
         parameter_sets = product(*parameters.values())
         template = join(
