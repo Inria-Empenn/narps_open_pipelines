@@ -179,7 +179,7 @@ class PipelineTeam0ED6(Pipeline):
         # COREGISTER - Coregister sbref to anat
         coregister_sbref_to_anat = Node(Coregister(), name = 'coregister_sbref_to_anat')
         coregister_sbref_to_anat.inputs.cost_function = 'nmi'
-        coregister_sbref_to_func.inputs.jobtype = 'estimate'
+        coregister_sbref_to_anat.inputs.jobtype = 'estimate'
         preprocessing.connect(
             segmentation_anat, 'native_gm_image', coregister_sbref_to_anat, 'target')
         preprocessing.connect(
