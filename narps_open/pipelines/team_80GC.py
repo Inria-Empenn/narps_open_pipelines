@@ -530,39 +530,39 @@ class PipelineTeam80GC(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             # Hypothesis 1
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
                 '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 2
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
                 '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 3
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
                 '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 4
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_gain_contrast_index_5',
                 '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 5
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
                 '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 6
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
                 '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 7
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
                 '_select_output2', 'group_level_tstat.nii'),
             # Hypothesis 8
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
                 '_select_output1', 'group_level_tstat.nii'),
             # Hypothesis 9
-            None,
+            '',
             join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_loss_contrast_index_6',
                 '_select_output0', 'group_level_tstat.nii'),
         ]
