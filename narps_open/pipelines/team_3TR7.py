@@ -90,13 +90,13 @@ class PipelineTeam3TR7(Pipeline):
             # Create a Bunch per run, i.e. cond1_run1, cond2_run1, etc.
             subject_info.append(
                 Bunch(
-                    conditions = [trial_key],
+                    conditions = ['trial'],
                     onsets = [onsets[trial_key]],
                     durations = [durations[trial_key]],
                     amplitudes = None,
                     tmod = None,
                     pmod = [Bunch(
-                        name = [gain_key, loss_key],
+                        name = ['gain', 'loss'],
                         poly = [1, 1],
                         param = [weights_gain[gain_key], weights_loss[loss_key]]
                         )],
