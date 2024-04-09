@@ -90,7 +90,7 @@ class PipelineTeam3TR7(Pipeline):
             # Create a Bunch per run, i.e. cond1_run1, cond2_run1, etc.
             subject_info.append(
                 Bunch(
-                    conditions = ['trial'],
+                    conditions = ['gamble'],
                     onsets = [onsets[trial_key]],
                     durations = [durations[trial_key]],
                     amplitudes = None,
