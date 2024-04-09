@@ -214,7 +214,7 @@ class PipelineTeam3TR7(Pipeline):
         specify_model.overwrite = False
         subject_level.connect(subject_info, 'subject_info', specify_model, 'subject_info')
         subject_level.connect(confounds, 'confounds_file', specify_model, 'realignment_parameters')
-        subject_level.connect(select_files, 'func', specify_model, 'functional_runs')
+        subject_level.connect(gunzip, 'out_file', specify_model, 'functional_runs')
 
         model_design = Node(Level1Design(), name = 'model_design')
         model_design.inputs.bases = {'hrf': {'derivs': [0, 0]}}
