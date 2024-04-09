@@ -336,7 +336,7 @@ class PipelineTeamL7J7(Pipeline):
         # Select files from subject level analysis
         templates = {
             'contrasts': join(self.directories.output_dir,
-                'subject_level', '_subject_id_*', 'scon_{contrast_id}.nii'),
+                'subject_level', '_subject_id_*', 'con_{contrast_id}.nii'),
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.sort_filelist = True
@@ -452,7 +452,7 @@ class PipelineTeamL7J7(Pipeline):
         # Select files from subject level analysis
         templates = {
             'contrasts': join(self.directories.output_dir,
-                'subject_level', '_subject_id_*', 'scon_{contrast_id}.nii'),
+                'subject_level', '_subject_id_*', 'con_{contrast_id}.nii'),
             #'mask': join('derivatives/fmriprep/gr_mask_tmax.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
