@@ -442,7 +442,7 @@ class PipelineTeam3TR7(Pipeline):
         # Select files from subject level analysis
         templates = {
             'contrasts': join(self.directories.output_dir,
-                'subject_level', '_subject_id_*', 'con_{contrast_id}.nii'),
+                'subject_level', '_subject_id_*', 'scon_{contrast_id}.nii'),
             #'mask': join('derivatives/fmriprep/gr_mask_tmax.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
@@ -523,6 +523,7 @@ class PipelineTeam3TR7(Pipeline):
         threshold.inputs.force_activation = False
         threshold.inputs.height_threshold = 0.05
         threshold.inputs.contrast_index = 1
+        threshold.inputs.extent_threshold = 5
 
         # Create the group level workflow
         group_level_analysis = Workflow(
