@@ -396,7 +396,6 @@ class PipelineTeamL7J7(Pipeline):
         threshold.inputs.height_threshold_type = 'p-value'
         threshold.inputs.force_activation = False
         threshold.inputs.height_threshold = 0.05
-        threshold.inputs.extent_threshold = 5
         threshold.inputs.contrast_index = [1, 2]
 
         # Create the group level workflow
@@ -534,7 +533,6 @@ class PipelineTeamL7J7(Pipeline):
         threshold.inputs.force_activation = False
         threshold.inputs.height_threshold = 0.05
         threshold.inputs.contrast_index = 1
-        threshold.inputs.extent_threshold = 5
 
         # Create the group level workflow
         group_level_analysis = Workflow(
