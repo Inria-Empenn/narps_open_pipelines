@@ -55,7 +55,7 @@ implemented_pipelines = {
     'K9P0': None,
     'L1A8': None,
     'L3V8': None,
-    'L7J7': None,
+    'L7J7': 'PipelineTeamL7J7',
     'L9G5': None,
     'O03M': None,
     'O21U': None,
