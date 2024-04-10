@@ -13,12 +13,27 @@ Usage:
 from os.path import join, exists
 from filecmp import cmp
 
-from pytest import helpers, mark
+from pytest import helpers, mark, fixture
 from nipype import Workflow
 from nipype.interfaces.base import Bunch
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_DC61 import PipelineTeamDC61
+
+@fixture
+def mock_participants_data(mocker):
+    """ A fixture to provide mocked data from the test_data directory """
+
+    mocker.patch(
+        'narps_open.data.participants.Configuration',
+        return_value = {
+            'directories': {
+                'dataset': join(
+                    Configuration()['directories']['test_data'],
+                    'data', 'participants')
+                }
+            }
+    )
 
 class TestPipelinesTeamDC61:
     """ A class that contains all the unit tests for the PipelineTeamDC61 class."""
@@ -39,7 +54,7 @@ class TestPipelinesTeamDC61:
         assert pipeline.get_run_level_analysis() is None
         assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
         group_level = pipeline.get_group_level_analysis()
-        assert len(group_level) == 3
+        assert len(group_level) == 2
         for sub_workflow in group_level:
             assert isinstance(sub_workflow, Workflow)
 
@@ -120,6 +135,26 @@ class TestPipelinesTeamDC61:
 
         # Check contents
         assert cmp(reference_file, created_confounds_file)
+
+    @staticmethod
+    @mark.unit_test
+    def test_group_level_contrasts():
+        """ Test the get_group_contrasts method """
+
+    @staticmethod
+    @mark.unit_test
+    def test_group_covariates(mock_participants_data):
+        """ Test the get_group_covariates method """
+        subjects = ['001', '002', '003', '004']
+        assert PipelineTeamDC61.get_group_covariates(subjects) == [
+            dict(vector = [0, 1, 0, 1], name = 'equalRange'),
+            dict(vector = [1, 0, 1, 0], name = 'equalIndifference')
+        ]
+        subjects = ['001', '003', '002', '004']
+        assert PipelineTeamDC61.get_group_covariates(subjects) == [
+            dict(vector = [0, 0, 1, 1], name = 'equalRange'),
+            dict(vector = [1, 1, 0, 0], name = 'equalIndifference')
+        ]
 
     @staticmethod
     @mark.pipeline_test
