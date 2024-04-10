@@ -523,7 +523,7 @@ class PipelineTeamL7J7(Pipeline):
         level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
         level2conestimate.inputs.group_contrast = True
         level2conestimate.inputs.contrasts = [
-            ['Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1]]
+            ['Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1]]
         ]
 
         # Threshold Node - Create thresholded maps
