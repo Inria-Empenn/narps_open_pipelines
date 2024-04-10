@@ -670,8 +670,8 @@ class PipelineTeamL7J7(Pipeline):
                 '_contrast_id_0002', 'spmT_0001.nii'),
             # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0002_thr.nii'),
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0002.nii')
+                '_contrast_id_0002', 'spmT_0001.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]
