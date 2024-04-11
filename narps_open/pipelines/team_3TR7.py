@@ -278,10 +278,6 @@ class PipelineTeam3TR7(Pipeline):
         templates += [join(
             self.directories.output_dir,
             'subject_level', '_subject_id_{subject_id}', 'SPM.mat')]
-        templates += [join(
-            self.directories.output_dir,
-            'subject_level', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
 
         # Format with subject_ids
         return_list = []
@@ -598,8 +594,7 @@ class PipelineTeam3TR7(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['groupComp'],
             'file': [
-                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
-                join('_threshold0', 'spmT_0001_thr.nii')
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii', 'spmT_0001_thr.nii'
                 ],
             'nb_subjects' : [str(len(self.subject_list))]
         }
