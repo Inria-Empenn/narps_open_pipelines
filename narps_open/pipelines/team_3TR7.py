@@ -273,7 +273,7 @@ class PipelineTeam3TR7(Pipeline):
 
         templates = [join(
             self.directories.output_dir,
-            'subject_level', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            'subject_level', '_subject_id_{subject_id}', f'scon_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
         templates += [join(
             self.directories.output_dir,
