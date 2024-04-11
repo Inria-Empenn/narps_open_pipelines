@@ -52,11 +52,11 @@ class TestPipelinesTeamB5I6:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*4*1 + 4*1, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*4*1 + 4*1, 8*4*2 + 4*4, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*4*4 + 4*4, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4*4*4 + 4*4, 8*4*2 + 4*4, 18])
 
     @staticmethod
     @mark.unit_test
@@ -138,9 +138,6 @@ class TestPipelinesTeamB5I6:
             temporary_data_dir, confounds_node.name, 'confounds_file_sub-sid_run-rid.tsv'))
         assert exists(created_confounds_file)
 
-        from shutil import copy
-        copy(created_confounds_file, '/work/toot.tsv')
-
         # Check contents
         assert cmp(reference_file, created_confounds_file)
 
@@ -173,9 +170,6 @@ class TestPipelinesTeamB5I6:
         created_confounds_file = abspath(join(
             temporary_data_dir, confounds_node.name, 'confounds_file_sub-sid_run-rid.tsv'))
         assert exists(created_confounds_file)
-
-        from shutil import copy
-        copy(created_confounds_file, '/work/toot_outl.tsv')
 
         # Check contents
         assert cmp(reference_file, created_confounds_file)

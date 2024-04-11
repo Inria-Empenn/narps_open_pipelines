@@ -12,7 +12,7 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     IsotropicSmooth, Level1Design, FEATModel,
     L2Model, Merge, FLAMEO, FILMGLS, MultipleRegressDesign,
-    Cluster, SmoothEstimate, FSLCommand, Randomise
+    FSLCommand, Randomise
     )
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl.maths import MultiImageMaths
@@ -595,8 +595,8 @@ class PipelineTeamB5I6(Pipeline):
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'flame1'
         group_level.connect(mask_intersection, 'out_file', estimate_model, 'mask_file')
-        group_level.connect(merge_copes, estimate_model, [('merged_file', 'cope_file')]),
-        group_level.connect(merge_varcopes, estimate_model, [('merged_file', 'var_cope_file')]),
+        group_level.connect(merge_copes, 'merged_file', estimate_model, 'cope_file')
+        group_level.connect(merge_varcopes, 'merged_file', estimate_model, 'var_cope_file')
         group_level.connect(specify_model, 'design_mat', estimate_model, 'design_file')
         group_level.connect(specify_model, 'design_con', estimate_model, 't_con_file')
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
@@ -608,33 +608,23 @@ class PipelineTeamB5I6(Pipeline):
             synchronize = True)
         randomise.inputs.tfce = True
         randomise.inputs.num_perm = 10000
-        randomise.inputs. = True
-        randomise.inputs.pthreshold = 0.05
+        randomise.inputs.c_thresh = 0.05
+        group_level.connect(mask_intersection, 'out_file', randomise, 'mask')
+        group_level.connect(merge_copes, 'merged_file', randomise, 'in_file')
+        group_level.connect(specify_model, 'design_con', randomise, 'tcon')
+        group_level.connect(specify_model, 'design_mat', randomise, 'design_mat')
 
-
-tcon
-mask
-fcon
-design_mat
-
-  (estimate_model, randomise,
-    ('zstats', 'in_file')
-    ('copes', 'cope_file'))
-
-
-
-
-        # Datasink Node - save important files
+        # Datasink Node - Save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        (estimate_model, data_sink, [
-                ('zstats', f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats'),
-                ('tstats', f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
-                ]),
-            (cluster, data_sink, [
-                ('threshold_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh'),
-                ('pval_file', f'group_level_analysis_{method}_nsub_{nb_subjects}.@pval')])
-            ])
+        group_level.connect(estimate_model, 'zstats', data_sink, 
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats')
+        group_level.connect(estimate_model, 'tstats', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
+        group_level.connect(randomise,'t_corrected_p_files', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
+        group_level.connect(randomise,'t_p_files', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_p_files')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
@@ -653,6 +643,8 @@ design_mat
             )
             get_group_subjects.inputs.list_1 = get_group(method)
             get_group_subjects.inputs.list_2 = self.subject_list
+            group_level.connect(get_group_subjects, 'out_list', get_copes, 'elements')
+            group_level.connect(get_group_subjects, 'out_list', get_varcopes, 'elements')
 
             # Function Node get_one_sample_t_test_regressors
             #   Get regressors in the equalRange and equalIndifference method case
@@ -664,14 +656,8 @@ design_mat
                 ),
                 name = 'regressors_one_sample',
             )
-
-            # Add missing connections
-            group_level_analysis.connect([
-                (get_group_subjects, get_copes, [('out_list', 'elements')]),
-                (get_group_subjects, get_varcopes, [('out_list', 'elements')]),
-                (get_group_subjects, regressors_one_sample, [('out_list', 'subject_list')]),
-                (regressors_one_sample, specify_model, [('regressors', 'regressors')])
-            ])
+            group_level.connect(get_group_subjects, 'out_list', regressors_one_sample, 'subject_list')
+            group_level.connect(regressors_one_sample, 'regressors', specify_model, 'regressors')
 
         elif method == 'groupComp':
 
@@ -726,19 +712,15 @@ design_mat
             regressors_two_sample.inputs.subject_list = self.subject_list
 
             # Add missing connections
-            group_level_analysis.connect([
-                (get_equal_range_subjects, regressors_two_sample, [
-                    ('out_list', 'equal_range_ids')
-                    ]),
-                (get_equal_indifference_subjects, regressors_two_sample, [
-                    ('out_list', 'equal_indifference_ids')
-                    ]),
-                (regressors_two_sample, specify_model, [
-                    ('regressors', 'regressors'),
-                    ('groups', 'groups')])
-            ])
+            group_level.connect(
+                get_equal_range_subjects, 'out_list', regressors_two_sample, 'equal_range_ids')
+            group_level.connect(
+                get_equal_indifference_subjects, 'out_list',
+                regressors_two_sample, 'equal_indifference_ids')
+            group_level.connect(regressors_two_sample, 'regressors', specify_model, 'regressors')
+            group_level.connect(regressors_two_sample, 'groups', specify_model, 'groups')
 
-        return group_level_analysis
+        return group_level
 
     def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
@@ -748,7 +730,7 @@ design_mat
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz',
+                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
                 '_cluster0/zstat1_threshold.nii.gz',
                 '_cluster1/zstat2_pval.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
@@ -772,7 +754,7 @@ design_mat
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz',
+                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
                 '_cluster0/zstat1_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
