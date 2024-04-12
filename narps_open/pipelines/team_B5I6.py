@@ -158,25 +158,15 @@ class PipelineTeamB5I6(Pipeline):
 
         # Compute outliers of `non-stdDVARS`
         dvars_outliers = array(data_frame['non-stdDVARS'])
-        print(dvars_outliers)
-
         percentile_75 = nanpercentile(dvars_outliers, 75)
         interquartile_range = percentile_75 - nanpercentile(dvars_outliers, 25)
         dvars_outliers = (dvars_outliers > (percentile_75 + 1.5 * interquartile_range)).astype(int)
 
-        print(dvars_outliers)
-        print(percentile_75 + 1.5 * interquartile_range)
-
         # Compute outliers of `FramewiseDisplacement`
         fd_outliers = array(data_frame['FramewiseDisplacement'])
-        print(fd_outliers)
-
         percentile_75 = nanpercentile(fd_outliers, 75)
         interquartile_range = percentile_75 - nanpercentile(fd_outliers, 25)
         fd_outliers = (fd_outliers > (percentile_75 + 1.5 * interquartile_range)).astype(int)
-
-        print(fd_outliers)
-        print(percentile_75 + 1.5 * interquartile_range)
 
         # Build an outlier regressor
         outlier_regressor = fd_outliers | dvars_outliers
