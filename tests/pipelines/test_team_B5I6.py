@@ -75,36 +75,41 @@ class TestPipelinesTeamB5I6:
         # Compare bunches to expected
         bunch = info_missed[0]
         assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['trial', 'missed']
-        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 27.535, 36.435], [19.535]])
-        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0], [4.0]])
-        assert bunch.amplitudes is None
-        assert bunch.tmod is None
-        assert bunch.regressor_names is None
-        assert bunch.regressors is None
-        bunch = bunch.pmod[0]
-        assert isinstance(bunch, Bunch)
-        assert bunch.name == ['gain', 'loss']
-        assert bunch.poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.param, [
+        assert bunch.conditions == ['trial', 'gain', 'loss', 'missed']
+        helpers.compare_float_2d_arrays(bunch.onsets, [
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [19.535]
+            ])
+        helpers.compare_float_2d_arrays(bunch.durations, [
+            [4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0],
+            [4.0]
+            ])
+        helpers.compare_float_2d_arrays(bunch.amplitudes, [
+            [1.0, 1.0, 1.0, 1.0],
             [-4.5, 15.5, -8.5, -2.5],
-            [-7.0,  1.0,  2.0,  4.0]
+            [-7.0,  1.0,  2.0,  4.0],
+            [1.0]
             ])
 
         bunch = info_no_missed[0]
         assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['trial']
-        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 27.535, 36.435]])
-        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes is None
-        assert bunch.tmod is None
-        assert bunch.regressor_names is None
-        assert bunch.regressors is None
-        bunch = bunch.pmod[0]
-        assert isinstance(bunch, Bunch)
-        assert bunch.name == ['gain', 'loss']
-        assert bunch.poly == [1, 1]
-        helpers.compare_float_2d_arrays(bunch.param, [
+        assert bunch.conditions == ['trial', 'gain', 'loss']
+        helpers.compare_float_2d_arrays(bunch.onsets, [
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435],
+            [4.071, 11.834, 27.535, 36.435]
+            ])
+        helpers.compare_float_2d_arrays(bunch.durations, [
+            [4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0]
+            ])
+        helpers.compare_float_2d_arrays(bunch.amplitudes, [
+            [1.0, 1.0, 1.0, 1.0],
             [-4.5, 15.5, -8.5, -2.5],
             [-7.0,  1.0,  2.0,  4.0]
             ])

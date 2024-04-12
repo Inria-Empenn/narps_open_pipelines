@@ -65,8 +65,10 @@ class PipelineTeamB5I6(Pipeline):
         onsets_missed = []
         durations_trial = []
         durations_missed = []
-        weights_gain = []
-        weights_loss = []
+        amplitudes_trial = []
+        amplitudes_missed = []
+        amplitudes_gain = []
+        amplitudes_loss = []
 
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
@@ -77,41 +79,35 @@ class PipelineTeamB5I6(Pipeline):
                 if 'NoResp' in info[5]:
                     onsets_missed.append(float(info[0]))
                     durations_missed.append(float(info[1]))
+                    amplitudes_missed.append(1.0)
                 else:
                     onsets_trial.append(float(info[0]))
                     durations_trial.append(float(info[1]))
-                    weights_gain.append(float(info[2]))
-                    weights_loss.append(float(info[3]))
+                    amplitudes_trial.append(1.0)
+                    amplitudes_gain.append(float(info[2]))
+                    amplitudes_loss.append(float(info[3]))
 
         # Mean center magnitudes
-        weights_gain = weights_gain - mean(weights_gain)
-        weights_loss = weights_loss - mean(weights_loss)
+        amplitudes_gain = amplitudes_gain - mean(amplitudes_gain)
+        amplitudes_loss = amplitudes_loss - mean(amplitudes_loss)
 
         # Add missed trials if any
-        conditions = ['trial']
-        onsets = [onsets_trial]
-        durations = [durations_trial]
+        conditions = ['trial', 'gain', 'loss']
+        onsets = [onsets_trial, onsets_trial, onsets_trial]
+        durations = [durations_trial, durations_trial, durations_trial]
+        amplitudes = [amplitudes_trial, amplitudes_gain, amplitudes_loss]
         if onsets_missed:
             conditions.append('missed')
             onsets.append(onsets_missed)
             durations.append(durations_missed)
+            amplitudes.append(amplitudes_missed)
 
         return [
             Bunch(
                 conditions = conditions,
                 onsets = onsets,
                 durations = durations,
-                amplitudes = None,
-                tmod = None,
-                pmod = [
-                    Bunch(
-                        name = ['gain', 'loss'],
-                        poly = [1, 1],
-                        param = [weights_gain, weights_loss]
-                    )
-                ],
-                regressor_names = None,
-                regressors = None
+                amplitudes = amplitudes
                 )
             ]
 
@@ -276,8 +272,10 @@ class PipelineTeamB5I6(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         run_level.connect(model_estimate, 'results_dir', data_sink, 'run_level_analysis.@results')
-        run_level.connect(model_generation, 'design_file', data_sink, 'run_level_analysis.@design_file')
-        run_level.connect(model_generation, 'design_image', data_sink, 'run_level_analysis.@design_img')
+        run_level.connect(
+            model_generation, 'design_file', data_sink, 'run_level_analysis.@design_file')
+        run_level.connect(
+            model_generation, 'design_image', data_sink, 'run_level_analysis.@design_img')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
@@ -607,7 +605,7 @@ class PipelineTeamB5I6(Pipeline):
         # Datasink Node - Save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        group_level.connect(estimate_model, 'zstats', data_sink, 
+        group_level.connect(estimate_model, 'zstats', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats')
         group_level.connect(estimate_model, 'tstats', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
