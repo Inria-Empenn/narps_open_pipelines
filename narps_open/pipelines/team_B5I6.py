@@ -592,7 +592,7 @@ class PipelineTeamB5I6(Pipeline):
         # Randomise Node - Perform clustering on statistical output
         randomise = MapNode(Randomise(),
             name = 'randomise',
-            iterfield = ['in_file', 'dlh', 'volume', 'cope_file'],
+            iterfield = ['in_file', 'cope_file'],
             synchronize = True)
         randomise.inputs.tfce = True
         randomise.inputs.num_perm = 10000
