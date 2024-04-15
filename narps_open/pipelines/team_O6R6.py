@@ -35,8 +35,8 @@ class PipelineTeamO6R6(Pipeline):
         self.team_id = 'O6R6'
         self.contrast_list = ['1', '2']
         self.run_level_contrasts = [
-            ('effect_of_gain', 'T', ['gain', 'loss'], [1, 0]),
-            ('effect_of_loss', 'T', ['gain', 'loss'], [0, 1])
+            ('effect_of_gain', 'T', ['gain_trial', 'loss_trial'], [1, 0]),
+            ('effect_of_loss', 'T', ['gain_trial', 'loss_trial'], [0, 1])
             ]
 
     def get_preprocessing(self):
@@ -75,7 +75,7 @@ class PipelineTeamO6R6(Pipeline):
                 if float(info[4]) > 0.0: # Response time exists
                     onsets_trial.append(float(info[0]))
                     durations_trial.append(float(info[4]))
-                    weights_trial.append(1.0)               
+                    weights_trial.append(1.0)
 
                     gain_amount = float(info[2])
                     loss_amount = float(info[3])
@@ -106,6 +106,22 @@ class PipelineTeamO6R6(Pipeline):
                 amplitudes = [weights_trial, weights_gain_trial, weights_loss_trial]
                 )
             ]
+
+    def get_subject_group(subject_id: str):
+        """
+        Return the group of the subject (either 'equalRange' or 'equalIndifference').
+
+        Parameters :
+        - subject_id : str, the subject identifier
+
+        Returns :
+        - group : str, the group to which belong the subject
+        """
+        from narps_open.data.participants import get_group
+
+        if subject_id in get_group('equalRange'):
+            return 'equalRange'
+        return 'equalIndifference'
 
     def get_run_level_analysis(self):
         """
@@ -146,13 +162,25 @@ class PipelineTeamO6R6(Pipeline):
         smoothing_func.inputs.fwhm = self.fwhm
         run_level.connect(select_files, 'func', smoothing_func, 'in_file')
 
+        # Function Node get_subject_group
+        #   This returns the name of the subject's group
+        subject_group = Node(Function(
+            function = self.get_subject_group,
+            input_names = ['subject_id'],
+            output_names = ['group']
+            ),
+            name = 'subject_group'
+        )
+        run_level.connect(information_source, 'subject_id', subject_group, 'input_str')
+
         # Get Subject Info - get subject specific condition information
         subject_information = Node(Function(
             function = self.get_subject_information,
-            input_names = ['event_file'],
+            input_names = ['event_file', 'group'],
             output_names = ['subject_info']
             ), name = 'subject_information')
         run_level.connect(select_files, 'events', subject_information, 'event_file')
+        run_level.connect(subject_group, 'group', subject_information, 'group')
 
         # SpecifyModel Node - Generate run level model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -164,7 +192,7 @@ class PipelineTeamO6R6(Pipeline):
 
         # Level1Design Node - Generate files for run level computation
         model_design = Node(Level1Design(), name = 'model_design')
-        model_design.inputs.bases = {'dgamma' : {'derivs' : False }}
+        model_design.inputs.bases = {'dgamma' : {'derivs' : True }}
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
         model_design.inputs.contrasts = self.run_level_contrasts
@@ -502,11 +530,16 @@ class PipelineTeamO6R6(Pipeline):
         group_level.connect(specify_model, 'design_con', estimate_model, 't_con_file')
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
 
-        # Cluster Node - Perform clustering on statistical output
-        cluster = Node(Cluster(), name = 'cluster')
-        # TODO : add parameters
-        group_level.connect(estimate_model, 'zstats', cluster, 'in_file')
-        group_level.connect(estimate_model, 'copes', cluster, 'cope_file')
+        # Randomise Node - Perform clustering on statistical output
+        randomise = Node(Randomise(),
+            name = 'randomise',
+            synchronize = True)
+        randomise.inputs.tfce = True
+        randomise.inputs.num_perm = 5000
+        randomise.inputs.c_thresh = 0.05
+        group_level.connect(mask_intersection, 'out_file', randomise, 'mask')
+        group_level.connect(estimate_model, 'zstats', randomise, 'in_file')
+        group_level.connect(estimate_model, 'copes', randomise, 'tcon')
 
         # Datasink Node - Save important files
         data_sink = Node(DataSink(), name = 'data_sink')

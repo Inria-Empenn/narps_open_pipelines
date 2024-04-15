@@ -51,11 +51,11 @@ class TestPipelinesTeamO6R6:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*1*2*4, 4*2*1 + 2*1, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*1*4*4, 2*4*1 + 2*1, 8*4*2 + 4*4, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*4*2*4, 4*2*4 + 2*4, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*4*4*4, 2*4*4 + 2*4, 8*4*2 + 4*4, 18])
 
     @staticmethod
     @mark.unit_test
@@ -75,18 +75,18 @@ class TestPipelinesTeamO6R6:
         assert bunch.conditions == ['trial', 'gain_trial', 'loss_trial']
         helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435]
-            ])
+            [4.071, 11.834],
+            [27.535, 36.435]
+            ])        
         helpers.compare_float_2d_arrays(bunch.durations, [
             [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288]
+            [2.388, 2.289],
+            [2.08, 2.288]
             ])
         helpers.compare_float_2d_arrays(bunch.amplitudes, [
-            [1.0, 1.0, 1.0, 1.0, 1.0],
-            [14.0, 34.0, 38.0, 10.0, 16.0],
-            [6.0, 14.0, 19.0, 15.0, 17.0]
+            [1.0, 1.0, 1.0, 1.0],
+            [3.0, 13.0],
+            [3.5, 4.5]
             ])
 
         # Compare bunches to expected
@@ -95,18 +95,18 @@ class TestPipelinesTeamO6R6:
         assert bunch.conditions == ['trial', 'gain_trial', 'loss_trial']
         helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435]
+            [4.071, 11.834],
+            [27.535, 36.435]
             ])
         helpers.compare_float_2d_arrays(bunch.durations, [
             [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288],
-            [2.388, 2.289, 2.08, 2.288]
+            [2.388, 2.289],
+            [2.08, 2.288]
             ])
         helpers.compare_float_2d_arrays(bunch.amplitudes, [
-            [1.0, 1.0, 1.0, 1.0, 1.0],
-            [14.0, 34.0, 38.0, 10.0, 16.0],
-            [6.0, 14.0, 19.0, 15.0, 17.0]
+            [1.0, 1.0, 1.0, 1.0],
+            [10.0, 30.0],
+            [11.0, 13.0]
             ])
 
     @staticmethod
