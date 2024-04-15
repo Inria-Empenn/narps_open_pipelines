@@ -31,13 +31,13 @@ class TestPipelinesTeam4SZ2:
         pipeline = PipelineTeam4SZ2()
 
         # 1 - check the parameters
-        assert pipeline.fwhm == 6.0
+        assert pipeline.fwhm == 5.0
         assert pipeline.team_id == '4SZ2'
 
         # 2 - check workflows
         assert pipeline.get_preprocessing() is None
         assert isinstance(pipeline.get_run_level_analysis(), Workflow)
-        assert isinstance(pipeline.get_subject_level_analysis(), Workflow)
+        assert pipeline.get_subject_level_analysis() is None
         group_level = pipeline.get_group_level_analysis()
         assert len(group_level) == 3
         for sub_workflow in group_level:
@@ -52,11 +52,11 @@ class TestPipelinesTeam4SZ2:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*1*2*4, 4*2*1 + 2*1, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*4*1*4, 0, 8*2*2 + 4*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*4*2*4, 4*2*4 + 2*4, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*4*4*4, 0, 8*2*2 + 4*2, 18])
 
     @staticmethod
     @mark.unit_test
@@ -72,7 +72,7 @@ class TestPipelinesTeam4SZ2:
         # Compare bunches to expected
         bunch = info_missed[0]
         assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['trial', 'gain', 'loss']
+        assert bunch.conditions == ['gain', 'loss']
         helpers.compare_float_2d_arrays(bunch.onsets, [
             [4.071, 11.834, 19.535, 27.535, 36.435],
             [4.071, 11.834, 19.535, 27.535, 36.435]

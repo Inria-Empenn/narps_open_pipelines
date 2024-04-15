@@ -12,7 +12,7 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     IsotropicSmooth, Level1Design, FEATModel,
     L2Model, Merge, FLAMEO, FILMGLS, MultipleRegressDesign,
-    FSLCommand, Randomise
+    FSLCommand, Cluster
     )
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl.maths import MultiImageMaths
@@ -73,9 +73,9 @@ class PipelineTeam4SZ2(Pipeline):
 
         return [
             Bunch(
-                conditions = ['gain', 'loss', 'gain_derivative', 'loss_derivative'],
-                onsets = [onsets] * 4,
-                durations = [durations] * 4,
+                conditions = ['gain', 'loss'],
+                onsets = [onsets] * 2,
+                durations = [durations] * 2,
                 amplitudes = [amplitudes_gain, amplitudes_loss]
                 )
             ]
@@ -298,7 +298,7 @@ class PipelineTeam4SZ2(Pipeline):
         group_level.connect(information_source, 'contrast_id', select_files, 'contrast_id')
 
         # Function Node elements_in_string
-        #   Get contrast of parameter estimates (cope) for these subjects
+        #   Get contrast of parameter estimates (cope) for subjects in a given group
         # Note : using a MapNode with elements_in_string requires using clean_list to remove
         #   None values from the out_list
         get_copes = MapNode(Function(
@@ -311,7 +311,7 @@ class PipelineTeam4SZ2(Pipeline):
         group_level.connect(select_files, 'cope', get_copes, 'input_str')
 
         # Function Node elements_in_string
-        #   Get variance of the estimated copes (varcope) for these subjects
+        #   Get variance of the estimated copes (varcope) for subjects in a given group
         # Note : using a MapNode with elements_in_string requires using clean_list to remove
         #   None values from the out_list
         get_varcopes = MapNode(Function(
@@ -322,6 +322,19 @@ class PipelineTeam4SZ2(Pipeline):
             name = 'get_varcopes', iterfield = 'input_str'
         )
         group_level.connect(select_files, 'varcope', get_varcopes, 'input_str')
+
+        # Function Node elements_in_string
+        #   Get masks for subjects in a given group
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_masks = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_masks', iterfield = 'input_str'
+        )
+        group_level.connect(select_files, 'masks', get_masks, 'input_str')
 
         # Merge Node - Merge cope files
         merge_copes = Node(Merge(), name = 'merge_copes')
@@ -337,7 +350,7 @@ class PipelineTeam4SZ2(Pipeline):
         split_masks = Node(Split(), name = 'split_masks')
         split_masks.inputs.splits = [1, len(self.subject_list) - 1]
         split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        group_level.connect(select_files, 'masks', split_masks, 'inlist')
+        group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
 
         # MultiImageMaths Node - Create a subject mask by
         #   computing the intersection of all run masks.
@@ -360,8 +373,14 @@ class PipelineTeam4SZ2(Pipeline):
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
 
         # Cluster Node - Perform clustering on statistical output
-        cluster = Node(Cluster(), name = 'cluster')
-        # TODO : add parameters
+        cluster = MapNode(
+            Cluster(),
+            name = 'cluster',
+            iterfield = ['in_file', 'cope_file'], 
+            synchronize = True
+            )
+        cluster.inputs.threshold = 2.3
+        cluster.inputs.out_threshold_file = True
         group_level.connect(estimate_model, 'zstats', cluster, 'in_file')
         group_level.connect(estimate_model, 'copes', cluster, 'cope_file')
 
@@ -372,10 +391,8 @@ class PipelineTeam4SZ2(Pipeline):
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats')
         group_level.connect(estimate_model, 'tstats', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
-        group_level.connect(randomise,'t_corrected_p_files', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
-        group_level.connect(randomise,'t_p_files', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_p_files')
+        group_level.connect(cluster,'threshold_file', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@threshold_file')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
@@ -396,6 +413,7 @@ class PipelineTeam4SZ2(Pipeline):
             get_group_subjects.inputs.list_2 = self.subject_list
             group_level.connect(get_group_subjects, 'out_list', get_copes, 'elements')
             group_level.connect(get_group_subjects, 'out_list', get_varcopes, 'elements')
+            group_level.connect(get_group_subjects, 'out_list', get_masks, 'elements')
 
             # Function Node get_one_sample_t_test_regressors
             #   Get regressors in the equalRange and equalIndifference method case
@@ -416,6 +434,7 @@ class PipelineTeam4SZ2(Pipeline):
             #   Indeed the SelectFiles node asks for all (*) subjects available
             get_copes.inputs.elements = self.subject_list
             get_varcopes.inputs.elements = self.subject_list
+            get_masks.inputs.elements = self.subject_list
 
             # Setup a two sample t-test
             specify_model.inputs.contrasts = [
@@ -481,7 +500,7 @@ class PipelineTeam4SZ2(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
+                '_cluster0/zstat1_pval.nii.gz',
                 '_cluster0/zstat1_threshold.nii.gz',
                 '_cluster1/zstat2_pval.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
