@@ -278,7 +278,7 @@ class PipelineTeamO6R6(Pipeline):
                 'run_level_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
                 'varcope{contrast_id}.nii.gz'),
             'masks' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory= self.directories.results_dir
