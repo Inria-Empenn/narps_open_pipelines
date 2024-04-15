@@ -178,6 +178,8 @@ def main():
         help='run the first levels only (preprocessing + subjects + runs)')
     parser.add_argument('-c', '--check', action='store_true', required=False,
         help='check pipeline outputs (runner is not launched)')
+    parser.add_argument('-e', '--exclusions', action='store_true', required=False,
+        help='check pipeline outputs (runner is not launched)')
     arguments = parser.parse_args()
 
     # Initialize a PipelineRunner
