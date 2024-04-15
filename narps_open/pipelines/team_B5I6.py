@@ -384,8 +384,6 @@ class PipelineTeamB5I6(Pipeline):
         # DataSink Node - store the wanted results in the wanted directory
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        subject_level.connect(
-            mask_intersection, 'out_file', data_sink, 'subject_level_analysis.@mask')
         subject_level.connect(estimate_model, 'zstats', data_sink, 'subject_level_analysis.@stats')
         subject_level.connect(
             estimate_model, 'tstats', data_sink, 'subject_level_analysis.@tstats')
@@ -409,19 +407,6 @@ class PipelineTeamB5I6(Pipeline):
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
             )
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
-
-        parameters = {
-            'contrast_id' : self.contrast_list,
-            'subject_id' : self.subject_list,
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
-            )
-        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
 
         return return_list
@@ -519,9 +504,8 @@ class PipelineTeamB5I6(Pipeline):
             'varcope' : join(self.directories.output_dir,
                 'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_*',
                 'varcope1.nii.gz'),
-            'masks': join(self.directories.output_dir,
-                'subject_level_analysis', '_contrast_id_1_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
+            'masks' : join('derivatives', 'fmriprep', 'sub-*', 'func',
+                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
@@ -553,6 +537,19 @@ class PipelineTeamB5I6(Pipeline):
         )
         group_level.connect(select_files, 'varcope', get_varcopes, 'input_str')
 
+        # Function Node elements_in_string
+        #   Get masks for these subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_masks = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_masks', iterfield = 'input_str'
+        )
+        group_level.connect(select_files, 'masks', get_masks, 'input_str')
+
         # Merge Node - Merge cope files
         merge_copes = Node(Merge(), name = 'merge_copes')
         merge_copes.inputs.dimension = 't'
@@ -565,14 +562,14 @@ class PipelineTeamB5I6(Pipeline):
 
         # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
         split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.subject_list) - 1]
+        split_masks.inputs.splits = [1, len(self.subject_list * self.run_list) - 1]
         split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        group_level.connect(select_files, 'masks', split_masks, 'inlist')
+        group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
 
         # MultiImageMaths Node - Create a subject mask by
         #   computing the intersection of all run masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.subject_list) - 1)
+        mask_intersection.inputs.op_string = '-add %s ' * (len(self.subject_list) - 1) + ''
         group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
         group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
 
@@ -633,6 +630,7 @@ class PipelineTeamB5I6(Pipeline):
             get_group_subjects.inputs.list_2 = self.subject_list
             group_level.connect(get_group_subjects, 'out_list', get_copes, 'elements')
             group_level.connect(get_group_subjects, 'out_list', get_varcopes, 'elements')
+            group_level.connect(get_group_subjects, 'out_list', get_masks, 'elements')
 
             # Function Node get_one_sample_t_test_regressors
             #   Get regressors in the equalRange and equalIndifference method case
@@ -653,6 +651,7 @@ class PipelineTeamB5I6(Pipeline):
             #   Indeed the SelectFiles node asks for all (*) subjects available
             get_copes.inputs.elements = self.subject_list
             get_varcopes.inputs.elements = self.subject_list
+            get_masks.inputs.elements = self.subject_list
 
             # Setup a two sample t-test
             specify_model.inputs.contrasts = [
