@@ -562,14 +562,16 @@ class PipelineTeamB5I6(Pipeline):
 
         # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
         split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.subject_list * self.run_list) - 1]
+        split_masks.inputs.splits = [1, (len(self.subject_list) * len(self.run_list)) - 1]
         split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
         group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
 
         # MultiImageMaths Node - Create a subject mask by
-        #   computing the intersection of all run masks.
+        #   computing the intersection of all run masks
+        #   (all voxels included in at least 80% of masks across all runs).
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-add %s ' * (len(self.subject_list) - 1) + ''
+        mask_intersection.inputs.op_string = '-add %s ' * (len(self.subject_list) - 1)\
+            + f' -thr {len(self.subject_list) * len(self.run_list) * 0.8} -bin'
         group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
         group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
 
