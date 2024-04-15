@@ -137,7 +137,7 @@ class PipelineTeam4SZ2(Pipeline):
 
         # Level1Design Node - Generate files for run level computation
         model_design = Node(Level1Design(), name = 'model_design')
-        model_design.inputs.bases = {'dgamma' : {'derivs' : False }}
+        model_design.inputs.bases = {'dgamma' : {'derivs' : True }}
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
         model_design.inputs.contrasts = self.run_level_contrasts
@@ -194,123 +194,8 @@ class PipelineTeam4SZ2(Pipeline):
             for parameter_values in parameter_sets for template in templates]
 
     def get_subject_level_analysis(self):
-        """
-        Create the subject level analysis workflow.
-
-        Returns:
-        - subject_level_analysis : nipype.WorkFlow
-        """
-        # Second level (single-subject, mean of all four scans) analysis workflow.
-        subject_level = Workflow(
-            base_dir = self.directories.working_dir,
-            name = 'subject_level_analysis')
-
-        # Infosource Node - To iterate on subject and runs
-        information_source = Node(IdentityInterface(
-            fields = ['subject_id', 'contrast_id']),
-            name = 'information_source')
-        information_source.iterables = [
-            ('subject_id', self.subject_list),
-            ('contrast_id', self.contrast_list)
-            ]
-
-        # SelectFiles node - to select necessary files
-        templates = {
-            'cope' : join(self.directories.output_dir,
-                'run_level_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
-                'cope{contrast_id}.nii.gz'),
-            'varcope' : join(self.directories.output_dir,
-                'run_level_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
-                'varcope{contrast_id}.nii.gz'),
-            'masks' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
-        }
-        select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory= self.directories.results_dir
-        subject_level.connect(information_source, 'subject_id', select_files, 'subject_id')
-        subject_level.connect(information_source, 'contrast_id', select_files, 'contrast_id')
-
-        # Merge Node - Merge copes files for each subject
-        merge_copes = Node(Merge(), name = 'merge_copes')
-        merge_copes.inputs.dimension = 't'
-        subject_level.connect(select_files, 'cope', merge_copes, 'in_files')
-
-        # Merge Node - Merge varcopes files for each subject
-        merge_varcopes = Node(Merge(), name = 'merge_varcopes')
-        merge_varcopes.inputs.dimension = 't'
-        subject_level.connect(select_files, 'varcope', merge_varcopes, 'in_files')
-
-        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
-        split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.run_list) - 1]
-        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        subject_level.connect(select_files, 'masks', split_masks, 'inlist')
-
-        # MultiImageMaths Node - Create a subject mask by
-        #   computing the intersection of all run masks.
-        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.run_list) - 1)
-        subject_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
-        subject_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
-
-        # L2Model Node - Generate subject specific second level model
-        generate_model = Node(L2Model(), name = 'generate_model')
-        generate_model.inputs.num_copes = len(self.run_list)
-
-        # FLAMEO Node - Estimate model
-        estimate_model = Node(FLAMEO(), name = 'estimate_model')
-        estimate_model.inputs.run_mode = 'flame1'
-        subject_level.connect(mask_intersection, 'out_file', estimate_model,  'mask_file')
-        subject_level.connect(merge_copes, 'merged_file', estimate_model, 'cope_file')
-        subject_level.connect(merge_varcopes, 'merged_file', estimate_model, 'var_cope_file')
-        subject_level.connect(generate_model, 'design_mat', estimate_model, 'design_file')
-        subject_level.connect(generate_model, 'design_con', estimate_model, 't_con_file')
-        subject_level.connect(generate_model, 'design_grp', estimate_model, 'cov_split_file')
-
-        # DataSink Node - store the wanted results in the wanted directory
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
-        subject_level.connect(
-            mask_intersection, 'out_file', data_sink, 'subject_level_analysis.@mask')
-        subject_level.connect(estimate_model, 'zstats', data_sink, 'subject_level_analysis.@stats')
-        subject_level.connect(
-            estimate_model, 'tstats', data_sink, 'subject_level_analysis.@tstats')
-        subject_level.connect(estimate_model, 'copes', data_sink, 'subject_level_analysis.@copes')
-        subject_level.connect(
-            estimate_model, 'var_copes', data_sink, 'subject_level_analysis.@varcopes')
-
-        return subject_level
-
-    def get_subject_level_outputs(self):
-        """ Return the names of the files the subject level analysis is supposed to generate. """
-
-        parameters = {
-            'contrast_id' : self.contrast_list,
-            'subject_id' : self.subject_list,
-            'file' : ['cope1.nii.gz', 'tstat1.nii.gz', 'varcope1.nii.gz', 'zstat1.nii.gz']
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}','{file}'
-            )
-        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
-
-        parameters = {
-            'contrast_id' : self.contrast_list,
-            'subject_id' : self.subject_list,
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
-            )
-        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
-
-        return return_list
+        """ No subject level analysis has been done by team 4SZ2 """
+        return None
 
     def get_one_sample_t_test_regressors(subject_list: list) -> dict:
         """
@@ -400,14 +285,13 @@ class PipelineTeam4SZ2(Pipeline):
         # SelectFiles Node - select necessary files
         templates = {
             'cope' : join(self.directories.output_dir,
-                'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_*',
-                'cope1.nii.gz'),
+                'run_level_analysis', '_run_id_*_subject_id_*', 'results',
+                'cope{contrast_id}.nii.gz'),
             'varcope' : join(self.directories.output_dir,
-                'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_*',
-                'varcope1.nii.gz'),
-            'masks': join(self.directories.output_dir,
-                'subject_level_analysis', '_contrast_id_1_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
+                'run_level_analysis', '_run_id_*_subject_id_*', 'results',
+                'varcope{contrast_id}.nii.gz'),
+            'masks': join('derivatives', 'fmriprep', 'sub-*', 'func',
+                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
