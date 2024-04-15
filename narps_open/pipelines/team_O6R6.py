@@ -171,7 +171,7 @@ class PipelineTeamO6R6(Pipeline):
             ),
             name = 'subject_group'
         )
-        run_level.connect(information_source, 'subject_id', subject_group, 'input_str')
+        run_level.connect(information_source, 'subject_id', subject_group, 'subject_id')
 
         # Get Subject Info - get subject specific condition information
         subject_information = Node(Function(
