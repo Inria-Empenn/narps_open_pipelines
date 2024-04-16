@@ -214,6 +214,7 @@ class PipelineTeam4SZ2(Pipeline):
         equal_range_ids: list,
         equal_indifference_ids: list,
         subject_list: list,
+        run_list: list
         ) -> dict:
         """
         Create dictionary of regressors for two sample t-test group analysis.
@@ -222,19 +223,24 @@ class PipelineTeam4SZ2(Pipeline):
             - equal_range_ids: ids of subjects in equal range group
             - equal_indifference_ids: ids of subjects in equal indifference group
             - subject_list: ids of subject for which to do the analysis
-
+            - run_list: ids of runs for which to do the analysis
         Returns:
             - regressors, dict: containing named lists of regressors.
             - groups, list: group identifiers to distinguish groups in FSL analysis.
         """
 
-        # Create 2 lists containing n_sub values which are
+        # Create 2 lists containing a value for each run, which is
         #  * 1 if the participant is on the group
         #  * 0 otherwise
-        equal_range_regressors = [1 if i in equal_range_ids else 0 for i in subject_list]
-        equal_indifference_regressors = [
-            1 if i in equal_indifference_ids else 0 for i in subject_list
-            ]
+        equal_range_regressors = []
+        equal_indifference_regressors = []
+
+        for subject_id in subject_list:
+            value_er = 1 if subject_id in equal_range_ids else 0
+            value_ei = 1 if subject_id in equal_indifference_ids else 0
+            for _ in run_list:
+                equal_range_regressors.append(value_er)
+                equal_indifference_regressors.append(value_ei)
 
         # Create regressors output : a dict with the two list
         regressors = dict(
@@ -268,8 +274,13 @@ class PipelineTeam4SZ2(Pipeline):
         Returns:
             - group_level: nipype.WorkFlow
         """
-        # Compute the number of participants used to do the analysis
+        # Compute the number of participants in the analysis
         nb_subjects = len(self.subject_list)
+
+        # Compute the number of participants in the group
+        nb_subjects_in_group = nb_subjects
+        if method in ['equalIndifference', 'equalRange']:
+            nb_subjects_in_group = len([s for s in self.subject_list if s in get_group(method)])
 
         # Declare the workflow
         group_level = Workflow(
@@ -294,8 +305,12 @@ class PipelineTeam4SZ2(Pipeline):
                 'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.results_dir
+        select_files.inputs.base_directory = self.directories.dataset_dir
         group_level.connect(information_source, 'contrast_id', select_files, 'contrast_id')
+
+        # Create a function to complete the subject ids out from the get_*_subjects node
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
+        complete_sub_ids = lambda l : [f'sub-{a}' for a in l]
 
         # Function Node elements_in_string
         #   Get contrast of parameter estimates (cope) for subjects in a given group
@@ -348,14 +363,15 @@ class PipelineTeam4SZ2(Pipeline):
 
         # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
         split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.subject_list) - 1]
+        split_masks.inputs.splits = [1, (nb_subjects_in_group * len(self.run_list)) - 1]
         split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
         group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
 
         # MultiImageMaths Node - Create a subject mask by
         #   computing the intersection of all run masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.subject_list) - 1)
+        mask_intersection.inputs.op_string = '-mul %s ' * \
+            ((nb_subjects_in_group * len(self.run_list)) - 1)
         group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
         group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
 
@@ -411,9 +427,12 @@ class PipelineTeam4SZ2(Pipeline):
             )
             get_group_subjects.inputs.list_1 = get_group(method)
             get_group_subjects.inputs.list_2 = self.subject_list
-            group_level.connect(get_group_subjects, 'out_list', get_copes, 'elements')
-            group_level.connect(get_group_subjects, 'out_list', get_varcopes, 'elements')
-            group_level.connect(get_group_subjects, 'out_list', get_masks, 'elements')
+            group_level.connect(
+                get_group_subjects, ('out_list', complete_subject_ids), get_copes, 'elements')
+            group_level.connect(
+                get_group_subjects, ('out_list', complete_subject_ids), get_varcopes, 'elements')
+            group_level.connect(
+                get_group_subjects, ('out_list', complete_sub_ids), get_masks, 'elements')
 
             # Function Node get_one_sample_t_test_regressors
             #   Get regressors in the equalRange and equalIndifference method case
@@ -425,16 +444,17 @@ class PipelineTeam4SZ2(Pipeline):
                 ),
                 name = 'regressors_one_sample',
             )
-            group_level.connect(get_group_subjects, 'out_list', regressors_one_sample, 'subject_list')
+            regressors_one_sample.inputs.subject_list = range(
+                nb_subjects_in_group * len(self.run_list))
             group_level.connect(regressors_one_sample, 'regressors', specify_model, 'regressors')
 
         elif method == 'groupComp':
 
             # Select copes and varcopes corresponding to the selected subjects
             #   Indeed the SelectFiles node asks for all (*) subjects available
-            get_copes.inputs.elements = self.subject_list
-            get_varcopes.inputs.elements = self.subject_list
-            get_masks.inputs.elements = self.subject_list
+            get_copes.inputs.elements = complete_subject_ids(self.subject_list)
+            get_varcopes.inputs.elements = complete_subject_ids(self.subject_list)
+            get_masks.inputs.elements = complete_sub_ids(self.subject_list)
 
             # Setup a two sample t-test
             specify_model.inputs.contrasts = [
@@ -474,12 +494,14 @@ class PipelineTeam4SZ2(Pipeline):
                         'equal_range_ids',
                         'equal_indifference_ids',
                         'subject_list',
+                        'run_list'
                     ],
                     output_names = ['regressors', 'groups']
                 ),
                 name = 'regressors_two_sample',
             )
             regressors_two_sample.inputs.subject_list = self.subject_list
+            regressors_two_sample.inputs.run_list = self.run_list
 
             # Add missing connections
             group_level.connect(
@@ -500,9 +522,7 @@ class PipelineTeam4SZ2(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz',
                 '_cluster0/zstat1_threshold.nii.gz',
-                '_cluster1/zstat2_pval.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
@@ -524,7 +544,6 @@ class PipelineTeam4SZ2(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
                 '_cluster0/zstat1_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
@@ -564,13 +583,13 @@ class PipelineTeam4SZ2(Pipeline):
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',

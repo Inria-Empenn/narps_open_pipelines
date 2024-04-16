@@ -52,11 +52,11 @@ class TestPipelinesTeam4SZ2:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 2*4*1*4, 0, 8*2*2 + 4*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*4*1*4, 0, 6*2*2 + 3*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 2*4*4*4, 0, 8*2*2 + 4*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 2*4*4*4, 0, 6*2*2 + 3*2, 18])
 
     @staticmethod
     @mark.unit_test
@@ -85,6 +85,31 @@ class TestPipelinesTeam4SZ2:
             [14.0, 34.0, 38.0, 10.0, 16.0],
             [6.0, 14.0, 19.0, 15.0, 17.0]
             ])
+
+    @staticmethod
+    @mark.unit_test
+    def test_one_sample_t_test_regressors():
+        """ Test the get_one_sample_t_test_regressors method """
+
+        result = PipelineTeam4SZ2.get_one_sample_t_test_regressors(['001', '002', '003', '004'])
+        assert result == {'group_mean' : [1]*4}
+
+    @staticmethod
+    @mark.unit_test
+    def test_two_sample_t_test_regressors():
+        """ Test the get_two_sample_t_test_regressors method """
+
+        result_1, result_2 = PipelineTeam4SZ2.get_two_sample_t_test_regressors(
+            ['001', '003'], # equal_range_ids
+            ['002', '004'], # equal_indifference_ids
+            ['001', '002', '003', '004'], # subject_list
+            ['01', '02'] # run_list
+            )
+        assert result_1 == {
+            'equalRange' : [1, 1, 0, 0, 1, 1, 0, 0],
+            'equalIndifference' : [0, 0, 1, 1, 0, 0, 1, 1]
+            }
+        assert result_2 == [1, 1, 2, 2, 1, 1, 2, 2]
 
     @staticmethod
     @mark.pipeline_test
