@@ -19,8 +19,8 @@ def main():
     parser = ArgumentParser(description = 'Compare reproduced files to original results.')
     parser.add_argument('-t', '--team', type = str, required = True,
         help = 'the team ID', choices = get_implemented_pipelines())
-    parser.add_argument('-s', '--subjects', type = int, required = True,
-        help = 'number of subjects in the group analysis')
+    subjects.add_argument('-n', '--nsubjects', type=str, required = True,
+        help='the number of subjects to be selected')
     arguments = parser.parse_args()
 
     # Initialize pipeline
@@ -29,7 +29,7 @@ def main():
     runner.pipeline.directories.results_dir = Configuration()['directories']['reproduced_results']
     runner.pipeline.directories.set_output_dir_with_team_id(arguments.team)
     runner.pipeline.directories.set_working_dir_with_team_id(arguments.team)
-    runner.nb_subjects = arguments.subjects
+    runner.nb_subjects = arguments.nsubjects
 
     # Indices and keys to the unthresholded maps
     indices = list(range(1, 18, 2))
