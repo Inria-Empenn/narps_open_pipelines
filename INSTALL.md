@@ -95,6 +95,7 @@ Finally, you are able to use the scripts of the project :
 
 * `narps_open_runner`: run pipelines
 * `narps_open_tester`: run a pipeline and test its results against original ones from the team
+* `narps_open_correlations`: compute and display correlation between results and original ones from the team
 * `narps_description`: get the textual description made by a team
 * `narps_results`: download the original results from teams
 * `narps_open_status`: get status information about the development process of the pipelines
@@ -106,6 +107,10 @@ narps_open_runner -t 2T6S -n 40
 # Run the pipeline for team 08MQ, compare results with original ones,
 #   and produces a report with correlation values.
 narps_open_tester -t 08MQ
+
+# Compute the correlation values between results of 2T6S reproduction on 60 subjects with original ones
+#   WARNING : 2T6S must have been previously computed with a group of 60 subjects
+narps_open_correlations -t 2T6S -n 60
 
 # Get the description of team C88N in markdown formatting
 narps_description -t C88N --md
@@ -121,6 +126,7 @@ narps_open_status --json
 > For further information about these command line tools, read the corresponding documentation pages.
 > * `narps_open_runner` : [docs/running.md](docs/running.md)
 > * `narps_open_tester` : [docs/testing.md](docs/testing.md#command-line-tool)
+> * `narps_open_correlations` : [docs/correlation.md](docs/correlation.md#command-line-tool)
 > * `narps_description` : [docs/description.md](docs/description.md)
 > * `narps_results` : [docs/data.md](docs/data.md#results-from-narps-teams)
 > * `narps_open_status` : [docs/status.md](docs/status.md)
