@@ -383,9 +383,13 @@ class PipelineTeamDC61(Pipeline):
             name = f'group_level_analysis_nsub_{nb_subjects}')
 
         # IDENTITY INTERFACE - Iterate over the list of subject-level contrasts
-        info_source = Node(IdentityInterface(fields=['contrast_id']),
+        info_source = Node(IdentityInterface(fields=['contrast_id', 'contrast_name']),
                           name = 'info_source')
-        info_source.iterables = [('contrast_id', self.contrast_list)]
+        info_source.iterables = [
+            ('contrast_id', self.contrast_list),
+            ('contrast_name', [c[0] for c in self.subject_level_contrasts])
+            ]
+        info_source.synchronize = True
 
         # SELECT FILES - Get files from subject-level analysis
         templates = {
@@ -395,7 +399,7 @@ class PipelineTeamDC61(Pipeline):
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.sort_filelist = True
         select_files.inputs.base_directory = self.directories.dataset_dir
-        group_level.connect(select_files, 'contrasts', select_files, 'contrast_id')
+        group_level.connect(info_source, 'contrast_id', select_files, 'contrast_id')
 
         # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
         #   If not complete, subject id '001' in search patterns
@@ -450,6 +454,7 @@ class PipelineTeamDC61(Pipeline):
             ),
             name = 'get_contrasts'
         )
+        group_level.connect(info_source, 'contrast_name', get_contrasts, 'subject_level_contrast')
 
         # ESTIMATE CONTRASTS - estimates simple group contrast
         contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
@@ -630,8 +635,10 @@ class PipelineTeamDC61(Pipeline):
 
         # Handle equalRange and equalIndifference
         parameters = {
-            'contrast_id': self.contrast_list,
-            'method': ['equalRange', 'equalIndifference'],
+            'contrast_dir': [
+                f'_contrast_id_{i}_contrast_name_{n[0]}' \
+                for i,n in zip(self.contrast_list, self.subject_level_contrasts)
+                ],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'SPM.mat',
                 'spmT_0001.nii', 'spmT_0002.nii',
@@ -643,8 +650,8 @@ class PipelineTeamDC61(Pipeline):
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_{nb_subjects}',
-            '_contrast_id_{contrast_id}',
+            'group_level_analysis_nsub_{nb_subjects}',
+            '{contrast_dir}',
             '{file}'
             )
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
