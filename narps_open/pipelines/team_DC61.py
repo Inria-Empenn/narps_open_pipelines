@@ -383,12 +383,9 @@ class PipelineTeamDC61(Pipeline):
             name = f'group_level_analysis_nsub_{nb_subjects}')
 
         # IDENTITY INTERFACE - Iterate over the list of subject-level contrasts
-        info_source = Node(IdentityInterface(fields=['contrast_id', 'contrast_name']),
+        info_source = Node(IdentityInterface(fields=['contrast_id']),
                           name = 'info_source')
-        info_source.iterables = [
-            ('contrast_id', self.contrast_list),
-            ('contrast_name', [c[0] for c in self.subject_level_contrasts])]
-        info_source.synchronize = True
+        info_source.iterables = [('contrast_id', self.contrast_list)]
 
         # SELECT FILES - Get files from subject-level analysis
         templates = {
@@ -398,6 +395,7 @@ class PipelineTeamDC61(Pipeline):
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.sort_filelist = True
         select_files.inputs.base_directory = self.directories.dataset_dir
+        group_level.connect(select_files, 'contrasts', select_files, 'contrast_id')
 
         # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
         #   If not complete, subject id '001' in search patterns
@@ -476,8 +474,6 @@ class PipelineTeamDC61(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect([
-            (model_estimate, data_sink, [
-                ('mask_image', f'{group_level.name}.@mask')]),
             (contrast_estimate, data_sink, [
                 ('spm_mat_file', f'{group_level.name}.@spm_mat'),
                 ('spmT_images', f'{group_level.name}.@T'),
@@ -619,8 +615,6 @@ class PipelineTeamDC61(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level_analysis.connect([
-            (model_estimate, data_sink, [
-                ('mask_image', f'{group_level_analysis.name}.@mask')]),
             (contrast_estimate, data_sink, [
                 ('spm_mat_file', f'{group_level_analysis.name}.@spm_mat'),
                 ('spmT_images', f'{group_level_analysis.name}.@T'),
@@ -639,7 +633,7 @@ class PipelineTeamDC61(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'con_0001.nii', 'con_0002.nii', 'SPM.mat',
                 'spmT_0001.nii', 'spmT_0002.nii',
                 join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
                 ],
@@ -661,7 +655,7 @@ class PipelineTeamDC61(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['groupComp'],
             'file': [
-                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii', 'spmT_0001_thr.nii'
+                'con_0001.nii', 'SPM.mat', 'spmT_0001.nii', 'spmT_0001_thr.nii'
                 ],
             'nb_subjects' : [str(len(self.subject_list))]
         }
