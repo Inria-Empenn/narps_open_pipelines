@@ -328,9 +328,11 @@ class PipelineTeamDC61(Pipeline):
             ]
 
         if subject_level_contrast == 'effect_of_loss':
+            range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
+            indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
             return [
-                ['loss_param_range', 'F', ['equalIndifference', 'equalRange'], [0, 1]],
-                ['loss_param_indiff', 'F', ['equalIndifference', 'equalRange'], [1, 0]]
+                ['loss_param_range_f', 'F', [range_con], [1]],
+                ['loss_param_indiff_f', 'F', [indiff_con], [1]]
             ]
 
         return []
