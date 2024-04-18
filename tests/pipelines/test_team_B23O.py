@@ -31,7 +31,6 @@ class TestPipelinesTeamB23O:
         pipeline = PipelineTeamB23O()
 
         # 1 - check the parameters
-        assert pipeline.fwhm == 5.0
         assert pipeline.team_id == 'B23O'
 
         # 2 - check workflows
@@ -52,11 +51,11 @@ class TestPipelinesTeamB23O:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*1, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*2*4*1, 4*2*1, 6*2*2 + 3*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*2*4*4, 4*2*4, 6*2*2 + 3*2, 18])
 
     @staticmethod
     @mark.unit_test
@@ -65,53 +64,28 @@ class TestPipelinesTeamB23O:
 
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
-        test_file_2 = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'events_resp.tsv')
 
         # Prepare several scenarii
-        info_missed = PipelineTeamB23O.get_subject_information(test_file)
-        info_no_missed = PipelineTeamB23O.get_subject_information(test_file_2)
+        info = PipelineTeamB23O.get_subject_information(test_file)
 
         # Compare bunches to expected
-        bunch = info_missed[0]
-        assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['trial', 'gain', 'loss', 'missed']
-        helpers.compare_float_2d_arrays(bunch.onsets, [
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435],
-            [19.535]
-            ])
-        helpers.compare_float_2d_arrays(bunch.durations, [
-            [4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0],
-            [4.0]
-            ])
-        helpers.compare_float_2d_arrays(bunch.amplitudes, [
-            [1.0, 1.0, 1.0, 1.0],
-            [-4.5, 15.5, -8.5, -2.5],
-            [-7.0,  1.0,  2.0,  4.0],
-            [1.0]
-            ])
-
-        bunch = info_no_missed[0]
+        bunch = info[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['trial', 'gain', 'loss']
         helpers.compare_float_2d_arrays(bunch.onsets, [
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435],
-            [4.071, 11.834, 27.535, 36.435]
+            [4.071, 11.834, 19.535, 27.535, 36.435],
+            [4.071, 11.834, 19.535, 27.535, 36.435],
+            [4.071, 11.834, 19.535, 27.535, 36.435],
             ])
         helpers.compare_float_2d_arrays(bunch.durations, [
-            [4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0],
-            [4.0, 4.0, 4.0, 4.0]
+            [4.0, 4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0, 4.0],
+            [4.0, 4.0, 4.0, 4.0, 4.0],
             ])
         helpers.compare_float_2d_arrays(bunch.amplitudes, [
-            [1.0, 1.0, 1.0, 1.0],
-            [-4.5, 15.5, -8.5, -2.5],
-            [-7.0,  1.0,  2.0,  4.0]
+            [1.0, 1.0, 1.0, 1.0, 1.0],
+            [14.0, 34.0, 38.0, 10.0, 16.0],
+            [6.0, 14.0, 19.0, 15.0, 17.0],
             ])
 
     @staticmethod

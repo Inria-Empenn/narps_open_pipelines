@@ -10,19 +10,17 @@ from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
-    IsotropicSmooth, Level1Design, FEATModel,
+    Level1Design, FEATModel,
     L2Model, Merge, FLAMEO, FILMGLS, MultipleRegressDesign,
     FSLCommand, Randomise
     )
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces.fsl.maths import MultiImageMaths
 
-from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
 from narps_open.data.participants import get_group
 from narps_open.core.common import list_intersection, elements_in_string, clean_list
-from narps_open.core.interfaces import InterfaceFactory
 
 # Setup FSL
 FSLCommand.set_default_output_type('NIFTI_GZ')
@@ -67,11 +65,11 @@ class PipelineTeamB23O(Pipeline):
 
             for line in file:
                 info = line.strip().split()
-                    onsets_trial.append(float(info[0]))
-                    durations_trial.append(float(info[1]))
-                    amplitudes_trial.append(1.0)
-                    amplitudes_gain.append(float(info[2]))
-                    amplitudes_loss.append(float(info[3]))
+                onsets_trial.append(float(info[0]))
+                durations_trial.append(float(info[1]))
+                amplitudes_trial.append(1.0)
+                amplitudes_gain.append(float(info[2]))
+                amplitudes_loss.append(float(info[3]))
 
         # Add missed trials if any
         conditions = ['trial', 'gain', 'loss']
@@ -103,52 +101,21 @@ class PipelineTeamB23O(Pipeline):
         from os.path import abspath
 
         from pandas import read_csv, DataFrame
-        from numpy import array, transpose, insert, diff, square, nanpercentile, c_
+        from numpy import array, transpose
 
         data_frame = read_csv(filepath, sep = '\t', header=0)
-        motion_regressors = array([
-            # Motion regressors
+        retained_confounds = DataFrame(transpose(array([
+            data_frame['CSF'], data_frame['WhiteMatter'], data_frame['GlobalSignal'],
+            data_frame['tCompCor00'], data_frame['tCompCor01'], data_frame['tCompCor02'],
+            data_frame['tCompCor03'], data_frame['tCompCor04'], data_frame['tCompCor05'],
+            data_frame['aCompCor00'], data_frame['aCompCor01'], data_frame['aCompCor02'],
+            data_frame['aCompCor03'], data_frame['aCompCor04'], data_frame['aCompCor05'],
+            data_frame['Cosine00'], data_frame['Cosine01'], data_frame['Cosine02'],
+            data_frame['Cosine03'], data_frame['Cosine04'], data_frame['Cosine05'],
+            data_frame['NonSteadyStateOutlier00'],
             data_frame['X'], data_frame['Y'], data_frame['Z'],
-            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ'],
-            # Derivatives
-            insert(diff(data_frame['X']), 0, 0),
-            insert(diff(data_frame['Y']), 0, 0),
-            insert(diff(data_frame['Z']), 0, 0),
-            insert(diff(data_frame['RotX']), 0, 0),
-            insert(diff(data_frame['RotY']), 0, 0),
-            insert(diff(data_frame['RotZ']), 0, 0),
-            # Squared motion regressors
-            square(data_frame['X']), square(data_frame['Y']), square(data_frame['Z']),
-            square(data_frame['RotX']), square(data_frame['RotY']), square(data_frame['RotZ']),
-            # Squared derivatives
-            insert(square(diff(data_frame['X'])), 0, 0),
-            insert(square(diff(data_frame['Y'])), 0, 0),
-            insert(square(diff(data_frame['Z'])), 0, 0),
-            insert(square(diff(data_frame['RotX'])), 0, 0),
-            insert(square(diff(data_frame['RotY'])), 0, 0),
-            insert(square(diff(data_frame['RotZ'])), 0, 0),
-        ])
-
-        # Compute outliers of `non-stdDVARS`
-        dvars_outliers = array(data_frame['non-stdDVARS'])
-        percentile_75 = nanpercentile(dvars_outliers, 75)
-        interquartile_range = percentile_75 - nanpercentile(dvars_outliers, 25)
-        dvars_outliers = (dvars_outliers > (percentile_75 + 1.5 * interquartile_range)).astype(int)
-
-        # Compute outliers of `FramewiseDisplacement`
-        fd_outliers = array(data_frame['FramewiseDisplacement'])
-        percentile_75 = nanpercentile(fd_outliers, 75)
-        interquartile_range = percentile_75 - nanpercentile(fd_outliers, 25)
-        fd_outliers = (fd_outliers > (percentile_75 + 1.5 * interquartile_range)).astype(int)
-
-        # Build an outlier regressor
-        outlier_regressor = fd_outliers | dvars_outliers
-
-        # Add the regressor if any outliers in the run
-        if outlier_regressor.any():
-            retained_confounds = DataFrame(c_[transpose(motion_regressors), outlier_regressor])
-        else :
-            retained_confounds = DataFrame(transpose(motion_regressors))
+            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']
+        ])))
 
         # Write confounds to a file
         confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
@@ -194,11 +161,6 @@ class PipelineTeamB23O(Pipeline):
         run_level.connect(information_source, 'subject_id', select_files, 'subject_id')
         run_level.connect(information_source, 'run_id', select_files, 'run_id')
 
-        # IsotropicSmooth Node - Smoothing data
-        smoothing_func = Node(IsotropicSmooth(), name = 'smoothing_func')
-        smoothing_func.inputs.fwhm = self.fwhm
-        run_level.connect(select_files, 'func', smoothing_func, 'in_file')
-
         # Get Subject Info - get subject specific condition information
         subject_information = Node(Function(
             function = self.get_subject_information,
@@ -223,12 +185,12 @@ class PipelineTeamB23O(Pipeline):
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
         run_level.connect(confounds, 'confounds_file', specify_model, 'realignment_parameters')
-        run_level.connect(smoothing_func, 'out_file', specify_model, 'functional_runs')
+        run_level.connect(select_files, 'func', specify_model, 'functional_runs')
         run_level.connect(subject_information, 'subject_info', specify_model, 'subject_info')
 
         # Level1Design Node - Generate files for run level computation
         model_design = Node(Level1Design(), name = 'model_design')
-        model_design.inputs.bases = {'dgamma' : {'derivs' : False }}
+        model_design.inputs.bases = {'dgamma' : {'derivs' : True}}
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
         model_design.inputs.contrasts = self.run_level_contrasts
@@ -241,7 +203,7 @@ class PipelineTeamB23O(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name='model_estimate')
-        run_level.connect(smoothing_func, 'out_file', model_estimate, 'in_file')
+        run_level.connect(select_files, 'func', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
 
@@ -253,14 +215,6 @@ class PipelineTeamB23O(Pipeline):
             model_generation, 'design_file', data_sink, 'run_level_analysis.@design_file')
         run_level.connect(
             model_generation, 'design_image', data_sink, 'run_level_analysis.@design_img')
-
-        # Remove large files, if requested
-        if Configuration()['pipelines']['remove_unused_data']:
-            remove_smooth = Node(
-                InterfaceFactory.create('remove_parent_directory'),
-                name = 'remove_smooth')
-            run_level.connect(data_sink, 'out_file', remove_smooth, '_')
-            run_level.connect(smoothing_func, 'out_file', remove_smooth, 'file_name')
 
         return run_level
 
@@ -571,7 +525,7 @@ class PipelineTeamB23O(Pipeline):
             iterfield = ['in_file', 'cope_file'],
             synchronize = True)
         randomise.inputs.tfce = True
-        randomise.inputs.num_perm = 10000
+        randomise.inputs.num_perm = 5000
         randomise.inputs.c_thresh = 0.05
         group_level.connect(mask_intersection, 'out_file', randomise, 'mask')
         group_level.connect(merge_copes, 'merged_file', randomise, 'in_file')
@@ -587,8 +541,8 @@ class PipelineTeamB23O(Pipeline):
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
         group_level.connect(randomise,'t_corrected_p_files', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
-        group_level.connect(randomise,'t_p_files', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_p_files')
+        group_level.connect(randomise,'tstat_files', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstat_files')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
@@ -696,10 +650,8 @@ class PipelineTeamB23O(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
-                '_cluster1/zstat2_pval.nii.gz',
-                '_cluster1/zstat2_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tfce_corrp_tstat2.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
@@ -720,8 +672,7 @@ class PipelineTeamB23O(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
                 ]
@@ -744,39 +695,39 @@ class PipelineTeamB23O(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz')
         ]
