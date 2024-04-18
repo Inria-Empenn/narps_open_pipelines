@@ -157,11 +157,6 @@ class PipelineTeamO6R6(Pipeline):
         run_level.connect(information_source, 'subject_id', select_files, 'subject_id')
         run_level.connect(information_source, 'run_id', select_files, 'run_id')
 
-        # IsotropicSmooth Node - Smoothing data
-        smoothing_func = Node(IsotropicSmooth(), name = 'smoothing_func')
-        smoothing_func.inputs.fwhm = self.fwhm
-        run_level.connect(select_files, 'func', smoothing_func, 'in_file')
-
         # Function Node get_subject_group
         #   This returns the name of the subject's group
         subject_group = Node(Function(
@@ -187,7 +182,7 @@ class PipelineTeamO6R6(Pipeline):
         specify_model.inputs.high_pass_filter_cutoff = 100
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
-        run_level.connect(smoothing_func, 'out_file', specify_model, 'functional_runs')
+        run_level.connect(select_files, 'func', specify_model, 'functional_runs')
         run_level.connect(subject_information, 'subject_info', specify_model, 'subject_info')
 
         # Level1Design Node - Generate files for run level computation
@@ -205,7 +200,7 @@ class PipelineTeamO6R6(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name='model_estimate')
-        run_level.connect(smoothing_func, 'out_file', model_estimate, 'in_file')
+        run_level.connect(select_files, 'func', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
 
@@ -217,14 +212,6 @@ class PipelineTeamO6R6(Pipeline):
             model_generation, 'design_file', data_sink, 'run_level_analysis.@design_file')
         run_level.connect(
             model_generation, 'design_image', data_sink, 'run_level_analysis.@design_img')
-
-        # Remove large files, if requested
-        if Configuration()['pipelines']['remove_unused_data']:
-            remove_smooth = Node(
-                InterfaceFactory.create('remove_parent_directory'),
-                name = 'remove_smooth')
-            run_level.connect(data_sink, 'out_file', remove_smooth, '_')
-            run_level.connect(smoothing_func, 'out_file', remove_smooth, 'file_name')
 
         return run_level
 
@@ -360,7 +347,7 @@ class PipelineTeamO6R6(Pipeline):
         template = join(
             self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
+            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz'
             )
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
@@ -462,7 +449,7 @@ class PipelineTeamO6R6(Pipeline):
                 'varcope1.nii.gz'),
             'masks': join(self.directories.output_dir,
                 'subject_level_analysis', '_contrast_id_1_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
+                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
@@ -531,15 +518,14 @@ class PipelineTeamO6R6(Pipeline):
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
 
         # Randomise Node - Perform clustering on statistical output
-        randomise = Node(Randomise(),
-            name = 'randomise',
-            synchronize = True)
+        randomise = Node(Randomise(), name = 'randomise')
         randomise.inputs.tfce = True
         randomise.inputs.num_perm = 5000
         randomise.inputs.c_thresh = 0.05
         group_level.connect(mask_intersection, 'out_file', randomise, 'mask')
-        group_level.connect(estimate_model, 'zstats', randomise, 'in_file')
-        group_level.connect(estimate_model, 'copes', randomise, 'tcon')
+        group_level.connect(merge_copes, 'merged_file', randomise, 'in_file')
+        group_level.connect(specify_model, 'design_con', randomise, 'tcon')
+        group_level.connect(specify_model, 'design_mat', randomise, 'design_mat')
 
         # Datasink Node - Save important files
         data_sink = Node(DataSink(), name = 'data_sink')
