@@ -90,48 +90,15 @@ class TestPipelinesTeamB23O:
 
     @staticmethod
     @mark.unit_test
-    def test_confounds_file_no_outliers(temporary_data_dir):
-        """ Test the get_confounds_file method in the case with no outliers """
+    def test_confounds_file(temporary_data_dir):
+        """ Test the get_confounds_file method """
 
         # Get input and reference output file
         confounds_file = join(
             Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
         reference_file = join(
             Configuration()['directories']['test_data'],
-            'pipelines', 'team_B23O', 'out_confounds_no_outliers.tsv')
-
-        # Create new confounds file
-        confounds_node = Node(Function(
-            input_names = ['filepath', 'subject_id', 'run_id'],
-            output_names = ['confounds_file'],
-            function = PipelineTeamB23O.get_confounds_file),
-            name = 'confounds_node')
-        confounds_node.base_dir = temporary_data_dir
-        confounds_node.inputs.filepath = confounds_file
-        confounds_node.inputs.subject_id = 'sid'
-        confounds_node.inputs.run_id = 'rid'
-        confounds_node.run()
-
-        # Check confounds file was created
-        created_confounds_file = abspath(join(
-            temporary_data_dir, confounds_node.name, 'confounds_file_sub-sid_run-rid.tsv'))
-        assert exists(created_confounds_file)
-
-        # Check contents
-        assert cmp(reference_file, created_confounds_file)
-
-    @staticmethod
-    @mark.unit_test
-    def test_confounds_file_outliers(temporary_data_dir):
-        """ Test the get_confounds_file method in the case with outliers """
-
-        # Get input and reference output file
-        confounds_file = join(
-            Configuration()['directories']['test_data'],
-            'pipelines', 'team_B23O', 'confounds_with_outliers.tsv')
-        reference_file = join(
-            Configuration()['directories']['test_data'],
-            'pipelines', 'team_B23O', 'out_confounds_outliers.tsv')
+            'pipelines', 'team_B23O', 'confounds.tsv')
 
         # Create new confounds file
         confounds_node = Node(Function(
