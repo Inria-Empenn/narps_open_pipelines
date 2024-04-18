@@ -226,10 +226,10 @@ class PipelineTeam4TQ6(Pipeline):
                 'run_level_analysis', '_run_id_*_subject_id_{subject_id}', 'results',
                 'varcope{contrast_id}.nii.gz'),
             'masks' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory= self.directories.results_dir
+        select_files.inputs.base_directory= self.directories.dataset_dir
         subject_level.connect(information_source, 'subject_id', select_files, 'subject_id')
         subject_level.connect(information_source, 'contrast_id', select_files, 'contrast_id')
 
@@ -308,7 +308,7 @@ class PipelineTeam4TQ6(Pipeline):
         template = join(
             self.directories.output_dir,
             'subject_level_analysis', '_contrast_id_{contrast_id}_subject_id_{subject_id}',
-            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz'
+            'sub-{subject_id}_task-MGT_run-01_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz'
             )
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
@@ -410,7 +410,7 @@ class PipelineTeam4TQ6(Pipeline):
                 'varcope1.nii.gz'),
             'masks': join(self.directories.output_dir,
                 'subject_level_analysis', '_contrast_id_1_subject_id_*',
-                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc_brain_mask_maths.nii.gz')
+                'sub-*_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask_maths.nii.gz')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
@@ -499,8 +499,6 @@ class PipelineTeam4TQ6(Pipeline):
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
         group_level.connect(randomise,'t_corrected_p_files', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
-        group_level.connect(randomise,'t_p_files', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_p_files')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
@@ -606,10 +604,8 @@ class PipelineTeam4TQ6(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
-                '_cluster1/zstat2_pval.nii.gz',
-                '_cluster1/zstat2_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tfce_corrp_tstat2.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
@@ -630,8 +626,7 @@ class PipelineTeam4TQ6(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
                 ]
@@ -653,40 +648,49 @@ class PipelineTeam4TQ6(Pipeline):
 
         nb_sub = len(self.subject_list)
         files = [
+            # Hypothesis 1
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 2
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 3
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 4
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
+                '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 5
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 6
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 7
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 8
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz')
         ]
