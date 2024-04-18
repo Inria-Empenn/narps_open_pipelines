@@ -550,8 +550,6 @@ class PipelineTeamO6R6(Pipeline):
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
         group_level.connect(randomise,'t_corrected_p_files', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
-        group_level.connect(randomise,'t_p_files', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_p_files')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
@@ -657,10 +655,8 @@ class PipelineTeamO6R6(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
-                '_cluster1/zstat2_pval.nii.gz',
-                '_cluster1/zstat2_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
+                'randomise_tfce_corrp_tstat2.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
@@ -681,8 +677,7 @@ class PipelineTeamO6R6(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz', # TODO : output for randomise
-                '_cluster0/zstat1_threshold.nii.gz',
+                'randomise_tfce_corrp_tstat1.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
                 ]
@@ -705,39 +700,39 @@ class PipelineTeamO6R6(Pipeline):
         nb_sub = len(self.subject_list)
         files = [
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_1', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat2'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_2', 'zstat2.nii.gz'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+                '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_2', 'zstat1.nii.gz')
         ]
