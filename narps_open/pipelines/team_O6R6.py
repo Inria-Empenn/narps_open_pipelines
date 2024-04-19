@@ -536,6 +536,8 @@ class PipelineTeamO6R6(Pipeline):
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
         group_level.connect(randomise,'t_corrected_p_files', data_sink,
             f'group_level_analysis_{method}_nsub_{nb_subjects}.@t_corrected_p_files')
+        group_level.connect(randomise,'tstat_files', data_sink,
+            f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstat_files')
 
         if method in ('equalIndifference', 'equalRange'):
             # Setup a one sample t-test
