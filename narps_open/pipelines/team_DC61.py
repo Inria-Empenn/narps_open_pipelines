@@ -350,10 +350,10 @@ class PipelineTeamDC61(Pipeline):
 
         return [
             dict(
-                vector = [1 if s in get_group('equalRange') else 0 for s in subjects],
+                vector = [1.0 if s in get_group('equalRange') else 0.0 for s in subjects],
                 name = 'equalRange'),
             dict(
-                vector = [1 if s in get_group('equalIndifference') else 0 for s in subjects],
+                vector = [1.0 if s in get_group('equalIndifference') else 0.0 for s in subjects],
                 name = 'equalIndifference')
         ]
 
