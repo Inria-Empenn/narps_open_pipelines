@@ -649,8 +649,8 @@ class PipelineTeamO21U(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                'randomise_tfce_corrp_tstat1.nii.gz',
-                'randomise_tfce_corrp_tstat2.nii.gz',
+                '_cluster0/zstat1_threshold.nii.gz',
+                '_cluster1/zstat2_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
                 'zstat1.nii.gz',
@@ -671,7 +671,7 @@ class PipelineTeamO21U(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                'randomise_tfce_corrp_tstat1.nii.gz',
+                '_cluster0/zstat1_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
                 ]
@@ -697,22 +697,22 @@ class PipelineTeamO21U(Pipeline):
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat2.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             # Hypothesis 2
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat2.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             # Hypothesis 3
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat2.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             # Hypothesis 4
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_1', 'randomise_tfce_corrp_tstat2'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat2.nii.gz'),
+                '_contrast_id_1', 'zstat1.nii.gz'),
             # Hypothesis 5
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
