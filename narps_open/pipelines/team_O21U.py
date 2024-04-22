@@ -717,12 +717,12 @@ class PipelineTeamO21U(Pipeline):
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             # Hypothesis 6
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
+                '_contrast_id_2', 'zstat2.nii.gz'),
             # Hypothesis 7
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_2', 'randomise_tfce_corrp_tstat1'),
