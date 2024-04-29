@@ -95,11 +95,11 @@ class TestPipelinesTeamO21U:
         """ Test the get_confounds_file method """
 
         # Get input and reference output file
-        confounds_file = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
-        reference_file = join(
+        confounds_file = abspath(join(
+            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv'))
+        reference_file = abspath(join(
             Configuration()['directories']['test_data'],
-            'pipelines', 'team_O21U', 'confounds.tsv')
+            'pipelines', 'team_O21U', 'confounds.tsv'))
 
         # Create new confounds file
         confounds_node = Node(Function(
