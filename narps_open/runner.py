@@ -178,7 +178,14 @@ def main():
         help='run the first levels only (preprocessing + subjects + runs)')
     parser.add_argument('-c', '--check', action='store_true', required=False,
         help='check pipeline outputs (runner is not launched)')
+    parser.add_argument('-e', '--exclusions', action='store_true', required=False,
+        help='run the analyses without the excluded subjects')
     arguments = parser.parse_args()
+
+    # Check arguments
+    if arguments.exclusions and not arguments.nsubjects:
+        print('Argument -e/--exclusions only works with -n/--nsubjects')
+        return
 
     # Initialize a PipelineRunner
     runner = PipelineRunner(team_id = arguments.team)
@@ -193,7 +200,14 @@ def main():
     elif arguments.rsubjects is not None:
         runner.random_nb_subjects = int(arguments.rsubjects)
     else:
-        runner.nb_subjects = int(arguments.nsubjects)
+        if arguments.exclusions:
+            # Intersection between the requested subset and the list of not excluded subjects
+            runner.subjects = list(
+                set(get_participants_subset(int(arguments.nsubjects)))
+              & set(get_participants(arguments.team))
+            )
+        else:
+            runner.nb_subjects = int(arguments.nsubjects)
 
     # Check data
     if arguments.check:

@@ -20,8 +20,6 @@ from nipype.interfaces.base import Bunch
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_98BT import PipelineTeam98BT
 
-TEMPORARY_DIR = join(Configuration()['directories']['test_runs'], 'test_98BT')
-
 class TestPipelinesTeam98BT:
     """ A class that contains all the unit tests for the PipelineTeam98BT class."""
 
@@ -84,8 +82,7 @@ class TestPipelinesTeam98BT:
 
     @staticmethod
     @mark.unit_test
-    @mark.parametrize('remove_test_dir', TEMPORARY_DIR)
-    def test_parameters_files(remove_test_dir):
+    def test_parameters_files(temporary_data_dir):
         """ Test the get_parameters_files method
             For this test, we created the two following files by downsampling output files
                 from the preprocessing pipeline :
@@ -105,11 +102,11 @@ class TestPipelinesTeam98BT:
 
         # Get new parameters file
         PipelineTeam98BT.get_parameters_file(
-            parameters_file, wc2_file, func_file, 'sid', 'rid', TEMPORARY_DIR)
+            parameters_file, wc2_file, func_file, 'sid', 'rid', temporary_data_dir)
 
         # Check parameters file was created
         created_parameters_file = join(
-            TEMPORARY_DIR, 'parameters_files', 'parameters_file_sub-sid_run-rid.tsv')
+            temporary_data_dir, 'parameters_files', 'parameters_file_sub-sid_run-rid.tsv')
         assert exists(created_parameters_file)
 
         # Check contents
