@@ -253,12 +253,12 @@ class PipelineTeam0ED6(Pipeline):
         """ Return the names of the files the preprocessing is supposed to generate. """
 
         output_dir = join(self.directories.output_dir, 'preprocessing',
-            '_run_id_{run_id}', '_subject_id_{subject_id}')
+            '_run_id_{run_id}_subject_id_{subject_id}')
 
         # Smoothing outputs
         templates = [
-            join(output_dir, 'swrusub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
-            join(output_dir, 'swrmeanusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
+            join(output_dir, 'swusub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            join(output_dir, 'swmeanusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
             ]
 
         # DVARS output
@@ -407,16 +407,16 @@ class PipelineTeam0ED6(Pipeline):
         # SELECT FILES - to select necessary files
         templates = {
             'dvars_file' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*', '_subject_id_{subject_id}',
+                '_run_id_*_subject_id_{subject_id}',
                 'dvars_out_DVARS.tsv'),
             'dvars_inference_file' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*', '_subject_id_{subject_id}',
+                '_run_id_*_subject_id_{subject_id}',
                 'dvars_out_Inference.tsv'),
             'realignement_parameters' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*', '_subject_id_{subject_id}', '_realign_unwarp1',
+                '_run_id_*_subject_id_{subject_id}', '_realign_unwarp1',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt'),
-            'func' : join(self.directories.output_dir, 'preprocessing', '_run_id_*',
-                '_subject_id_{subject_id}', 'swrusub-{subject_id}_task-MGT_run-*_bold.nii'),
+            'func' : join(self.directories.output_dir, 'preprocessing',
+                '_run_id_*_subject_id_{subject_id}', 'swusub-{subject_id}_task-MGT_run-*_bold.nii'),
             'event' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv')
         }
