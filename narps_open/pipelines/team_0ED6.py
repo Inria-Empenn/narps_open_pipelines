@@ -105,6 +105,7 @@ class PipelineTeam0ED6(Pipeline):
 
         # MERGE - Merge files for the realign & unwarp node into one input.
         merge_sbref_func = Node(Merge(2), name = 'merge_sbref_func')
+        merge_sbref_func.inputs.ravel_inputs = True
         preprocessing.connect(gunzip_sbref, 'out_file', merge_sbref_func, 'in1')
         preprocessing.connect(gunzip_func, 'out_file', merge_sbref_func, 'in2')
 
@@ -159,6 +160,7 @@ class PipelineTeam0ED6(Pipeline):
         # MERGE - Merge func + func mean image files for the coregister_sbref_to_anat
         #   node into one input.
         merge_func_before_coregister = Node(Merge(2), name = 'merge_func_before_coregister')
+        merge_func_before_coregister.inputs.ravel_inputs = True
         preprocessing.connect( # out2 is func
             split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in1')
         preprocessing.connect( # out2 is func mean
