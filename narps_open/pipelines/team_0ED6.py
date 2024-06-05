@@ -448,7 +448,7 @@ class PipelineTeam0ED6(Pipeline):
                 'run_id'])
         confounds.inputs.run_id = self.run_list
         subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
-        subject_level.connect(select_files, 'dvars_inference_file', confounds, 'dvars_file')
+        subject_level.connect(select_files, 'dvars_file', confounds, 'dvars_file')
         subject_level.connect(
             select_files, 'dvars_inference_file', confounds, 'dvars_inference_file')
         subject_level.connect(
