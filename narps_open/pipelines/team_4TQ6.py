@@ -452,18 +452,16 @@ class PipelineTeam4TQ6(Pipeline):
         merge_varcopes.inputs.dimension = 't'
         group_level.connect(get_varcopes, ('out_list', clean_list), merge_varcopes, 'in_files')
 
-        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
-        split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.subject_list) - 1]
-        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        group_level.connect(select_files, 'masks', split_masks, 'inlist')
+        # Merge Node - Merge masks for further intersection
+        merge_masks = Node(Merge(), name = 'merge_masks')
+        merge_masks.inputs.dimension = 't'
+        group_level.connect(select_files, 'masks', merge_masks, 'in_files')
 
-        # MultiImageMaths Node - Create a subject mask by
-        #   computing the intersection of all run masks.
+        # MultiImageMaths Node - Create a group mask by
+        #   computing the intersection of all subject masks.
         mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.subject_list) - 1)
-        group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
-        group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
+        mask_intersection.inputs.op_string = '-Tmin -thr 0.9'
+        group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
