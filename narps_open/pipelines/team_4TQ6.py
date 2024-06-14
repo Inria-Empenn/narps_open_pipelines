@@ -15,7 +15,7 @@ from nipype.interfaces.fsl import (
     FSLCommand, Randomise
     )
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.fsl.maths import MultiImageMaths
+from nipype.interfaces.fsl.maths import MultiImageMaths, MathsCommand
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import Pipeline
@@ -470,10 +470,10 @@ class PipelineTeam4TQ6(Pipeline):
         merge_masks.inputs.dimension = 't'
         group_level.connect(get_masks, ('out_list', clean_list), merge_masks, 'in_files')
 
-        # MultiImageMaths Node - Create a group mask by
+        # MathsCommand Node - Create a group mask by
         #   computing the intersection of all subject masks.
-        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-Tmin -thr 0.9'
+        mask_intersection = Node(MathsCommand(), name = 'mask_intersection')
+        mask_intersection.inputs.args = '-Tmin -thr 0.9'
         group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # MultipleRegressDesign Node - Specify model
