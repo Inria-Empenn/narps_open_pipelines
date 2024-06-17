@@ -6,6 +6,8 @@
 from os.path import join
 from itertools import product
 
+from numpy import array
+
 from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function, Split
 from nipype.interfaces.io import SelectFiles, DataSink
@@ -15,12 +17,12 @@ from nipype.interfaces.fsl import (
     FSLCommand, Cluster
     )
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.fsl.maths import MultiImageMaths
+from nipype.interfaces.fsl.maths import MathsCommand
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
-from narps_open.data.participants import get_group
+from narps_open.data.participants import get_group, get_participants_information
 from narps_open.core.common import list_intersection, elements_in_string, clean_list
 from narps_open.core.interfaces import InterfaceFactory
 
@@ -38,6 +40,11 @@ class PipelineTeam4SZ2(Pipeline):
         self.run_level_contrasts = [
             ('effect_of_gain', 'T', ['gain', 'loss'], [1, 0]),
             ('effect_of_loss', 'T', ['gain', 'loss'], [0, 1])
+            ]
+        self.group_level_contrasts = [
+            ('group_equal_indifference', 'T', ['equalIndifference', 'equalRange'], [1, 0]),
+            ('group_equal_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]),
+            ('group_comp', 'T', ['equalIndifference', 'equalRange'], [-1, 1])
             ]
 
     def get_preprocessing(self):
@@ -197,59 +204,45 @@ class PipelineTeam4SZ2(Pipeline):
         """ No subject level analysis has been done by team 4SZ2 """
         return None
 
-    def get_one_sample_t_test_regressors(subject_list: list) -> dict:
-        """
-        Create dictionary of regressors for one sample t-test group analysis.
-
-        Parameters:
-            - subject_list: ids of subject in the group for which to do the analysis
-
-        Returns:
-            - dict containing named lists of regressors.
-        """
-
-        return dict(group_mean = [1 for _ in subject_list])
-
-    def get_two_sample_t_test_regressors(
-        equal_range_ids: list,
-        equal_indifference_ids: list,
-        subject_list: list,
-        run_list: list
-        ) -> dict:
+    @staticmethod
+    def get_group_level_regressors(subject_list: list):
         """
         Create dictionary of regressors for two sample t-test group analysis.
 
         Parameters:
-            - equal_range_ids: ids of subjects in equal range group
-            - equal_indifference_ids: ids of subjects in equal indifference group
             - subject_list: ids of subject for which to do the analysis
-            - run_list: ids of runs for which to do the analysis
+
         Returns:
             - regressors, dict: containing named lists of regressors.
             - groups, list: group identifiers to distinguish groups in FSL analysis.
         """
 
-        # Create 2 lists containing a value for each run, which is
+        # Create lists containing regressors for each group (equalRange, equalIndifference)
         #  * 1 if the participant is on the group
         #  * 0 otherwise
-        equal_range_regressors = []
-        equal_indifference_regressors = []
+        equal_range_group = get_group('equalRange')
+        equal_indif_group = get_group('equalIndifference')
+        equal_range_regressor = [1 if s in equal_range_group else 0 for s in subject_list]
+        equal_indif_regressor = [1 if s in equal_indif_group else 0 for s in subject_list]
 
-        for subject_id in subject_list:
-            value_er = 1 if subject_id in equal_range_ids else 0
-            value_ei = 1 if subject_id in equal_indifference_ids else 0
-            for _ in run_list:
-                equal_range_regressors.append(value_er)
-                equal_indifference_regressors.append(value_ei)
+        # Get gender and age of participants
+        participants_data = get_participants_information()[['participant_id', 'gender', 'age']]
+        participants = participants_data.loc[
+            participants_data['participant_id'].isin([f'sub-{s}' for s in subject_list])
+            ]
+        ages = array(participants['age'])
+        genders = array(participants['gender'])
 
-        # Create regressors output : a dict with the two list
+        # Create regressors output
         regressors = dict(
-            equalRange = equal_range_regressors,
-            equalIndifference = equal_indifference_regressors
+            equalIndifference = equal_indif_regressor,
+            equalRange = equal_range_regressor,
+            age = [int(a) for a in ages], 
+            gender = [1 if i == 'F' else 0 for i in genders]
         )
 
-        # Create groups outputs : a list with 1 for equalRange subjects and 2 for equalIndifference
-        groups = [1 if i == 1 else 2 for i in equal_range_regressors]
+        # Create groups outputs
+        groups = [1 if i == 1 else 2 for i in equal_range_regressor]
 
         return regressors, groups
 
@@ -260,32 +253,13 @@ class PipelineTeam4SZ2(Pipeline):
         Returns;
             - a list of nipype.WorkFlow
         """
-
-        methods = ['equalRange', 'equalIndifference', 'groupComp']
-        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
-
-    def get_group_level_analysis_sub_workflow(self, method):
-        """
-        Return a workflow for the group level analysis.
-
-        Parameters:
-            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
-
-        Returns:
-            - group_level: nipype.WorkFlow
-        """
         # Compute the number of participants in the analysis
         nb_subjects = len(self.subject_list)
-
-        # Compute the number of participants in the group
-        nb_subjects_in_group = nb_subjects
-        if method in ['equalIndifference', 'equalRange']:
-            nb_subjects_in_group = len([s for s in self.subject_list if s in get_group(method)])
 
         # Declare the workflow
         group_level = Workflow(
             base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
+            name = f'group_level_analysis_nsub_{nb_subjects}')
 
         # Infosource Node - iterate over the contrasts generated by the subject level analysis
         information_source = Node(IdentityInterface(
@@ -323,6 +297,7 @@ class PipelineTeam4SZ2(Pipeline):
             ),
             name = 'get_copes', iterfield = 'input_str'
         )
+        get_copes.inputs.elements = complete_subject_ids(self.subject_list)
         group_level.connect(select_files, 'cope', get_copes, 'input_str')
 
         # Function Node elements_in_string
@@ -336,6 +311,7 @@ class PipelineTeam4SZ2(Pipeline):
             ),
             name = 'get_varcopes', iterfield = 'input_str'
         )
+        get_varcopes.inputs.elements = complete_subject_ids(self.subject_list)
         group_level.connect(select_files, 'varcope', get_varcopes, 'input_str')
 
         # Function Node elements_in_string
@@ -349,6 +325,7 @@ class PipelineTeam4SZ2(Pipeline):
             ),
             name = 'get_masks', iterfield = 'input_str'
         )
+        get_masks.inputs.elements = complete_subject_ids(self.subject_list)
         group_level.connect(select_files, 'masks', get_masks, 'input_str')
 
         # Merge Node - Merge cope files
@@ -356,27 +333,29 @@ class PipelineTeam4SZ2(Pipeline):
         merge_copes.inputs.dimension = 't'
         group_level.connect(get_copes, ('out_list', clean_list), merge_copes, 'in_files')
 
+        # Merge Masks - Merge mask files
+        merge_masks = Node(Merge(), name = 'merge_masks')
+        merge_masks.inputs.dimension = 't'
+        group_level.connect(get_masks, ('out_list', clean_list), merge_masks, 'in_files')
+
         # Merge Node - Merge cope files
         merge_varcopes = Node(Merge(), name = 'merge_varcopes')
         merge_varcopes.inputs.dimension = 't'
         group_level.connect(get_varcopes, ('out_list', clean_list), merge_varcopes, 'in_files')
 
-        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
-        split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, (nb_subjects_in_group * len(self.run_list)) - 1]
-        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
-
-        # MultiImageMaths Node - Create a subject mask by
+        # MathsCommand Node - Create a global mask by
         #   computing the intersection of all run masks.
-        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * \
-            ((nb_subjects_in_group * len(self.run_list)) - 1)
-        group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
-        group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
+        mask_intersection = Node(MathsCommand(), name = 'mask_intersection')
+        mask_intersection.inputs.args = '-Tmin -thr 0.9'
+        group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
+
+        # Get regressors for the group level analysis
+        regressors, groups = self.get_group_level_regressors(self.subject_list)
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
+        specify_model.inputs.regressors = regressors
+        specify_model.inputs.groups = groups
 
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
@@ -404,123 +383,19 @@ class PipelineTeam4SZ2(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         group_level.connect(estimate_model, 'zstats', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@zstats')
+            f'group_level_analysis_nsub_{nb_subjects}.@zstats')
         group_level.connect(estimate_model, 'tstats', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@tstats')
+            f'group_level_analysis_nsub_{nb_subjects}.@tstats')
         group_level.connect(cluster,'threshold_file', data_sink,
-            f'group_level_analysis_{method}_nsub_{nb_subjects}.@threshold_file')
-
-        if method in ('equalIndifference', 'equalRange'):
-            # Setup a one sample t-test
-            specify_model.inputs.contrasts = [
-                ['group_mean', 'T', ['group_mean'], [1]],
-                ['group_mean_neg', 'T', ['group_mean'], [-1]]
-                ]
-
-            # Function Node get_group_subjects - Get subjects in the group and in the subject_list
-            get_group_subjects = Node(Function(
-                function = list_intersection,
-                input_names = ['list_1', 'list_2'],
-                output_names = ['out_list']
-                ),
-                name = 'get_group_subjects'
-            )
-            get_group_subjects.inputs.list_1 = get_group(method)
-            get_group_subjects.inputs.list_2 = self.subject_list
-            group_level.connect(
-                get_group_subjects, ('out_list', complete_subject_ids), get_copes, 'elements')
-            group_level.connect(
-                get_group_subjects, ('out_list', complete_subject_ids), get_varcopes, 'elements')
-            group_level.connect(
-                get_group_subjects, ('out_list', complete_sub_ids), get_masks, 'elements')
-
-            # Function Node get_one_sample_t_test_regressors
-            #   Get regressors in the equalRange and equalIndifference method case
-            regressors_one_sample = Node(
-                Function(
-                    function = self.get_one_sample_t_test_regressors,
-                    input_names = ['subject_list'],
-                    output_names = ['regressors']
-                ),
-                name = 'regressors_one_sample',
-            )
-            regressors_one_sample.inputs.subject_list = range(
-                nb_subjects_in_group * len(self.run_list))
-            group_level.connect(regressors_one_sample, 'regressors', specify_model, 'regressors')
-
-        elif method == 'groupComp':
-
-            # Select copes and varcopes corresponding to the selected subjects
-            #   Indeed the SelectFiles node asks for all (*) subjects available
-            get_copes.inputs.elements = complete_subject_ids(self.subject_list)
-            get_varcopes.inputs.elements = complete_subject_ids(self.subject_list)
-            get_masks.inputs.elements = complete_sub_ids(self.subject_list)
-
-            # Setup a two sample t-test
-            specify_model.inputs.contrasts = [
-                ['equalRange_sup', 'T', ['equalRange', 'equalIndifference'], [1, -1]]
-            ]
-
-            # Function Node get_equal_range_subjects
-            #   Get subjects in the equalRange group and in the subject_list
-            get_equal_range_subjects = Node(Function(
-                function = list_intersection,
-                input_names = ['list_1', 'list_2'],
-                output_names = ['out_list']
-                ),
-                name = 'get_equal_range_subjects'
-            )
-            get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
-            get_equal_range_subjects.inputs.list_2 = self.subject_list
-
-            # Function Node get_equal_indifference_subjects
-            #   Get subjects in the equalIndifference group and in the subject_list
-            get_equal_indifference_subjects = Node(Function(
-                function = list_intersection,
-                input_names = ['list_1', 'list_2'],
-                output_names = ['out_list']
-                ),
-                name = 'get_equal_indifference_subjects'
-            )
-            get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
-            get_equal_indifference_subjects.inputs.list_2 = self.subject_list
-
-            # Function Node get_two_sample_t_test_regressors
-            #   Get regressors in the groupComp method case
-            regressors_two_sample = Node(
-                Function(
-                    function = self.get_two_sample_t_test_regressors,
-                    input_names = [
-                        'equal_range_ids',
-                        'equal_indifference_ids',
-                        'subject_list',
-                        'run_list'
-                    ],
-                    output_names = ['regressors', 'groups']
-                ),
-                name = 'regressors_two_sample',
-            )
-            regressors_two_sample.inputs.subject_list = self.subject_list
-            regressors_two_sample.inputs.run_list = self.run_list
-
-            # Add missing connections
-            group_level.connect(
-                get_equal_range_subjects, 'out_list', regressors_two_sample, 'equal_range_ids')
-            group_level.connect(
-                get_equal_indifference_subjects, 'out_list',
-                regressors_two_sample, 'equal_indifference_ids')
-            group_level.connect(regressors_two_sample, 'regressors', specify_model, 'regressors')
-            group_level.connect(regressors_two_sample, 'groups', specify_model, 'groups')
+            f'group_level_analysis_nsub_{nb_subjects}.@threshold_file')
 
         return group_level
 
     def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
 
-        # Handle equalRange and equalIndifference
         parameters = {
             'contrast_id': self.contrast_list,
-            'method': ['equalRange', 'equalIndifference'],
             'file': [
                 '_cluster0/zstat1_threshold.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
@@ -533,33 +408,12 @@ class PipelineTeam4SZ2(Pipeline):
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_'+f'{len(self.subject_list)}',
+            'group_level_analysis_nsub_'+f'{len(self.subject_list)}',
             '_contrast_id_{contrast_id}',
             '{file}'
             )
-        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+        return [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets]
-
-        # Handle groupComp
-        parameters = {
-            'contrast_id': self.contrast_list,
-            'file': [
-                '_cluster0/zstat1_threshold.nii.gz',
-                'tstat1.nii.gz',
-                'zstat1.nii.gz'
-                ]
-        }
-        parameter_sets = product(*parameters.values())
-        template = join(
-            self.directories.output_dir,
-            f'group_level_analysis_groupComp_nsub_{len(self.subject_list)}',
-            '_contrast_id_{contrast_id}',
-            '{file}'
-            )
-        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
-            for parameter_values in parameter_sets]
-
-        return return_list
 
     def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names. """

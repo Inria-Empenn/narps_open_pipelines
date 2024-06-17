@@ -38,10 +38,7 @@ class TestPipelinesTeam4SZ2:
         assert pipeline.get_preprocessing() is None
         assert isinstance(pipeline.get_run_level_analysis(), Workflow)
         assert pipeline.get_subject_level_analysis() is None
-        group_level = pipeline.get_group_level_analysis()
-        assert len(group_level) == 3
-        for sub_workflow in group_level:
-            assert isinstance(sub_workflow, Workflow)
+        assert isinstance(pipeline.get_group_level_analysis(), Workflow)
 
     @staticmethod
     @mark.unit_test
@@ -88,28 +85,20 @@ class TestPipelinesTeam4SZ2:
 
     @staticmethod
     @mark.unit_test
-    def test_one_sample_t_test_regressors():
-        """ Test the get_one_sample_t_test_regressors method """
+    def test_get_group_level_regressors():
+        """ Test the get_group_level_regressors method """
 
-        result = PipelineTeam4SZ2.get_one_sample_t_test_regressors(['001', '002', '003', '004'])
-        assert result == {'group_mean' : [1]*4}
+        regressors, groups = PipelineTeam4SZ2.get_group_level_regressors(['001', '002', '003', '004'])
 
-    @staticmethod
-    @mark.unit_test
-    def test_two_sample_t_test_regressors():
-        """ Test the get_two_sample_t_test_regressors method """
-
-        result_1, result_2 = PipelineTeam4SZ2.get_two_sample_t_test_regressors(
-            ['001', '003'], # equal_range_ids
-            ['002', '004'], # equal_indifference_ids
-            ['001', '002', '003', '004'], # subject_list
-            ['01', '02'] # run_list
-            )
-        assert result_1 == {
-            'equalRange' : [1, 1, 0, 0, 1, 1, 0, 0],
-            'equalIndifference' : [0, 0, 1, 1, 0, 0, 1, 1]
-            }
-        assert result_2 == [1, 1, 2, 2, 1, 1, 2, 2]
+        for k1, k2 in zip(regressors.keys(), ['equalIndifference', 'equalRange', 'age', 'gender']):
+            assert k1 == k2
+        assert regressors['equalIndifference'] == [1, 0, 1, 0]
+        assert regressors['equalRange'] == [0, 1, 0, 1]
+        print(regressors['age'])
+        print(regressors['gender'])
+        assert regressors['age'] == [24, 25, 27, 25]
+        assert regressors['gender'] == [0, 0, 1, 0]
+        assert groups == [2, 1, 2, 1]
 
     @staticmethod
     @mark.pipeline_test
