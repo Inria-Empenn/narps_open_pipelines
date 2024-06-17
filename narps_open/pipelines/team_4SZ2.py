@@ -325,7 +325,7 @@ class PipelineTeam4SZ2(Pipeline):
             ),
             name = 'get_masks', iterfield = 'input_str'
         )
-        get_masks.inputs.elements = complete_subject_ids(self.subject_list)
+        get_masks.inputs.elements = complete_sub_ids(self.subject_list)
         group_level.connect(select_files, 'masks', get_masks, 'input_str')
 
         # Merge Node - Merge cope files
