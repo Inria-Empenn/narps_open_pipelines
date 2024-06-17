@@ -44,7 +44,7 @@ class PipelineTeam4SZ2(Pipeline):
         self.group_level_contrasts = [
             ('group_equal_indifference', 'T', ['equalIndifference', 'equalRange'], [1, 0]),
             ('group_equal_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]),
-            ('group_comp', 'T', ['equalIndifference', 'equalRange'], [-1, 1])
+            ('group_comparison', 'T', ['equalIndifference', 'equalRange'], [-1, 1])
             ]
 
     def get_preprocessing(self):
@@ -356,6 +356,7 @@ class PipelineTeam4SZ2(Pipeline):
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
         specify_model.inputs.regressors = regressors
         specify_model.inputs.groups = groups
+        specify_model.inputs.contrasts = self.group_level_contrasts
 
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
