@@ -401,10 +401,13 @@ class PipelineTeam4SZ2(Pipeline):
             'file': [
                 '_cluster0/zstat1_threshold.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
+                '_cluster2/zstat3_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'tstat2.nii.gz',
+                'tstat3.nii.gz',
                 'zstat1.nii.gz',
-                'zstat2.nii.gz'
+                'zstat2.nii.gz',
+                'zstat3.nii.gz'
                 ]
         }
         parameter_sets = product(*parameters.values())
@@ -422,41 +425,41 @@ class PipelineTeam4SZ2(Pipeline):
 
         nb_sub = len(self.subject_list)
         files = [
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            # Hypothesis 1
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_1', 'zstat1.nii.gz'),
+            # Hypothesis 2
+            join(f'group_level_analysis_nsub_{nb_sub}',
+                '_contrast_id_1', '_cluster1', 'zstat2_threshold.nii.gz'),
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 3
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_1', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_1', 'zstat1.nii.gz'),
+            # Hypothesis 4
+            join(f'group_level_analysis_nsub_{nb_sub}',
+                '_contrast_id_1', '_cluster1', 'zstat2_threshold.nii.gz'),
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_1', 'zstat2.nii.gz'),
+            # Hypothesis 5
+            join(f'group_level_analysis_nsub_{nb_sub}',
+                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 6
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat2.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_2', 'zstat2.nii.gz'),
+            # Hypothesis 7
+            join(f'group_level_analysis_nsub_{nb_sub}',
+                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_2', 'zstat1.nii.gz'),
+            # Hypothesis 8
+            join(f'group_level_analysis_nsub_{nb_sub}',
                 '_contrast_id_2', '_cluster1', 'zstat2_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat2.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz'),
-            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', '_cluster0', 'zstat1_threshold.nii.gz'),
-            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_2', 'zstat1.nii.gz')
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_2', 'zstat2.nii.gz'),
+            # Hypothesis 9
+            join(f'group_level_analysis_nsub_{nb_sub}',
+                '_contrast_id_2', '_cluster2', 'zstat3_threshold.nii.gz'),
+            join(f'group_level_analysis_nsub_{nb_sub}', '_contrast_id_2', 'zstat3.nii.gz')
         ]
         return [join(self.directories.output_dir, f) for f in files]
