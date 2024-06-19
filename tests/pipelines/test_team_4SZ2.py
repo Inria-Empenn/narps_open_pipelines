@@ -88,17 +88,17 @@ class TestPipelinesTeam4SZ2:
     def test_get_group_level_regressors():
         """ Test the get_group_level_regressors method """
 
-        regressors, groups = PipelineTeam4SZ2.get_group_level_regressors(['001', '002', '003', '004'])
+        regressors, groups = PipelineTeam4SZ2.get_group_level_regressors(
+            ['001', '002', '003', '004'],
+            ['01', '02'])
 
         for k1, k2 in zip(regressors.keys(), ['equalIndifference', 'equalRange', 'age', 'gender']):
             assert k1 == k2
-        assert regressors['equalIndifference'] == [1, 0, 1, 0]
-        assert regressors['equalRange'] == [0, 1, 0, 1]
-        print(regressors['age'])
-        print(regressors['gender'])
-        assert regressors['age'] == [24, 25, 27, 25]
-        assert regressors['gender'] == [0, 0, 1, 0]
-        assert groups == [2, 1, 2, 1]
+        assert regressors['equalIndifference'] == [1, 1, 0, 0, 1, 1, 0, 0]
+        assert regressors['equalRange'] == [0, 0, 1, 1, 0, 0, 1, 1]
+        assert regressors['age'] == [24, 24, 25, 25, 27, 27, 25, 25]
+        assert regressors['gender'] == [0, 0, 0, 0, 1, 1, 0, 0]
+        assert groups == [2, 2, 1, 1, 2, 2, 1, 1]
 
     @staticmethod
     @mark.pipeline_test

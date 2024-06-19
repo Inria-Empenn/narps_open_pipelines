@@ -205,12 +205,13 @@ class PipelineTeam4SZ2(Pipeline):
         return None
 
     @staticmethod
-    def get_group_level_regressors(subject_list: list):
+    def get_group_level_regressors(subject_list: list, run_list: list):
         """
         Create dictionary of regressors for two sample t-test group analysis.
 
         Parameters:
             - subject_list: ids of subject for which to do the analysis
+            - run_list: ids of runs for which to do the analysis
 
         Returns:
             - regressors, dict: containing named lists of regressors.
@@ -222,8 +223,8 @@ class PipelineTeam4SZ2(Pipeline):
         #  * 0 otherwise
         equal_range_group = get_group('equalRange')
         equal_indif_group = get_group('equalIndifference')
-        equal_range_regressor = [1 if s in equal_range_group else 0 for s in subject_list]
-        equal_indif_regressor = [1 if s in equal_indif_group else 0 for s in subject_list]
+        equal_range_regressor = [1 if s in equal_range_group else 0 for s in subject_list for _ in run_list]
+        equal_indif_regressor = [1 if s in equal_indif_group else 0 for s in subject_list for _ in run_list]
 
         # Get gender and age of participants
         participants_data = get_participants_information()[['participant_id', 'gender', 'age']]
@@ -237,8 +238,8 @@ class PipelineTeam4SZ2(Pipeline):
         regressors = dict(
             equalIndifference = equal_indif_regressor,
             equalRange = equal_range_regressor,
-            age = [int(a) for a in ages], 
-            gender = [1 if i == 'F' else 0 for i in genders]
+            age = [int(a) for a in ages for _ in run_list], 
+            gender = [1 if i == 'F' else 0 for i in genders for _ in run_list]
         )
 
         # Create groups outputs
