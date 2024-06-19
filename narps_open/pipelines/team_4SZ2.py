@@ -223,8 +223,10 @@ class PipelineTeam4SZ2(Pipeline):
         #  * 0 otherwise
         equal_range_group = get_group('equalRange')
         equal_indif_group = get_group('equalIndifference')
-        equal_range_regressor = [1 if s in equal_range_group else 0 for s in subject_list for _ in run_list]
-        equal_indif_regressor = [1 if s in equal_indif_group else 0 for s in subject_list for _ in run_list]
+        equal_range_regressor = [
+            1 if s in equal_range_group else 0 for s in subject_list for _ in run_list]
+        equal_indif_regressor = [
+            1 if s in equal_indif_group else 0 for s in subject_list for _ in run_list]
 
         # Get gender and age of participants
         participants_data = get_participants_information()[['participant_id', 'gender', 'age']]
@@ -242,10 +244,7 @@ class PipelineTeam4SZ2(Pipeline):
             gender = [1 if i == 'F' else 0 for i in genders for _ in run_list]
         )
 
-        # Create groups outputs
-        groups = [1 if i == 1 else 2 for i in equal_range_regressor]
-
-        return regressors, groups
+        return regressors
 
     def get_group_level_analysis(self):
         """
@@ -351,12 +350,13 @@ class PipelineTeam4SZ2(Pipeline):
         group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # Get regressors for the group level analysis
-        regressors, groups = self.get_group_level_regressors(self.subject_list, self.run_list)
+        regressors = self.get_group_level_regressors(self.subject_list, self.run_list)
 
         # MultipleRegressDesign Node - Specify model
+        #     NB : no "groups" input is needed because equalRange and equalIndifference groups
+        #     are already modeled in the design
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
         specify_model.inputs.regressors = regressors
-        specify_model.inputs.groups = groups
         specify_model.inputs.contrasts = self.group_level_contrasts
 
         # FLAMEO Node - Estimate model
