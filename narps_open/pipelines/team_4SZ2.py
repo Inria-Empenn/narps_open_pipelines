@@ -351,7 +351,7 @@ class PipelineTeam4SZ2(Pipeline):
         group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # Get regressors for the group level analysis
-        regressors, groups = self.get_group_level_regressors(self.subject_list)
+        regressors, groups = self.get_group_level_regressors(self.subject_list, self.run_list)
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
