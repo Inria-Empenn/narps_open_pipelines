@@ -21,7 +21,7 @@ set expdir="$1"
 -gltLabel 3 'LOSS_indiff' -gltCode 3 'group : 1*indiff cond : 1*LOSS' \
 -gltLabel 4 'LOSS_range'  -gltCode 4 'group : 1*range cond : 1*LOSS' \
 -gltLabel 5 'LOSS_range-indiff' -gltCode 5 'group : 1*range -1*indiff cond : 1*LOSS' \
--dataTable 
+-dataTable \
 Subj  cond  group InputFile \
 001 GAIN  indifference  /home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/sub-001.results.block/sub-001_GAIN.nii \
 001 LOSS  indifference  /home/jlefortb/narps_open_pipelines/data/results/team_6VV2_afni/firstlevel/sub-001.results.block/sub-001_LOSS.nii \
