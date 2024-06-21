@@ -157,6 +157,7 @@ class PipelineTeam4SZ2(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name='model_estimate')
+        model_estimate.inputs.output_pwdata = True
         run_level.connect(smoothing_func, 'out_file', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
