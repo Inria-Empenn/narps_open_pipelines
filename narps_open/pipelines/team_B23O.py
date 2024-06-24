@@ -10,7 +10,7 @@ from nipype import Workflow, Node, MapNode
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
-    Level1Design, FEATModel,
+    Level1Design, FEATModel, FilterRegressor,
     L2Model, Merge, FLAMEO, FILMGLS, MultipleRegressDesign,
     FSLCommand, Randomise
     )
@@ -87,7 +87,7 @@ class PipelineTeamB23O(Pipeline):
 
     def get_confounds_file(filepath, subject_id, run_id):
         """
-        Create a tsv file with only desired confounds per subject per run.
+        Create a tsv file by selecting the confounds to be used, per subject per run.
 
         Parameters :
         - filepath : path to the subject confounds file (i.e. one per run)
@@ -95,31 +95,21 @@ class PipelineTeamB23O(Pipeline):
         - run_id: run for which the 1st level analysis is made
 
         Return :
-        - confounds_file : paths to new files containing only desired confounds.
+        - confounds_file : paths to new confounds file
         """
         from os.path import abspath
 
         from pandas import read_csv, DataFrame
         from numpy import array, transpose
 
-        data_frame = read_csv(filepath, sep = '\t', header=0)
-        retained_confounds = DataFrame(transpose(array([
-            data_frame['CSF'], data_frame['WhiteMatter'], data_frame['GlobalSignal'],
-            data_frame['tCompCor00'], data_frame['tCompCor01'], data_frame['tCompCor02'],
-            data_frame['tCompCor03'], data_frame['tCompCor04'], data_frame['tCompCor05'],
-            data_frame['aCompCor00'], data_frame['aCompCor01'], data_frame['aCompCor02'],
-            data_frame['aCompCor03'], data_frame['aCompCor04'], data_frame['aCompCor05'],
-            data_frame['Cosine00'], data_frame['Cosine01'], data_frame['Cosine02'],
-            data_frame['Cosine03'], data_frame['Cosine04'], data_frame['Cosine05'],
-            data_frame['NonSteadyStateOutlier00'],
-            data_frame['X'], data_frame['Y'], data_frame['Z'],
-            data_frame['RotX'], data_frame['RotY'], data_frame['RotZ']
-        ])))
+        # Remove 1-based columns (4, 5, 6, 7) from original confounds file
+        data_frame = read_csv(filepath, sep = '\t', header=0).drop(columns = [
+            'stdDVARS', 'non-stdDVARS', 'vx-wisestdDVARS', 'FramewiseDisplacement'])
 
         # Write confounds to a file
         confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
         with open(confounds_file, 'w', encoding = 'utf-8') as writer:
-            writer.write(retained_confounds.to_csv(
+            writer.write(data_frame.to_csv(
                 sep = '\t', index = False, header = False, na_rep = '0.0'))
 
         return confounds_file
@@ -178,13 +168,18 @@ class PipelineTeamB23O(Pipeline):
         run_level.connect(information_source, 'run_id', confounds, 'run_id')
         run_level.connect(select_files, 'confounds', confounds, 'filepath')
 
+        # FilterRegressor Node - Denoise func data using confounds
+        noise_removal = Node(FilterRegressor(), name = 'noise_removal')
+        noise_removal.inputs.filter_all = True
+        run_level.connect(select_files, 'func', noise_removal, 'in_file')
+        run_level.connect(confounds, 'confounds_file', noise_removal, 'design_file')
+
         # SpecifyModel Node - Generate run level model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
         specify_model.inputs.high_pass_filter_cutoff = 100
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
-        run_level.connect(confounds, 'confounds_file', specify_model, 'realignment_parameters')
-        run_level.connect(select_files, 'func', specify_model, 'functional_runs')
+        run_level.connect(noise_removal, 'out_file', specify_model, 'functional_runs')
         run_level.connect(subject_information, 'subject_info', specify_model, 'subject_info')
 
         # Level1Design Node - Generate files for run level computation
@@ -202,6 +197,8 @@ class PipelineTeamB23O(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name='model_estimate')
+        model_estimate.inputs.output_pwdata = True
+        model_estimate.inputs.smooth_autocorr = True
         run_level.connect(select_files, 'func', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
