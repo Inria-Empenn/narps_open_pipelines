@@ -44,7 +44,7 @@ class L3V8(Pipeline):
             ('pos_loss', 'T', loss_conditions, [1, 1, 1, 1]), # average positive effect -loss value
             ('neg_gain', 'T', gain_conditions, [-1, -1, -1, -1]),  # average negative activation - gain value
             ('neg_loss', 'T', loss_conditions, [-1, -1, -1, -1]) # average negative activation - loss value
-            # figure out group contrast settings
+            # figure out group contrast settings # TODO
             ('contrast1', 'T', gain_conditions, [-1, 1, -1, 1, -1, 1, -1, 1]) # group differences between EqI and EqR
             
             ]
