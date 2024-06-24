@@ -51,7 +51,6 @@ class PipelineTeamB23O(Pipeline):
         Returns :
         - subject_info : list of Bunch for 1st level analysis.
         """
-        from numpy import mean
         from nipype.interfaces.base import Bunch
 
         onsets_trial = []
@@ -294,7 +293,7 @@ class PipelineTeamB23O(Pipeline):
         #   computing the intersection of all run masks.
         mask_intersection = Node(MathsCommand(), name = 'mask_intersection')
         mask_intersection.inputs.args = '-Tmin -thr 0.9'
-        group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
+        subject_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # L2Model Node - Generate subject specific second level model
         generate_model = Node(L2Model(), name = 'generate_model')
