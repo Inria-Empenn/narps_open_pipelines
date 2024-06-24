@@ -7,7 +7,7 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Split
+from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.fsl import (
     Level1Design, FEATModel,
@@ -15,7 +15,7 @@ from nipype.interfaces.fsl import (
     FSLCommand, Randomise
     )
 from nipype.algorithms.modelgen import SpecifyModel
-from nipype.interfaces.fsl.maths import MultiImageMaths
+from nipype.interfaces.fsl.maths import MathsCommand
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -285,18 +285,16 @@ class PipelineTeamB23O(Pipeline):
         merge_varcopes.inputs.dimension = 't'
         subject_level.connect(select_files, 'varcope', merge_varcopes, 'in_files')
 
-        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
-        split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, len(self.run_list) - 1]
-        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        subject_level.connect(select_files, 'masks', split_masks, 'inlist')
+        # Merge Node - Merge masks files for each subject
+        merge_masks = Node(Merge(), name = 'merge_masks')
+        merge_masks.inputs.dimension = 't'
+        subject_level.connect(select_files, 'masks', merge_masks, 'in_files')
 
-        # MultiImageMaths Node - Create a subject mask by
+        # MathsCommand Node - Create a subject mask by
         #   computing the intersection of all run masks.
-        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-mul %s ' * (len(self.run_list) - 1)
-        subject_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
-        subject_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
+        mask_intersection = Node(MathsCommand(), name = 'mask_intersection')
+        mask_intersection.inputs.args = '-Tmin -thr 0.9'
+        group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # L2Model Node - Generate subject specific second level model
         generate_model = Node(L2Model(), name = 'generate_model')
@@ -305,7 +303,7 @@ class PipelineTeamB23O(Pipeline):
         # FLAMEO Node - Estimate model
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'flame1'
-        subject_level.connect(mask_intersection, 'out_file', estimate_model,  'mask_file')
+        subject_level.connect(mask_intersection, 'out_file', estimate_model, 'mask_file')
         subject_level.connect(merge_copes, 'merged_file', estimate_model, 'cope_file')
         subject_level.connect(merge_varcopes, 'merged_file', estimate_model, 'var_cope_file')
         subject_level.connect(generate_model, 'design_mat', estimate_model, 'design_file')
@@ -491,20 +489,17 @@ class PipelineTeamB23O(Pipeline):
         merge_varcopes.inputs.dimension = 't'
         group_level.connect(get_varcopes, ('out_list', clean_list), merge_varcopes, 'in_files')
 
-        # Split Node - Split mask list to serve them as inputs of the MultiImageMaths node.
-        split_masks = Node(Split(), name = 'split_masks')
-        split_masks.inputs.splits = [1, (len(self.subject_list) * len(self.run_list)) - 1]
-        split_masks.inputs.squeeze = True # Unfold one-element splits removing the list
-        group_level.connect(get_masks, ('out_list', clean_list), split_masks, 'inlist')
+        # Merge Node - Merge masks files
+        merge_masks = Node(Merge(), name = 'merge_masks')
+        merge_masks.inputs.dimension = 't'
+        group_level.connect(get_masks, ('out_list', clean_list), merge_masks, 'in_files')
 
-        # MultiImageMaths Node - Create a subject mask by
+        # MathsCommand Node - Create a subject mask by
         #   computing the intersection of all run masks
         #   (all voxels included in at least 80% of masks across all runs).
-        mask_intersection = Node(MultiImageMaths(), name = 'mask_intersection')
-        mask_intersection.inputs.op_string = '-add %s ' * (len(self.subject_list) - 1)\
-            + f' -thr {len(self.subject_list) * len(self.run_list) * 0.8} -bin'
-        group_level.connect(split_masks, 'out1', mask_intersection, 'in_file')
-        group_level.connect(split_masks, 'out2', mask_intersection, 'operand_files')
+        mask_intersection = Node(MathsCommand(), name = 'mask_intersection')
+        mask_intersection.inputs.args = '-Tmin -thr 0.9'
+        group_level.connect(merge_masks, 'merged_file', mask_intersection, 'in_file')
 
         # MultipleRegressDesign Node - Specify model
         specify_model = Node(MultipleRegressDesign(), name = 'specify_model')
