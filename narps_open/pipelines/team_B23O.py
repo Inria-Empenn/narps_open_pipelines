@@ -511,10 +511,7 @@ class PipelineTeamB23O(Pipeline):
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
 
         # Randomise Node - Perform clustering on statistical output
-        randomise = MapNode(Randomise(),
-            name = 'randomise',
-            iterfield = ['in_file', 'cope_file'],
-            synchronize = True)
+        randomise = Node(Randomise(), name = 'randomise')
         randomise.inputs.tfce = True
         randomise.inputs.num_perm = 5000
         randomise.inputs.c_thresh = 0.05
