@@ -267,7 +267,7 @@ class PipelineTeamB23O(Pipeline):
                 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory= self.directories.results_dir
+        select_files.inputs.base_directory= self.directories.dataset_dir
         subject_level.connect(information_source, 'subject_id', select_files, 'subject_id')
         subject_level.connect(information_source, 'contrast_id', select_files, 'contrast_id')
 
