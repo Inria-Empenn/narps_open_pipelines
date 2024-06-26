@@ -140,6 +140,8 @@ class PipelineTeamB23O(Pipeline):
         templates = {
             'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'),
+            'mask' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'),
             'events' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'),
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
@@ -173,6 +175,7 @@ class PipelineTeamB23O(Pipeline):
         noise_removal.inputs.filter_all = True
         run_level.connect(select_files, 'func', noise_removal, 'in_file')
         run_level.connect(confounds, 'confounds_file', noise_removal, 'design_file')
+        run_level.connect(select_files, 'mask', noise_removal, 'mask')
 
         # SpecifyModel Node - Generate run level model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -196,7 +199,7 @@ class PipelineTeamB23O(Pipeline):
         run_level.connect(model_design, 'fsf_files', model_generation, 'fsf_file')
 
         # FILMGLS Node - Estimate first level model
-        model_estimate = Node(FILMGLS(), name='model_estimate')
+        model_estimate = Node(FILMGLS(), name = 'model_estimate')
         model_estimate.inputs.output_pwdata = True
         model_estimate.inputs.smooth_autocorr = True
         run_level.connect(select_files, 'func', model_estimate, 'in_file')
