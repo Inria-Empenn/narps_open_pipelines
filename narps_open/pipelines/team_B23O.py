@@ -200,7 +200,6 @@ class PipelineTeamB23O(Pipeline):
 
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name = 'model_estimate')
-        model_estimate.inputs.output_pwdata = True
         model_estimate.inputs.smooth_autocorr = True
         run_level.connect(select_files, 'func', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
