@@ -201,7 +201,9 @@ class PipelineTeamB23O(Pipeline):
         # FILMGLS Node - Estimate first level model
         model_estimate = Node(FILMGLS(), name = 'model_estimate')
         model_estimate.inputs.smooth_autocorr = True
-        run_level.connect(select_files, 'func', model_estimate, 'in_file')
+        # Default value for threshold is -1000.0 although nipype's documentation says 1000.0
+        model_estimate.inputs.threshold = 1000.0
+        run_level.connect(noise_removal, 'out_file', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
 
