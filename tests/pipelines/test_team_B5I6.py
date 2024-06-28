@@ -52,11 +52,11 @@ class TestPipelinesTeamB5I6:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*1, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*1, 6*6*2 + 3*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4, 8*4*2 + 4*4, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4, 6*6*2 + 3*2, 18])
 
     @staticmethod
     @mark.unit_test
@@ -64,9 +64,10 @@ class TestPipelinesTeamB5I6:
         """ Test the get_subject_information method """
 
         # Get test files
-        test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
-        test_file_2 = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'events_resp.tsv')
+        test_file = abspath(join(
+            Configuration()['directories']['test_data'], 'pipelines', 'events.tsv'))
+        test_file_2 = abspath(join(
+            Configuration()['directories']['test_data'], 'pipelines', 'events_resp.tsv'))
 
         # Prepare several scenarii
         info_missed = PipelineTeamB5I6.get_subject_information(test_file)
@@ -120,11 +121,11 @@ class TestPipelinesTeamB5I6:
         """ Test the get_confounds_file method in the case with no outliers """
 
         # Get input and reference output file
-        confounds_file = join(
-            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv')
-        reference_file = join(
+        confounds_file = abspath(join(
+            Configuration()['directories']['test_data'], 'pipelines', 'confounds.tsv'))
+        reference_file = abspath(join(
             Configuration()['directories']['test_data'],
-            'pipelines', 'team_B5I6', 'out_confounds_no_outliers.tsv')
+            'pipelines', 'team_B5I6', 'out_confounds_no_outliers.tsv'))
 
         # Create new confounds file
         confounds_node = Node(Function(
@@ -152,12 +153,12 @@ class TestPipelinesTeamB5I6:
         """ Test the get_confounds_file method in the case with outliers """
 
         # Get input and reference output file
-        confounds_file = join(
+        confounds_file = abspath(join(
             Configuration()['directories']['test_data'],
-            'pipelines', 'team_B5I6', 'confounds_with_outliers.tsv')
-        reference_file = join(
+            'pipelines', 'team_B5I6', 'confounds_with_outliers.tsv'))
+        reference_file = abspath(join(
             Configuration()['directories']['test_data'],
-            'pipelines', 'team_B5I6', 'out_confounds_outliers.tsv')
+            'pipelines', 'team_B5I6', 'out_confounds_outliers.tsv'))
 
         # Create new confounds file
         confounds_node = Node(Function(
