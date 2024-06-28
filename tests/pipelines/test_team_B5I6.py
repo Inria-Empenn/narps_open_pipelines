@@ -52,11 +52,11 @@ class TestPipelinesTeamB5I6:
 
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*1, 6*6*2 + 3*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*1, 4*6*1, 6*6*2 + 3*6, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4, 6*6*2 + 3*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 4*6*4*4, 4*6*4, 6*6*2 + 3*6, 18])
 
     @staticmethod
     @mark.unit_test
