@@ -19,7 +19,7 @@ def main():
     parser = ArgumentParser(description = 'Compare reproduced files to original results.')
     parser.add_argument('-t', '--team', type = str, required = True,
         help = 'the team ID', choices = get_implemented_pipelines())
-    parser.add_argument('-n', '--nsubjects', type=int, required = True,
+    parser.add_argument('-n', '--nsubjects', type = int, required = True,
         help='the number of subjects to be selected')
     arguments = parser.parse_args()
 
