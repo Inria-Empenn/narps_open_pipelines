@@ -140,6 +140,8 @@ class PipelineTeamB23O(Pipeline):
         templates = {
             'func' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz'),
+            'mask' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'),
             'events' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_events.tsv'),
             'confounds' : join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
@@ -163,7 +165,7 @@ class PipelineTeamB23O(Pipeline):
             function = self.get_confounds_file,
             input_names = ['filepath', 'subject_id', 'run_id'],
             output_names = ['confounds_file']),
-             name = 'confounds')
+            name = 'confounds')
         run_level.connect(information_source, 'subject_id', confounds, 'subject_id')
         run_level.connect(information_source, 'run_id', confounds, 'run_id')
         run_level.connect(select_files, 'confounds', confounds, 'filepath')
@@ -173,6 +175,7 @@ class PipelineTeamB23O(Pipeline):
         noise_removal.inputs.filter_all = True
         run_level.connect(select_files, 'func', noise_removal, 'in_file')
         run_level.connect(confounds, 'confounds_file', noise_removal, 'design_file')
+        run_level.connect(select_files, 'mask', noise_removal, 'mask')
 
         # SpecifyModel Node - Generate run level model
         specify_model = Node(SpecifyModel(), name = 'specify_model')
@@ -187,6 +190,11 @@ class PipelineTeamB23O(Pipeline):
         model_design.inputs.bases = {'dgamma' : {'derivs' : True}}
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = True
+        model_design.inputs.orthogonalization = {
+            1: {0: False, 1: False, 2: False, 3: False}, # 1st regressor "Trial" not orthogonalized
+            2: {0: True, 1: True, 2: False, 3: True}, # 2nd regressor "Gain" orth with 1st and 3rd
+            3: {0: True, 1: True, 2: True, 3: False}, # 3rd regressor "Loss" orth with 1st and 2nd
+            }
         model_design.inputs.contrasts = self.run_level_contrasts
         run_level.connect(specify_model, 'session_info', model_design, 'session_info')
 
@@ -196,10 +204,11 @@ class PipelineTeamB23O(Pipeline):
         run_level.connect(model_design, 'fsf_files', model_generation, 'fsf_file')
 
         # FILMGLS Node - Estimate first level model
-        model_estimate = Node(FILMGLS(), name='model_estimate')
-        model_estimate.inputs.output_pwdata = True
+        model_estimate = Node(FILMGLS(), name = 'model_estimate')
         model_estimate.inputs.smooth_autocorr = True
-        run_level.connect(select_files, 'func', model_estimate, 'in_file')
+        # Default value for threshold is -1000.0 although nipype's documentation says 1000.0
+        model_estimate.inputs.threshold = 1000.0
+        run_level.connect(noise_removal, 'out_file', model_estimate, 'in_file')
         run_level.connect(model_generation, 'con_file', model_estimate, 'tcon_file')
         run_level.connect(model_generation, 'design_file', model_estimate, 'design_file')
 
