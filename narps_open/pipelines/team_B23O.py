@@ -332,8 +332,8 @@ class PipelineTeamB23O(Pipeline):
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'flame1'
         subject_level.connect(mask_intersection, 'out_file', estimate_model, 'mask_file')
-        subject_level.connect(mask_copes, 'merged_file', estimate_model, 'cope_file')
-        subject_level.connect(mask_varcopes, 'merged_file', estimate_model, 'var_cope_file')
+        subject_level.connect(mask_copes, 'out_file', estimate_model, 'cope_file')
+        subject_level.connect(mask_varcopes, 'out_file', estimate_model, 'var_cope_file')
         subject_level.connect(generate_model, 'design_mat', estimate_model, 'design_file')
         subject_level.connect(generate_model, 'design_con', estimate_model, 't_con_file')
         subject_level.connect(generate_model, 'design_grp', estimate_model, 'cov_split_file')
@@ -639,8 +639,8 @@ class PipelineTeamB23O(Pipeline):
         estimate_model = Node(FLAMEO(), name = 'estimate_model')
         estimate_model.inputs.run_mode = 'flame1'
         group_level.connect(mask_intersection, 'out_file', estimate_model, 'mask_file')
-        group_level.connect(mask_copes, 'merged_file', estimate_model, 'cope_file')
-        group_level.connect(mask_varcopes, 'merged_file', estimate_model, 'var_cope_file')
+        group_level.connect(mask_copes, 'out_file', estimate_model, 'cope_file')
+        group_level.connect(mask_varcopes, 'out_file', estimate_model, 'var_cope_file')
         group_level.connect(specify_model, 'design_mat', estimate_model, 'design_file')
         group_level.connect(specify_model, 'design_con', estimate_model, 't_con_file')
         group_level.connect(specify_model, 'design_grp', estimate_model, 'cov_split_file')
@@ -651,7 +651,7 @@ class PipelineTeamB23O(Pipeline):
         randomise.inputs.num_perm = 5000
         randomise.inputs.c_thresh = 0.05
         group_level.connect(mask_intersection, 'out_file', randomise, 'mask')
-        group_level.connect(mask_copes, 'merged_file', randomise, 'in_file')
+        group_level.connect(mask_copes, 'out_file', randomise, 'in_file')
         group_level.connect(specify_model, 'design_con', randomise, 'tcon')
         group_level.connect(specify_model, 'design_mat', randomise, 'design_mat')
 
