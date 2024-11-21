@@ -1,4 +1,4 @@
-### Contents overview
+# Contents overview
 
 - :snake: :package: `narps_open/` contains the Python package with all the pipelines logic.
 - :brain: `data/` contains data that is used by the pipelines, as well as the (intermediate or final) results data. Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).

@@ -19,6 +19,25 @@ docker run -it \
            nipype/nipype:py38
 ``` 
 
+> [!NOTE]
+> The `Dockerfile` available in the root directory of the repository contains a receipe to build a docker image with the project installed, ready to be launched.
+> From the root directory:
+>
+> ```bash
+> # Replace IMAGE_NAME in the following command
+> docker build -t IMAGE_NAME .
+> 
+> # Check the image was created
+> docker images
+> 
+> # Use IMAGE_NAME again to refer to the newly created image
+> docker run -it IMAGE_NAME
+> ``` 
+
+> [!TIP]
+> Find useful information on the [Docker documentation page](https://docs.docker.com/get-started/). Here is a [cheat sheet with Docker commands](https://docs.docker.com/get-started/docker_cheatsheet.pdf)
+
+
 ## Use Jupyter with the container
 
 If you wish to use [Jupyter](https://jupyter.org/) to run the code, a port forwarding is needed :
@@ -43,7 +62,7 @@ You can now access Jupyter using the address provided by the command line.
 
 ## Create a custom Docker image
 
-The `elodiegermani/open_pipeline` Docker image is based on [Neurodocker](https://github.com/ReproNim/neurodocker). It was created using the following command line :
+If you wish to create your own custom environment, make changes to the parameters, software versions, you can build your custom image using [Neurodocker](https://github.com/ReproNim/neurodocker). Generate a Dockerfile using the following command line :
 
 ```bash
 docker run --rm repronim/neurodocker:0.7.0 generate docker \
@@ -67,7 +86,7 @@ docker run --rm repronim/neurodocker:0.7.0 generate docker \
            --run 'mkdir -p ~/.jupyter && echo c.NotebookApp.ip = \"0.0.0.0\" > ~/.jupyter/jupyter_notebook_config.py' > Dockerfile
 ```
 
-If you wish to create your own custom environment, make changes to the parameters, and build your custom image from the generated Dockerfile.
+And build a new image from the Dockerfile.
 
 ```bash
 # Replace IMAGE_NAME in the following command
