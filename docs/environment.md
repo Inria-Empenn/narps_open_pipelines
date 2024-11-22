@@ -20,7 +20,7 @@ docker run -it \
 ``` 
 
 > [!NOTE]
-> The `Dockerfile` available in the root directory of the repository contains a receipe to build a docker image with the project installed, ready to be launched.
+> The `Dockerfile` available in the root directory of the repository contains a recipe to build a docker image with the project installed, ready to be launched.
 > From the root directory:
 >
 > ```bash
