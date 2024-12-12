@@ -32,13 +32,16 @@ class PipelineTeamDC61(Pipeline):
         self.fwhm = 5.0
         self.team_id = 'DC61'
         self.contrast_list = ['0001', '0002']
+
+        # Give a weight of 1/N to each regressor, N being the number of runs
+        nb_runs = len(self.run_list)
         self.subject_level_contrasts = [
             ('effect_of_gain', 'T',
-                [f'gamble_run{r}xgain_param^1' for r in range(1, len(self.run_list) + 1)],
-                [0.25]*len(self.run_list)),
+                [f'gamble_run{r}xgain_param^1' for r in range(1, nb_runs + 1)],
+                [1.0 / nb_runs] * nb_runs),
             ('effect_of_loss', 'T',
-                [f'gamble_run{r}xloss_param^1' for r in range(1, len(self.run_list) + 1)],
-                [0.25]*len(self.run_list))
+                [f'gamble_run{r}xloss_param^1' for r in range(1, nb_runs + 1)],
+                [1.0 / nb_runs] * nb_runs)
         ]
 
     def get_preprocessing(self):
@@ -334,8 +337,6 @@ class PipelineTeamDC61(Pipeline):
                 ['loss_param_range_f', 'F', [range_con], [1]],
                 ['loss_param_indiff_f', 'F', [indiff_con], [1]]
             ]
-
-        return []
 
     def get_group_covariates(subjects: list):
         """ Return a covariates list for OneSampleTTestDesign
