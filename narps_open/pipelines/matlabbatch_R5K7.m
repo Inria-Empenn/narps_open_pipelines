@@ -18,7 +18,7 @@ matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.data.presubphasemag.phase = 
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/fmap/sub-001_phasediff.nii,1'};
 matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.data.presubphasemag.magnitude = {
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/fmap/sub-001_magnitude1.nii,1'};
-matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.defaults.defaultsval.et = [0.00492 0.00738];
+matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.defaults.defaultsval.et = [4.92 7.38];
 matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.defaults.defaultsval.maskbrain = 0;
 matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.defaults.defaultsval.blipdir = -1;
 matlabbatch{1}.spm.tools.fieldmap.calculatevdm.subj.defaults.defaultsval.tert = 29.15;
