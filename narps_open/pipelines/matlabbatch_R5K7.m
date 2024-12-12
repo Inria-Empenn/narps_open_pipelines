@@ -81,6 +81,14 @@ matlabbatch{end+1}.spm.tools.oldseg.data = {
 % calculated transformation between anat and standardized space
 
 % Coreg each sbref onto mean unwarp
+
+% --> For each run, the distortion-corrected single-band reference EPI image 
+% was co-registered to the mean EPI image obtained from Realignment & Unwarping
+ % using normalised mutual information. 
+
+% Note in Python implem: This sounds like there were 4 coreg and not a single 
+% as done below (4 coregs were implemented in the Python code)
+
 matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
     'ABS_PATH/unwarped_mean_image.nii'
     };
@@ -113,6 +121,9 @@ matlabbatch{end}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
 % keeps the same name as before *but* the header has been modified to apply
 % the coregistration'
 
+
+% Note in Python implem: The coreg are done separatly in each run and therefore
+% other only includes 'usub-001_task-MGT_run-01_bold.nii'
 matlabbatch{end+1}.spm.spatial.coreg.estimate.ref(1) = {
     'ABS_PATH/c1sub-001_T1w.nii'
 };
@@ -285,6 +296,22 @@ self.subject_level_contrasts = [
 
 I think this means we have a single stat model with the 4 factors and the 2 
 groups and that the contrast.
+
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(1).name = 'Factor';
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(1).dept = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(1).variance = 1;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(1).gmsca = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(1).ancova = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(2).name = 'Group';
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(2).dept = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(2).variance = 1;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(2).gmsca = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fac(2).ancova = 0;
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fsuball.fsubject.scans = '<UNDEFINED>';
+matlabbatch{1}.spm.stats.factorial_design.des.fblock.fsuball.fsubject.conds = [1 1
+                                                                               2 1
+                                                                               3 1
+                                                                               4 1];
 
 
 % ##### 6) Group-level contrast
