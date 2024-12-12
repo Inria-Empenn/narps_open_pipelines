@@ -141,6 +141,31 @@ class TestPipelinesTeamDC61:
     def test_group_level_contrasts():
         """ Test the get_group_contrasts method """
 
+        # Wrong parameter
+        assert PipelineTeamDC61.get_group_level_contrasts('wrong') is None
+
+        # effect_of_gain parameter
+        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_gain') 
+
+        # effect_of_loss parameter
+        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_loss') 
+        [
+                ['gain_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
+                ['gain_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
+        ]
+
+        if subject_level_contrast == 'effect_of_loss':
+            range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
+            indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
+            return [
+                ['loss_param_range_f', 'F', [range_con], [1]],
+                ['loss_param_indiff_f', 'F', [indiff_con], [1]]
+            ]
+
+
+
+
+
     @staticmethod
     @mark.unit_test
     def test_group_covariates(mock_participants_data):
