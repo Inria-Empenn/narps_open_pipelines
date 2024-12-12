@@ -273,3 +273,26 @@ self.subject_level_contrasts = [
 ]
 
 % ##### 6) Group-level statistical analysis
+% --> A flexible factorial design was used to examine the effects of 4 factors 
+% of interest [task, gain (PM1), loss (PM2) and RT (PM3); cf. description 
+% above] for each of the 2 groups (Equal Indifference vs. Equal Range).
+
+% Note to myself: here we are missing the info on how many second-level models 
+% were created. This is important as to build the contrasts we need the name of 
+% the conditions
+
+% We'll reuse Python code from DC61 to generate the conditions with parametric 
+% modulation
+if subject_level_contrast == 'effect_of_gain':
+    return [
+        ['gain_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
+        ['gain_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
+    ]
+
+if subject_level_contrast == 'effect_of_loss':
+    range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
+    indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
+    return [
+        ['loss_param_range_f', 'F', [range_con], [1]],
+        ['loss_param_indiff_f', 'F', [indiff_con], [1]]
+    ]
