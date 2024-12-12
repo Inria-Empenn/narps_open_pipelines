@@ -34,7 +34,7 @@ class PipelineTeamR5K7(Pipeline):
 
     def __init__(self):
         super().__init__()
-        self.fwhm = 5.0
+        self.fwhm = 8.0
         self.team_id = 'R5K7'
         self.contrast_list = ['0001', '0002', '0003', '0004']
         condition_names = ['task', 'taskxgain^1', 'taskxloss^1', 'taskxreaction_time^1']
@@ -106,123 +106,56 @@ class PipelineTeamR5K7(Pipeline):
         preprocessing.connect(gunzip_sbref, 'out_file', fieldmap, 'epi_file')
         preprocessing.connect(gunzip_anat, 'out_file', fieldmap, 'anat_file')
 
-        # APPLYVDM - Apply fieldmap to single band reference EPI (sbref)
-        apply_fieldmap = Node(ApplyVDM(), name = 'apply_fieldmap')
-        apply_fieldmap.inputs.distortion_direction = 2
-        apply_fieldmap.inputs.write_which = [2, 0]
-        apply_fieldmap.inputs.interpolation = 7
-        preprocessing.connect(gunzip_sbref, 'out_file', apply_fieldmap, 'in_files')
-        preprocessing.connect(fieldmap, 'vdm', apply_fieldmap, 'vdmfile')
-
-        # MERGE - Merge files for the realign & unwarp node into one input.
-        merge_sbref_func = Node(Merge(2), name = 'merge_sbref_func')
-        merge_sbref_func.inputs.ravel_inputs = True
-        preprocessing.connect(gunzip_sbref, 'out_file', merge_sbref_func, 'in1')
-        preprocessing.connect(gunzip_func, 'out_file', merge_sbref_func, 'in2')
-
         # REALIGN UNWARP
         realign_unwarp = MapNode(RealignUnwarp(), name = 'realign_unwarp', iterfield = 'in_files')
         realign_unwarp.inputs.quality = 0.95
         realign_unwarp.inputs.separation = 3
-        realign_unwarp.inputs.fwhm = 5
         realign_unwarp.inputs.register_to_mean = True
         realign_unwarp.inputs.interp = 7
-        realign_unwarp.inputs.wrap = [0, 0, 0]
-        realign_unwarp.inputs.weight = ''
-        realign_unwarp.inputs.est_basis_func = [12, 12]
-        realign_unwarp.inputs.est_reg_order = 1
-        realign_unwarp.inputs.est_reg_factor = 100000
-        realign_unwarp.inputs.est_jacobian_deformations = False
-        realign_unwarp.inputs.est_first_order_effects = [4, 5]
-        realign_unwarp.inputs.est_second_order_effects = []
-        realign_unwarp.inputs.est_unwarp_fwhm = 4
-        realign_unwarp.inputs.est_re_est_mov_par = True
-        realign_unwarp.inputs.est_num_of_iterations = [5]
-        realign_unwarp.inputs.est_taylor_expansion_point = 'Average'
-        realign_unwarp.inputs.reslice_which = [1, 1]
         realign_unwarp.inputs.reslice_interp = 7
-        realign_unwarp.inputs.reslice_wrap = [0, 0, 0]
-        realign_unwarp.inputs.reslice_mask = True
-        realign_unwarp.inputs.out_prefix = 'u'
         preprocessing.connect(fieldmap, 'vdm', realign_unwarp, 'phase_map')
-        preprocessing.connect(merge_sbref_func, 'out', realign_unwarp, 'in_files')
+        preprocessing.connect(gunzip_func, 'out_file', realign_unwarp, 'in_files')
 
-        # SPLIT - Split the mean outputs of realign_unwarp
-        #   * realigned+unwarped sbref mean
-        #   * realigned+unwarped func mean
-        split_realign_unwarp_means = Node(Split(), name = 'split_realign_unwarp_means')
-        split_realign_unwarp_means.inputs.splits = [1, 1] # out1 is sbref; out2 is func
-        split_realign_unwarp_means.inputs.squeeze = True # Unfold one-element splits
-        preprocessing.connect(realign_unwarp, 'mean_image', split_realign_unwarp_means, 'inlist')
-
-        # SPLIT - Split the output of realign_unwarp
-        #   * realigned+unwarped sbref
-        #   * realigned+unwarped func
-        split_realign_unwarp_outputs = Node(Split(), name = 'split_realign_unwarp_outputs')
-        split_realign_unwarp_outputs.inputs.splits = [1, 1] # out1 is sbref; out2 is func
-        split_realign_unwarp_outputs.inputs.squeeze = True # Unfold one-element splits
-        preprocessing.connect(
-            realign_unwarp, 'realigned_unwarped_files',
-            split_realign_unwarp_outputs, 'inlist')
+        # SEGMENT - brain segmentation of anat file
+        segmentation_anat = Node(Segment(), name = 'segmentation_anat')
+        segmentation_anat.inputs.csf_output_type = [False, False, False] # No output for CSF
+        segmentation_anat.inputs.gm_output_type = [True, False, False] # No output for GM
+        segmentation_anat.inputs.wm_output_type = [False, False, False] # No output for WM
+        segmentation_anat.inputs.save_bias_corrected = False
+        preprocessing.connect(gunzip_func, 'out_file', segmentation_anat, 'data')
 
         # COREGISTER - Coregister sbref to realigned and unwarped mean image of func
-        coregister_sbref_to_func = Node(Coregister(), name = 'coregister_sbref_to_func')
-        coregister_sbref_to_func.inputs.cost_function = 'nmi'
-        coregister_sbref_to_func.inputs.separation = [4, 2]
-        coregister_sbref_to_func.inputs.ctolerance = [
-            0.02, 0.02, 0.02, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001]
-        coregister_sbref_to_func.inputs.fwhm = [7, 7]
-        coregister_sbref_to_func.inputs.jobtype = 'estimate'
+        coregister_sbref_to_mean_func = Node(Coregister(), name = 'coregister_sbref_to_mean_func')
+        coregister_sbref_to_mean_func.inputs.cost_function = 'nmi'
+        coregister_sbref_to_mean_func.inputs.jobtype = 'estimate'
         preprocessing.connect(
-            split_realign_unwarp_means, 'out2',  # mean func
-            coregister_sbref_to_func, 'target')
+            realign_unwarp, 'mean_image', # realigned and unwarp mean func
+            coregister_sbref_to_mean_func, 'target')
         preprocessing.connect(
-            split_realign_unwarp_outputs, 'out1', # sbref
-            coregister_sbref_to_func, 'source')
+            gunzip_sbref, 'out_file', coregister_sbref_to_mean_func, 'source')
 
-        # MERGE - Merge func + func mean image files for the coregister_sbref_to_anat
-        #   node into one input.
-        merge_func_before_coregister = Node(Merge(2), name = 'merge_func_before_coregister')
-        merge_func_before_coregister.inputs.ravel_inputs = True
-        preprocessing.connect( # out2 is func
-            split_realign_unwarp_outputs, 'out2', merge_func_before_coregister, 'in1')
-        preprocessing.connect( # out2 is func mean
-            split_realign_unwarp_means, 'out2', merge_func_before_coregister, 'in2')
-
-        # COREGISTER - Coregister sbref to anat
+        # COREGISTER - Coregister sbref (now in the func space) and func to anat space
         coregister_sbref_to_anat = Node(Coregister(), name = 'coregister_sbref_to_anat')
         coregister_sbref_to_anat.inputs.cost_function = 'nmi'
-        coregister_sbref_to_anat.inputs.separation = [4, 2]
-        coregister_sbref_to_anat.inputs.ctolerance = [
-            0.02, 0.02, 0.02, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001]
-        coregister_sbref_to_anat.inputs.fwhm = [7, 7]
         coregister_sbref_to_anat.inputs.jobtype = 'estimate'
-        coregister_sbref_to_anat.inputs.target = join(
-            SPMInfo.getinfo()['path'], 'toolbox', 'OldSeg', 'grey.nii')
         preprocessing.connect(
-            coregister_sbref_to_func, 'coregistered_source', coregister_sbref_to_anat, 'source')
-        preprocessing.connect(# out[0] is func, out[1] is func mean
-            merge_func_before_coregister, 'out', coregister_sbref_to_anat, 'apply_to_files')
-
-        # SEGMENT - First step of sbref normalization.
-        segmentation_sbref = Node(Segment(), name = 'segmentation_sbref')
-        segmentation_sbref.inputs.csf_output_type = [False, False, False] # No output for CSF
-        segmentation_sbref.inputs.gm_output_type = [False, False, False] # No output for GM
-        segmentation_sbref.inputs.wm_output_type = [False, False, False] # No output for WM
-        segmentation_sbref.inputs.save_bias_corrected = False
-        segmentation_sbref.inputs.warp_frequency_cutoff = 45
-        segmentation_sbref.inputs.sampling_distance = 2.0
+            coregister_sbref_to_mean_func, 'coregistered_source',
+            coregister_sbref_to_anat, 'source')
         preprocessing.connect(
-            coregister_sbref_to_anat, 'coregistered_source', segmentation_sbref, 'data')
+            segmentation_anat, 'native_gm_image',
+            coregister_sbref_to_anat, 'target')
+        preprocessing.connect(
+            realign_unwarp, 'realigned_unwarped_files', # realigned and unwarp func files
+            coregister_sbref_to_anat, 'apply_to_files')
 
-        # NORMALIZE - Deformation computed by the segmentation_sbref step is applied to
-        #   the func, mean func, and sbref.
+        # NORMALIZE - Deformation computed by the segmentation_anat step is applied to
+        #   the func (in anat space).
+        # TODO : we might need the sbref (in anat space) to be normalized as well
         normalize = Node(Normalize(), name = 'normalize')
-        normalize.inputs.write_voxel_sizes = [2, 2, 2]
         normalize.inputs.jobtype = 'write' # Estimation was done on previous step
         preprocessing.connect(
-            segmentation_sbref, 'transformation_mat', normalize, 'parameter_file')
-        preprocessing.connect(# coregistered_files[0] is func, coregistered_files[1] is func mean
+            segmentation_anat, 'transformation_mat', normalize, 'parameter_file')
+        preprocessing.connect(
             coregister_sbref_to_anat, 'coregistered_files', normalize, 'apply_to_files')
 
         # SMOOTH - Spatial smoothing of fMRI data
@@ -233,16 +166,6 @@ class PipelineTeamR5K7(Pipeline):
         smoothing.inputs.prefix = 's'
         preprocessing.connect(normalize, 'normalized_files', smoothing, 'in_files')
 
-        # SELECT - Select the smoothed func.
-        select_func = Node(Select(), name = 'select_func')
-        select_func.inputs.index = [0] # func file
-        preprocessing.connect(smoothing, 'smoothed_files', select_func, 'inlist')
-
-        # COMPUTE DVARS - Identify corrupted time-points from func
-        compute_dvars = Node(ComputeDVARS(), name = 'compute_dvars')
-        compute_dvars.inputs.out_file_name = 'dvars_out'
-        preprocessing.connect(select_func, 'out', compute_dvars, 'in_file')
-
         # DATA SINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
@@ -250,10 +173,6 @@ class PipelineTeamR5K7(Pipeline):
         preprocessing.connect(
             realign_unwarp, 'realignment_parameters',
             data_sink, 'preprocessing.@realignement_parameters')
-        preprocessing.connect(
-            compute_dvars, 'dvars_out_file', data_sink, 'preprocessing.@dvars_out_file')
-        preprocessing.connect(
-            compute_dvars, 'inference_out_file', data_sink, 'preprocessing.@inference_out_file')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
@@ -291,20 +210,11 @@ class PipelineTeamR5K7(Pipeline):
 
         # Smoothing outputs
         templates = [
-            join(output_dir, 'swusub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
-            join(output_dir, 'swmeanusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
-            ]
-
-        # DVARS output
-        templates += [
-            join(output_dir, 'dvars_out_DVARS.tsv'),
-            join(output_dir, 'dvars_out_Inference.tsv')
+            join(output_dir, 'swusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
             ]
 
         # Realignement parameters
         templates += [
-            join(output_dir, '_realign_unwarp0',
-                'rp_sub-{subject_id}_task-MGT_run-{run_id}_sbref.txt'),
             join(output_dir, '_realign_unwarp1',
                 'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')
             ]
