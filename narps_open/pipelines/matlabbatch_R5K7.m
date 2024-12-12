@@ -151,3 +151,125 @@ matlabbatch{end+1}.spm.spatial.smooth.data = {
     'ABS_PATH/narps_open_pipelines/data/original/ds001734/sub-001/func/usub-001_task-MGT_run-04_bold.nii'
 };
 matlabbatch{end}.spm.spatial.smooth.fwhm = [8 8 8];
+
+% ##### 4) First-level statistical analysis
+
+% We'll reuse Python code from DC61 to generate the conditions with parametric 
+% modulation
+
+def get_subject_information(event_files: list):
+        from nipype.interfaces.base import Bunch
+
+        subject_info = []
+
+        for run_id, event_file in enumerate(event_files):
+
+            onsets = []
+            durations = []
+            gain_value = []
+            loss_value = []
+            reaction_time = []
+
+            # Parse the events file
+            with open(event_file, 'rt') as file:
+                next(file)  # skip the header
+
+                for line in file:
+                    info = line.strip().split()
+
+% --> independent_vars_first_level : - event-related design with each trial 
+% modelled with a duration of 4 sec and 3 linear parametric modulators (PMs 
+% orthogonalized via de-meaning against task and preceding PMs, respectively) 
+% for gain, loss and reaction time (in that order) as given in the .tsv log 
+% files
+
+                    onsets.append(float(info[0]))
+                    durations.append(float(info[1]))
+                    gain_value.append(float(info[2]))
+                    loss_value.append(float(info[3]))
+                    reaction_time.append(float(info[4]))
+
+            # Create a Bunch for the run
+            subject_info.append(
+                Bunch(
+                    conditions = [f'gamble_run{run_id + 1}'],
+                    onsets = [onsets],
+                    durations = [durations], % duration is 4s
+                    amplitudes = None,
+                    tmod = None,
+                    pmod = [
+                        Bunch(
+                            name = ['gain_param', 'loss_param', 'rt_param'],
+                            poly = [1, 1, 1],
+                            param = [gain_value, loss_value, reaction_time]
+                        )
+                    ],
+                    regressor_names = None,
+                    regressors = None
+                ))
+
+        return subject_info
+
+
+matlabbatch{1}.spm.stats.fmri_spec.dir = '<UNDEFINED>';
+matlabbatch{1}.spm.stats.fmri_spec.timing.units = 'secs';
+matlabbatch{1}.spm.stats.fmri_spec.timing.RT = '<UNDEFINED>'; % Same as usual = TR 
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).scans = '<UNDEFINED>'; % scans from session 1
+% Note that parametric modulation was done in the Python code above and is not repeated here
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).multi = {''};
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).regress = struct('name', {}, 'val', {});
+% --> 6 motion regressors (1st-order only) reflecting the 6 realignment parameters for translation and rotation movements obtained during preprocessing
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).multi_reg = {'<PATH_TO_REALIGN_SESS1>'}; % link to parameter motion files created by realign
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).hpf = 128;
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).scans = '<UNDEFINED>'; % scans from session 2
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).multi = {''};
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).regress = struct('name', {}, 'val', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).multi_reg = {'<PATH_TO_REALIGN_SESS2>'}; % link to parameter motion files created by realign
+matlabbatch{1}.spm.stats.fmri_spec.sess(2).hpf = 128;
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).scans = '<UNDEFINED>'; % scans from session 3
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).multi = {''};
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).regress = struct('name', {}, 'val', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).multi_reg = {'<PATH_TO_REALIGN_SESS3>'}; % link to parameter motion files created by realign
+matlabbatch{1}.spm.stats.fmri_spec.sess(3).hpf = 128;
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).scans = '<UNDEFINED>'; % scans from session 4
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).multi = {''};
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).regress = struct('name', {}, 'val', {});
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).multi_reg = {'<PATH_TO_REALIGN_SESS4>'}; % link to parameter motion files created by realign
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).hpf = 128;
+matlabbatch{1}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
+% --> canonical HRF plus temporal derivative
+matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [1 0];
+
+% Those are just the default
+% matlabbatch{1}.spm.stats.fmri_spec.volt = 1;
+% matlabbatch{1}.spm.stats.fmri_spec.global = 'None';
+% matlabbatch{1}.spm.stats.fmri_spec.mthresh = 0.8;
+% matlabbatch{1}.spm.stats.fmri_spec.mask = {''};
+% matlabbatch{1}.spm.stats.fmri_spec.cvi = 'AR(1)';
+
+
+% ##### 5) Contrast definition at the first-level
+% --> After model estimation, sum contrast images for each regressor of 
+% interest [task, gain (PM1), loss (PM2) and RT (PM3)] were computed across 
+% the 4 sessions in each participant.
+self.contrast_list = ['0001', '0002', '0003', '0004']
+self.subject_level_contrasts = [
+    ('task', 'T',
+        [f'gamble_run{r}' for r in range(1, len(self.run_list) + 1)],
+        [1]*len(self.run_list)),
+    ('effect_of_gain', 'T',
+        [f'gamble_run{r}xgain_param^1' for r in range(1, len(self.run_list) + 1)],
+        [1]*len(self.run_list)),
+    ('effect_of_loss', 'T',
+        [f'gamble_run{r}xloss_param^1' for r in range(1, len(self.run_list) + 1)],
+        [1]*len(self.run_list))
+    ('effect_of_RT', 'T',
+        [f'gamble_run{r}xRT_param^1' for r in range(1, len(self.run_list) + 1)],
+        [1]*len(self.run_list))
+]
+
+% ##### 6) Group-level statistical analysis
