@@ -239,7 +239,6 @@ matlabbatch{1}.spm.stats.fmri_spec.sess(4).cond = struct('name', {}, 'onset', {}
 matlabbatch{1}.spm.stats.fmri_spec.sess(4).multi = {''};
 matlabbatch{1}.spm.stats.fmri_spec.sess(4).regress = struct('name', {}, 'val', {});
 matlabbatch{1}.spm.stats.fmri_spec.sess(4).multi_reg = {'<PATH_TO_REALIGN_SESS4>'}; % link to parameter motion files created by realign
-matlabbatch{1}.spm.stats.fmri_spec.sess(4).hpf = 128;
 matlabbatch{1}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
 % --> canonical HRF plus temporal derivative
 matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [1 0];
@@ -249,13 +248,17 @@ matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [1 0];
 % matlabbatch{1}.spm.stats.fmri_spec.global = 'None';
 % matlabbatch{1}.spm.stats.fmri_spec.mthresh = 0.8;
 % matlabbatch{1}.spm.stats.fmri_spec.mask = {''};
-% matlabbatch{1}.spm.stats.fmri_spec.cvi = 'AR(1)';
 
+% --> model_settings : 1st-level model: "AR(1) + w" autocorrelation model in 
+% SPM, high-pass filter: 128 s (Note: those are default in SPM)
+matlabbatch{1}.spm.stats.fmri_spec.cvi = 'AR(1)';
+matlabbatch{1}.spm.stats.fmri_spec.sess(4).hpf = 128;
 
 % ##### 5) Contrast definition at the first-level
 % --> After model estimation, sum contrast images for each regressor of 
 % interest [task, gain (PM1), loss (PM2) and RT (PM3)] were computed across 
 % the 4 sessions in each participant.
+
 self.contrast_list = ['0001', '0002', '0003', '0004']
 self.subject_level_contrasts = [
     ('task', 'T',
@@ -277,22 +280,38 @@ self.subject_level_contrasts = [
 % of interest [task, gain (PM1), loss (PM2) and RT (PM3); cf. description 
 % above] for each of the 2 groups (Equal Indifference vs. Equal Range).
 
-% Note to myself: here we are missing the info on how many second-level models 
-% were created. This is important as to build the contrasts we need the name of 
-% the conditions
+% --> 2nd-level model: random-effects GLM implemented with weighted least 
+% squares (via SPM's restricted maximum likelihood estimation); both between-condition and between-group variances assumed to be unequal
 
-% We'll reuse Python code from DC61 to generate the conditions with parametric 
-% modulation
-if subject_level_contrast == 'effect_of_gain':
-    return [
-        ['gain_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
-        ['gain_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
-    ]
+I think this means we have a single stat model with the 4 factors and the 2 
+groups and that the contrast.
 
-if subject_level_contrast == 'effect_of_loss':
-    range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
-    indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
-    return [
-        ['loss_param_range_f', 'F', [range_con], [1]],
-        ['loss_param_indiff_f', 'F', [indiff_con], [1]]
-    ]
+
+% ##### 6) Group-level contrast
+% --> inference_contrast_effect : Linear T contrasts for the two parameters of 
+% interest (PM1 indicating linear hemodynamic changes with Gain value over 
+% trials within each subject, PM2 indicating such changes with Loss value) were
+ % used to test for the effects specified in the 9 hypotheses given.
+
+ task_range gain_range loss_range RT_range task_indiff gain_indiff loss_indiff RT_indiff
+
+% H1 - Positive parametric effect of gains in the vmPFC (equal indifference group)
+% H3 -  Positive parametric effect of gains in the ventral striatum (equal indifference group) 
+['gain_indiff_pos', 'T', ['gain_indiff'], [1]],
+% H2 - Positive parametric effect of gains in the vmPFC (equal range group) 
+% H4 - Positive parametric effect of gains in the ventral striatum (equal range group) 
+['gain_range_pos', 'T', ['gain_range'], [1]],
+% H5 - Negative parametric effect of losses in the vmPFC (equal indifference group) 
+['loss_indiff_neg', 'T', ['loss_indiff'], [-1]] 
+% H6 - Negative parametric effect of losses in the vmPFC (equal range group) 
+['loss_range_neg', 'T', ['loss_range'], [-1]] 
+% H7 - Positive parametric effect of losses in the amygdala (equal indifference group)
+['loss_indiff_pos', 'T', ['loss_indiff'], [1]] 
+% H8 - Positive parametric effect of losses in the amygdala (equal range group) 
+['loss_range_pos', 'T', ['loss_range'], [1]] 
+% H9 - Greater positive response to losses in amygdala (equal range group vs. equal indifference group)
+['loss_range_pos_range_vs_indiff', 'T', ['loss_range' 'loss_indiff'], [1 -1]] 
+
+% ##### 7) Inference
+% --> pval_computation : standard parametric inference
+% --> multiple_testing_correction : family-wise error correction, based on Random Field Theory
