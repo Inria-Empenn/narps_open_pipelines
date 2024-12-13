@@ -101,15 +101,9 @@ class PipelineTeamL3V8(Pipeline):
 
         motion_correction = Node(interface=Realign(), name='realign')
         motion_correction.inputs.register_to_mean = False # they registered to 1st slice
-        motion_correction.inputs.fwhm = 6
         motion_correction.inputs.interp = 4
         motion_correction.inputs.quality = 0.9
-        motion_correction.inputs.separation = 4
-        motion_correction.inputs.wrap = [0, 0, 0]
-        motion_correction.inputs.write_which = [2, 1]
         motion_correction.inputs.write_interp = 4 
-        motion_correction.inputs.write_wrap = [0, 0, 0]
-        motion_correction.inputs.write_mask = True
         motion_correction.inputs.jobtype = 'estwrite'
         
 
@@ -124,10 +118,8 @@ class PipelineTeamL3V8(Pipeline):
         coregisteration = Node(Coregister(), name="coregister")
         coregisteration.inputs.jobtype = 'estimate'
         coregisteration.inputs.cost_function = 'nmi'
-        coregisteration.inputs.fwhm = [6.0, 6.0]
-        coregisteration.inputs.separation = [4.0, 2.0]
-        coregisteration.inputs.tolerance = [0.02, 0.02, 0.02, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001]
 
+        
         # connect coreg
         preprocessing.connect( motion_correction, 'mean_image', coregisteration, 'target') # target=mean
         preprocessing.connect( gunzip_anat, 'out_file', coregisteration, 'source') # T1w=source anat
@@ -141,8 +133,6 @@ class PipelineTeamL3V8(Pipeline):
         segmentation.inputs.write_deformation_fields = [True, True]
         segmentation.inputs.channel_info = (0.0001, 60, (True, True))
         segmentation.inputs.affine_regularization = 'mni'
-        segmentation.inputs.warping_regularization = [0, 0.001, 0.5, 0.05, 0.2]
-        segmentation.inputs.sampling_distance = 3
         segmentation.inputs.tissues = [
             [(spm_tissues_file, 1), 1, (True,False), (True, False)],
             [(spm_tissues_file, 2), 1, (True,False), (True, False)],
@@ -162,7 +152,6 @@ class PipelineTeamL3V8(Pipeline):
 
         normalization = Node(Normalize12(), name="normalize") 
         normalization.inputs.jobtype = 'write'
-        normalization.inputs.write_voxel_sizes = [3, 3, 3]
         normalization.inputs.write_interp = 4
         normalization.inputs.warping_regularization = [0, 0.001, 0.5, 0.05, 0.2]
 
