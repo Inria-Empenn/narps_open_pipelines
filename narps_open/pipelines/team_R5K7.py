@@ -57,29 +57,44 @@ class PipelineTeamR5K7(Pipeline):
             base_dir = self.directories.working_dir,
             name = 'preprocessing')
 
-        # IDENTITY INTERFACE - To iterate on subjects and runs
-        information_source = Node(IdentityInterface(
-            fields = ['subject_id', 'run_id']),
-            name = 'information_source')
-        information_source.iterables = [
-            ('subject_id', self.subject_list),
-            ('run_id', self.run_list)
-            ]
+        # IDENTITY INTERFACE - To iterate on subjects
+        information_source_subjects = Node(IdentityInterface(
+            fields = ['subject_id']),
+            name = 'information_source_subjects')
+        information_source_subjects.iterables = [('subject_id', self.subject_list)]
 
-        # SELECT FILES - Select input files
+        # IDENTITY INTERFACE - To iterate on subjects and runs
+        information_source_runs = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source_runs')
+        information_source_runs.iterables = [('run_id', self.run_list)]
+        preprocessing.connect(
+            information_source_subjects, 'subject_id', information_source_runs, 'subject_id')
+
+        # SELECT FILES - Select input files per subject
         templates = {
             'anat' : join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
             'magnitude' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz'),
-            'phase' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz'),
+            'phase' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
+        }
+        select_subject_files = Node(SelectFiles(templates), name = 'select_subject_files')
+        select_subject_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_subjects, 'subject_id', select_subject_files, 'subject_id')
+
+        # SELECT FILES - Select input files per run
+        templates = {
             'func' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz'),
             'sbref' : join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_sbref.nii.gz')
         }
-        select_files = Node(SelectFiles(templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.dataset_dir
-        preprocessing.connect(information_source, 'subject_id', select_files, 'subject_id')
-        preprocessing.connect(information_source, 'run_id', select_files, 'run_id')
+        select_run_files = Node(SelectFiles(templates), name = 'select_run_files')
+        select_run_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_runs, 'subject_id', select_run_files, 'subject_id')
+        preprocessing.connect(
+            information_source_runs, 'run_id', select_run_files, 'run_id')
 
         # GUNZIP - gunzip files because SPM do not use .nii.gz files
         gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
@@ -87,13 +102,11 @@ class PipelineTeamR5K7(Pipeline):
         gunzip_sbref = Node(Gunzip(), name = 'gunzip_sbref')
         gunzip_magnitude = Node(Gunzip(), name = 'gunzip_magnitude')
         gunzip_phase = Node(Gunzip(), name = 'gunzip_phase')
-        preprocessing.connect(select_files, 'anat', gunzip_anat, 'in_file')
-        preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
-        preprocessing.connect(select_files, 'sbref', gunzip_sbref, 'in_file')
-        preprocessing.connect(select_files, 'magnitude', gunzip_magnitude, 'in_file')
-        preprocessing.connect(select_files, 'phase', gunzip_phase, 'in_file')
-
-        # IMCALC - Compute difference between the two magnitude maps
+        preprocessing.connect(select_subject_files, 'anat', gunzip_anat, 'in_file')
+        preprocessing.connect(select_run_files, 'func', gunzip_func, 'in_file')
+        preprocessing.connect(select_run_files, 'sbref', gunzip_sbref, 'in_file')
+        preprocessing.connect(select_subject_files, 'magnitude', gunzip_magnitude, 'in_file')
+        preprocessing.connect(select_subject_files, 'phase', gunzip_phase, 'in_file')
 
         # FIELD MAP - Compute a voxel displacement map from magnitude and phase data
         fieldmap = Node(FieldMap(), name = 'fieldmap')
@@ -297,12 +310,6 @@ class PipelineTeamR5K7(Pipeline):
 
         # SELECT FILES - to select necessary files
         templates = {
-            'dvars_file' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'dvars_out_DVARS.tsv'),
-            'dvars_inference_file' : join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'dvars_out_Inference.tsv'),
             'realignement_parameters' : join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}', '_realign_unwarp1',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt'),
