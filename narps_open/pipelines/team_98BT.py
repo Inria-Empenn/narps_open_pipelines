@@ -151,6 +151,10 @@ class PipelineTeam98BT(Pipeline):
         short_echo_time = min(float(fieldmap_info['EchoTime1']), float(fieldmap_info['EchoTime2']))
         long_echo_time = max(float(fieldmap_info['EchoTime1']), float(fieldmap_info['EchoTime2']))
 
+        print('Echo times: ------')
+        print(short_echo_time)
+        print(long_echo_time)
+
         if short_echo_time == float(fieldmap_info['EchoTime1']):
             magnitude_file = magnitude_files[0]
         elif short_echo_time == float(fieldmap_info['EchoTime2']):
