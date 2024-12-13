@@ -337,8 +337,8 @@ class PipelineTeam98BT(Pipeline):
         Returns: a list of nipype.WorkFlow
         """
         return [
-            self.get_preprocessing_sub_workflow(),
-            self.get_dartel_template_sub_workflow()
+            self.get_dartel_template_sub_workflow(),
+            self.get_preprocessing_sub_workflow()
         ]
 
     def get_preprocessing_outputs(self):
