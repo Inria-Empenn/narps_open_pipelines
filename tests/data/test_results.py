@@ -12,8 +12,7 @@ Usage:
 """
 
 from os.path import isdir, join
-from shutil import rmtree, move, copytree
-from time import sleep
+from shutil import rmtree, copytree
 
 from checksumdir import dirhash
 from pytest import mark
@@ -74,7 +73,8 @@ class TestResultsCollection:
 
         # Mock the results path
         results_directory = Configuration()['directories']['narps_results']
-        Configuration()['directories']['narps_results'] = Configuration()['directories']['test_runs']
+        Configuration()[
+            'directories']['narps_results'] = Configuration()['directories']['test_runs']
 
         # Init & download the collection
         collection = ResultsCollection('2T6S')
@@ -103,7 +103,8 @@ class TestResultsCollection2T6S:
         """ Test the rectify method """
 
         # Get raw data
-        orig_directory = join(Configuration()['directories']['test_data'], 'results', 'team_2T6S')
+        orig_directory = join(
+            Configuration()['directories']['test_data'], 'data', 'results', 'team_2T6S')
 
         # Create test data
         test_directory = join(Configuration()['directories']['test_runs'], 'results_team_2T6S')

@@ -1,3 +1,4 @@
+# pylint: skip-file
 from nipype.interfaces.fsl import (BET, FAST, MCFLIRT, FLIRT, FNIRT, ApplyWarp, SUSAN, 
                                    Info, ImageMaths, IsotropicSmooth, Threshold, Level1Design, FEATModel, 
                                    L2Model, Merge, FLAMEO, ContrastMgr,Cluster,  FILMGLS, Randomise, MultipleRegressDesign)

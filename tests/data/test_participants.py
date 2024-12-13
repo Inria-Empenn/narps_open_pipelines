@@ -10,28 +10,46 @@ Usage:
     pytest -q test_participants.py
     pytest -q test_participants.py -k <selected_test>
 """
+from os.path import join
 
-from pytest import mark
+from pytest import mark, fixture
 
 import narps_open.data.participants as part
+from narps_open.utils.configuration import Configuration
+
+@fixture
+def mock_participants_data(mocker):
+    """ A fixture to provide mocked data from the test_data directory """
+
+    mocker.patch(
+        'narps_open.data.participants.Configuration',
+        return_value = {
+            'directories': {
+                'dataset': join(
+                    Configuration()['directories']['test_data'],
+                    'data', 'participants')
+                }
+            }
+    )
 
 class TestParticipants:
     """ A class that contains all the unit tests for the participants module."""
 
     @staticmethod
     @mark.unit_test
-    def test_get_participants_information():
+    def test_get_participants_information(mock_participants_data):
         """ Test the get_participants_information function """
-        """p_info = part.get_participants_information()
-        assert len(p_info) == 108
-        assert p_info.at[5, 'participant_id'] == 'sub-006'
-        assert p_info.at[5, 'group'] == 'equalRange'
-        assert p_info.at[5, 'gender'] == 'M'
-        assert p_info.at[5, 'age'] == 30
-        assert p_info.at[12, 'participant_id'] == 'sub-015'
-        assert p_info.at[12, 'group'] == 'equalIndifference'
-        assert p_info.at[12, 'gender'] == 'F'
-        assert p_info.at[12, 'age'] == 26"""
+
+        p_info = part.get_participants_information()
+        assert len(p_info) == 4
+        assert p_info.at[1, 'participant_id'] == 'sub-002'
+        assert p_info.at[1, 'group'] == 'equalRange'
+        assert p_info.at[1, 'gender'] == 'M'
+        assert p_info.at[1, 'age'] == 25
+        assert p_info.at[2, 'participant_id'] == 'sub-003'
+        assert p_info.at[2, 'group'] == 'equalIndifference'
+        assert p_info.at[2, 'gender'] == 'F'
+        assert p_info.at[2, 'age'] == 27
 
     @staticmethod
     @mark.unit_test
@@ -87,3 +105,12 @@ class TestParticipants:
         assert len(participants_list) == 80
         assert participants_list[0] == '020'
         assert participants_list[-1] == '003'
+
+    @staticmethod
+    @mark.unit_test
+    def test_get_group(mock_participants_data):
+        """ Test the get_group function """
+
+        assert part.get_group('') == []
+        assert part.get_group('equalRange') == ['002', '004']
+        assert part.get_group('equalIndifference') == ['001', '003']

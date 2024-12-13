@@ -17,11 +17,28 @@ from narps_open.pipelines import implemented_pipelines
 
 def get_opened_issues():
     """ Return a list of opened issues and pull requests for the NARPS Open Pipelines project """
-    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
+
+    # First get the number of issues of the project
+    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines'
     response = get(request_url, timeout = 2)
     response.raise_for_status()
 
-    return response.json()
+    # Get all opened issues
+    request_url = 'https://api.github.com/repos/Inria-Empenn/narps_open_pipelines/issues'
+    request_url += '?page={page_number}'
+
+    issues = []
+    page = True # Will later be replaced by a table
+    page_number = 1 # According to the doc, first page is not page 0
+    # https://docs.github.com/en/rest/issues/issues#list-repository-issues
+    while bool(page) is True : # Test if the page is empty
+        response = get(request_url.format(page_number = str(page_number)), timeout = 2)
+        response.raise_for_status()
+        page = response.json()
+        issues += page
+        page_number += 1
+
+    return issues
 
 def get_teams_with_pipeline_files():
     """ Return a set of teams having a file for their pipeline in the repository """
@@ -58,9 +75,17 @@ class PipelineStatusReport():
 
             # Get software used in the pipeline, from the team description
             description = TeamDescription(team_id)
-            self.contents[team_id]['softwares'] = \
+            self.contents[team_id]['software'] = \
                 description.categorized_for_analysis['analysis_SW']
             self.contents[team_id]['fmriprep'] = description.preprocessing['used_fmriprep_data']
+
+            # Get comments about the pipeline
+            self.contents[team_id]['excluded'] = \
+                description.comments['excluded_from_narps_analysis']
+            self.contents[team_id]['reproducibility'] = \
+                int(description.comments['reproducibility'])
+            self.contents[team_id]['reproducibility_comment'] = \
+                description.comments['reproducibility_comment']
 
             # Get issues and pull requests related to the team
             issues = {}
@@ -91,10 +116,11 @@ class PipelineStatusReport():
             else:
                 self.contents[team_id]['status'] = '1-progress'
 
-        # Sort contents with the following priorities : 1-"status", 2-"softwares" and 3-"fmriprep"
+        # Sort contents with the following priorities :
+        #    1-"status", 2-"softwares", 3-"fmriprep"
         self.contents = OrderedDict(sorted(
             self.contents.items(),
-            key=lambda k: (k[1]['status'], k[1]['softwares'], k[1]['fmriprep'])
+            key=lambda k: (k[1]['status'], k[1]['software'], k[1]['fmriprep'])
             ))
 
     def markdown(self):
@@ -106,14 +132,23 @@ class PipelineStatusReport():
         output_markdown += '<br>:red_circle: not started yet\n'
         output_markdown += '<br>:orange_circle: in progress\n'
         output_markdown += '<br>:green_circle: completed\n'
-        output_markdown += '<br><br>The *softwares used* column gives a simplified version of '
+        output_markdown += '<br><br>The *main software* column gives a simplified version of '
         output_markdown += 'what can be found in the team descriptions under the '
         output_markdown += '`general.software` column.\n'
+        output_markdown += '<br><br>The *reproducibility* column rates the pipeline as follows:\n'
+        output_markdown += ' * default score is :star::star::star::star:;\n'
+        output_markdown += ' * -1 if the team did not use fmriprep data;\n'
+        output_markdown += ' * -1 if the team used several pieces of software '
+        output_markdown += '(e.g.: FSL and AFNI);\n'
+        output_markdown += ' * -1 if the team used custom or marginal software '
+        output_markdown += '(i.e.: something else than SPM, FSL, AFNI or nistats);\n'
+        output_markdown += ' * -1 if the team did not provided his source code.\n'
 
         # Start table
-        output_markdown += '| team_id | status | softwares used | fmriprep used ? |'
-        output_markdown += ' related issues | related pull requests |\n'
-        output_markdown += '| --- |:---:| --- | --- | --- | --- |\n'
+        output_markdown += '\n| team_id | status | main software | fmriprep used ? |'
+        output_markdown += ' related issues | related pull requests |'
+        output_markdown += ' excluded from NARPS analysis | reproducibility |\n'
+        output_markdown += '| --- |:---:| --- | --- | --- | --- | --- | --- |\n'
 
         # Add table contents
         for team_key, team_values in self.contents.items():
@@ -128,7 +163,7 @@ class PipelineStatusReport():
                 status = ':red_circle:'
 
             output_markdown += f'| {status} '
-            output_markdown += f'| {team_values["softwares"]} '
+            output_markdown += f'| {team_values["software"]} '
             output_markdown += f'| {team_values["fmriprep"]} '
 
             issues = ''
@@ -141,12 +176,22 @@ class PipelineStatusReport():
             for issue_number, issue_url in team_values['pulls'].items():
                 pulls += f'[{issue_number}]({issue_url}), '
 
-            output_markdown += f'| {pulls} |\n'
+            output_markdown += f'| {pulls} '
+            output_markdown += f'| {team_values["excluded"]} '
 
+            reproducibility_ranking = ''
+            for _ in range(team_values['reproducibility']):
+                reproducibility_ranking += ':star:'
+            for _ in range(4-team_values['reproducibility']):
+                reproducibility_ranking += ':black_small_square:'
+            output_markdown += f'| {reproducibility_ranking}<br />'
+            output_markdown += f'{team_values["reproducibility_comment"]} |\n'
 
         return output_markdown
 
-if __name__ == '__main__':
+def main():
+    """ Entry-point for the command line tool narps_open_status """
+
     # Parse arguments
     parser = ArgumentParser(description='Get a work progress status report for pipelines.')
     formats = parser.add_mutually_exclusive_group(required = False)
@@ -161,3 +206,6 @@ if __name__ == '__main__':
         print(report.markdown())
     else:
         print(report)
+
+if __name__ == '__main__':
+    main()

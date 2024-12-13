@@ -1,4 +1,4 @@
-# The NARPS Open Pipelines project
+# NARPS Open Pipelines
 
 <p align="center">
 	<img src="assets/images/project_illustration.png"/> 
@@ -15,45 +15,27 @@
         <img src="https://img.shields.io/github/commit-activity/m/Inria-Empenn/narps_open_pipelines" /></a>
 </p>
 
-## Table of contents
+**The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS study (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
 
-- [Project presentation](#project-presentation)
-- [Getting Started](#getting-started)
-	- [Contents overview](#contents-overview)
-	- [Installation](#installation)
-	- [Contributing](#contributing)
-- [References](#references)
-- [Funding](#funding)
+We base our reproductions on the original descriptions provided by the teams and test the quality of the reproductions by comparing our results with the original results published on NeuroVault.
 
-## Project presentation
+Find more information about the NARPS study [here](docs/narps.md).
 
-Neuroimaging workflows are highly flexible, leaving researchers with multiple possible options to analyze a dataset [(Carp, 2012)](https://www.frontiersin.org/articles/10.3389/fnins.2012.00149/full).
-However, different analytical choices can cause variation in the results [(Botvinik-Nezer et al., 2020)](https://www.nature.com/articles/s41586-020-2314-9), leading to what was called a "vibration of effects" [(Ioannidis, 2008)](https://pubmed.ncbi.nlm.nih.gov/18633328/) also known as analytical variability. 
+:vertical_traffic_light: See [the pipeline dashboard](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) to view our current progress at a glance !
 
-**The goal of the NARPS Open Pipelines project is to create a codebase reproducing the 70 pipelines of the NARPS project (Botvinik-Nezer et al., 2020) and share this as an open resource for the community**. 
+## Contributing
 
-To perform the reproduction, we are lucky to be able to use the [descriptions provided by the teams](https://github.com/poldrack/narps/blob/1.0.1/ImageAnalyses/metadata_files/analysis_pipelines_for_analysis.xlsx).
-We also created a [shared spreadsheet](https://docs.google.com/spreadsheets/d/1FU_F6kdxOD4PRQDIHXGHS4zTi_jEVaUqY_Zwg0z6S64/edit?usp=sharing) that can be used to add comments on pipelines (e.g.: identify the ones that are not reproducible with NiPype).
+There are many ways you can contribute 🤗 :wave: Any help is welcome ! 
 
-:vertical_traffic_light: Lastly, please find [here in the project's wiki](https://github.com/Inria-Empenn/narps_open_pipelines/wiki/pipeline_status) a dashboard to see pipelines work progresses at first glance.
+NARPS Open Pipelines uses [nipype](https://nipype.readthedocs.io/en/latest/index.html) as a workflow manager and provides a series of templates and examples to help reproducing the different teams’ analyses. Nevertheless knowing Python or Nipype is not required to take part in the project.
 
-## Getting Started
+Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
 
-### Contents overview
+## Using the codebase
 
-- :snake: :package: `narps_open/` contains the Python package with all the pipelines logic.
-- :brain: `data/` contains data that is used by the pipelines, as well as the (intermediate or final) results data. Instructions to download data are available in [INSTALL.md](/INSTALL.md#data-download-instructions).
-- :blue_book: `docs/` contains the documentation for the project. Start browsing it with the entry point [docs/README.md](/docs/README.md)
-- :orange_book: `examples/` contains notebooks examples to launch of the reproduced pipelines.
-- :microscope: `tests/` contains the tests of the narps_open package.
+To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md).
 
-### Installation
-
-To get the pipelines running, please follow the installation steps in [INSTALL.md](/INSTALL.md)
-
-### Contributing 
-
-:wave: Any help is welcome ! Follow the guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md) if you wish to get involved !
+If you are interested in using the codebase, see the user documentation in [docs](/docs/) (work-in-progress).
 
 ## References
 
@@ -64,14 +46,16 @@ To get the pipelines running, please follow the installation steps in [INSTALL.m
 
 ## Funding
 
-This project is supported by Région Bretagne (Boost MIND). 
+This project is supported by Région Bretagne (Boost MIND) and by Inria (Exploratory action GRASP). 
 
 ## Credits
 
-This project is developed in the Empenn team by Boris Clenet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
+This project is developed in the Empenn team by Boris Clénet, Elodie Germani, Jeremy Lefort-Besnard and Camille Maumet with contributions by Rémi Gau.
 
 In addition, this project was presented and received contributions during the following events:
- - OHBM Brainhack 2022 (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.
- - e-ReproNim FENS NENS Cluster Brainhack: <ADD_NAMES_HERE>
- - OHBM Brainhack 2023 (July 2023): <ADD_NAMES_HERE>
- - ORIGAMI lab hackathon (Sept 2023): 
+ - [Empenn team](https://team.inria.fr/empenn/) hackathon (February 2024): Mathieu Acher, Élise Bannier, Boris Clénet, Isabelle Corouge, Malo Gaubert, Élodie Germani,  Gauthier Le Bartz Lyan, Jérémy Lefort-Besnard, Camille Maumet, Youenn Merel, Alexandre Pron.
+ - [Brainhack Marseille 2023](https://brainhack-marseille.github.io/) (December 2023)
+ - [ORIGAMI lab](https://neurodatascience.github.io/) hackathon (September 2023): 
+ - [OHBM Brainhack 2023](https://ohbm.github.io/hackathon2023/) (July 2023): Arshitha Basavaraj, Boris Clénet, Rémi Gau, Élodie Germani, Yaroslav Halchenko, Camille Maumet, Paul Taylor.
+ - [e-ReproNim FENS NENS Cluster Brainhack](https://repro.school/2023-e-repronim-brainhack/) (June 2023) : Liz Bushby, Boris Clénet, Michael Dayan, Aimee Westbrook.
+ - [OHBM Brainhack 2022](https://ohbm.github.io/hackathon2022/) (June 2022): Elodie Germani, Arshitha Basavaraj, Trang Cao, Rémi Gau, Anna Menacher, Camille Maumet.

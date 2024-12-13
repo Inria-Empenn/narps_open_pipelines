@@ -9,14 +9,12 @@ on:
     paths:
       - 'narps_open/**'
       - 'setup.py'
-      - 'setup.cfg'
       - 'pytest.ini'
       - 'tests/conftest.py'
   pull_request:
     paths:
       - 'narps_open/**'
       - 'setup.py'
-      - 'setup.cfg'
       - 'pytest.ini'
       - 'tests/conftest.py'
 

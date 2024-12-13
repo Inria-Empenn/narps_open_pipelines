@@ -1,6 +1,6 @@
 
 # to avoid commiting data
-./data/
+data/
 
 # neuro user in docker image
 neuro
@@ -139,3 +139,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 *pyscript*
+
+# For mac users
+*.DS_Store
