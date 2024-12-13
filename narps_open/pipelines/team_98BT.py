@@ -151,10 +151,6 @@ class PipelineTeam98BT(Pipeline):
         short_echo_time = min(float(fieldmap_info['EchoTime1']), float(fieldmap_info['EchoTime2']))
         long_echo_time = max(float(fieldmap_info['EchoTime1']), float(fieldmap_info['EchoTime2']))
 
-        print('Echo times: ------')
-        print(short_echo_time)
-        print(long_echo_time)
-
         if short_echo_time == float(fieldmap_info['EchoTime1']):
             magnitude_file = magnitude_files[0]
         elif short_echo_time == float(fieldmap_info['EchoTime2']):
@@ -473,10 +469,14 @@ class PipelineTeam98BT(Pipeline):
                 durations.append(4.0)
                 weights_gain.append(float(info[2]))
                 weights_loss.append(float(info[3]))
-                if 'accept' in str(info[5]):
+                if 'weakly_accept' in str(info[5]):
                     answers.append(1)
+                elif 'strongly_accept' in str(info[5]):
+                    answers.append(2)
+                elif 'weakly_reject' in str(info[5]):
+                    answers.append(-1)
                 else:
-                    answers.append(0)
+                    answers.append(-2)
 
         # Create Bunch
         return Bunch(
