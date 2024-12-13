@@ -48,87 +48,54 @@ class PipelineTeam3C6G(Pipeline):
             ['neg_effect_of_loss', 'T', conditions, [0, 0, -1]]
             ]
 
-    def get_subject_information(event_files: list, runs: list):
+    def get_subject_information(event_file: str, short_run_id: int):
         """
-         -MGT task (taken from .tsv files, duration = 4) with canonical HRF (no derivatives)
-        -Parametric modulator gain (from "gain" column in event .tsv file)
-        - Parametric modulator loss (from "loss" column in event .tsv file)
-        -highpass DCT filtering in SPM (using default period of 1/128 s)
-        -6 movement regressors from realignment
-
-        Create Bunchs for specifySPMModel.
+        Create Bunchs of subject event information for specifySPMModel.
 
         Parameters :
-        - event_files: list of events files (one per run) for the subject
-        - runs: list of runs to use
+        - event_file: str, events file for a run of a subject
+        - short_run_id: str, an identifier for the run corresponding to the event_file
+            must be '1' for the first run, '2' for the second run, etc.
 
         Returns :
-        - subject_info : list of Bunch for 1st level analysis.
+        - subject_info : Bunch corresponding to the event file
         """
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['trial']
-        onset = {}
-        duration = {}
-        weights_gain = {}
-        weights_loss = {}
+        onsets = []
+        durations = []
+        weights_gain = []
+        weights_loss = []
 
-        # Loop over number of runs
-        for run_id in range(len(runs)):
+        # Parse event file
+        with open(event_file[short_run_id], 'rt') as file:
+            next(file)  # skip the header
 
-            # Create dictionary items with empty lists
-            onset.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            duration.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            weights_gain.update({'gain_run' + str(run_id + 1): []})
-            weights_loss.update({'loss_run' + str(run_id + 1): []})
+            for line in file:
+                info = line.strip().split()
 
-            with open(event_files[run_id], 'rt') as event_file:
-                next(event_file)  # skip the header
+                onsets.append(float(info[0]))
+                durations.append(4.0)
+                weights_gain.append(float(info[2]))
+                weights_loss.append(float(info[3]))
 
-                for line in event_file:
-                    info = line.strip().split()
-
-                    for condition in condition_names:
-                        val = condition + '_run' + str(run_id + 1)  # trial_run1 or accepting_run1
-                        val_gain = 'gain_run' + str(run_id + 1)  # gain_run1
-                        val_loss = 'loss_run' + str(run_id + 1)  # loss_run1
-                        if condition == 'trial':
-                            onset[val].append(float(info[0]))  # onsets for trial_run1
-                            duration[val].append(float(4))
-                            weights_gain[val_gain].append(float(info[2]))
-                            weights_loss[val_loss].append(float(info[3]))
-
-        # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
-        # But names must not have '_run1' etc because we concatenate runs
-        subject_info = []
-        for run_id in range(len(runs)):
-
-            conditions = [s + '_run' + str(run_id + 1) for s in condition_names]
-            gain = 'gain_run' + str(run_id + 1)
-            loss = 'loss_run' + str(run_id + 1)
-
-            subject_info.insert(
-                run_id,
+        # Create bunch
+        return Bunch(
+            conditions = [f'trial_run{short_run_id}'],
+            onsets = [onsets],
+            durations = [durations],
+            amplitudes = None,
+            tmod = None,
+            pmod = [
                 Bunch(
-                    conditions = condition_names,
-                    onsets = [onset[c] for c in conditions],
-                    durations = [duration[c] for c in conditions],
-                    amplitudes = None,
-                    tmod = None,
-                    pmod = [
-                        Bunch(
-                            name = ['gain', 'loss'],
-                            poly = [1, 1],
-                            param = [weights_gain[gain], weights_loss[loss]],
-                        ),
-                        None,
-                    ],
-                    regressor_names = None,
-                    regressors = None,
-                ),
-            )
-
-        return subject_info
+                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
+                    poly = [1, 1],
+                    param = [weights_gain, weights_loss]
+                )
+            ],
+            regressor_names = None,
+            regressors = None
+        )
 
     def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
@@ -326,15 +293,12 @@ class PipelineTeam3C6G(Pipeline):
         subject_level_analysis.connect(information_source, 'subject_id', select_files, 'subject_id')
 
         # FUNCTION node get_subject_information - get subject specific condition information
-        subject_information = Node(
-            Function(
-                input_names = ['event_files', 'runs'],
-                output_names = ['subject_info'],
+        subject_information = MapNode(Function(
                 function = self.get_subject_information,
-            ),
-            name = 'subject_information',
-        )
-        subject_information.inputs.runs = self.run_list
+                input_names = ['event_files', 'runs'],
+                output_names = ['subject_info']),
+            name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
+        subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
         subject_level_analysis.connect(select_files, 'event', subject_information, 'event_files')
 
         # SPECIFY MODEL - generates SPM-specific Model
