@@ -115,9 +115,9 @@ class PipelineTeamL3V8(Pipeline):
 
         # connection node for motion correction
         preprocessing.connect(gunzip_func, 'out_file', motion_correction, 'in_files')
-        preprocessing.connect( motion_correction, 'realigned_files', data_sink, 'preprocessing.@realigned_files' )
-        preprocessing.connect( motion_correction, 'realignment_parameters', data_sink, 'preprocessing.@realignment_parameters' )
-        preprocessing.connect( motion_correction, 'mean_image', data_sink, 'preprocessing.@mean_image' )
+        preprocessing.connect( motion_correction, 'realigned_files', data_sink, 'preprocessing.@realigned_files')
+        preprocessing.connect( motion_correction, 'realignment_parameters', data_sink, 'preprocessing.@realignment_parameters')
+        preprocessing.connect( motion_correction, 'mean_image', data_sink, 'preprocessing.@mean_image')
         
         # coregistration node
 
@@ -129,8 +129,9 @@ class PipelineTeamL3V8(Pipeline):
         coregisteration.inputs.tolerance = [0.02, 0.02, 0.02, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001]
 
         # connect coreg
-        preprocessing.connect( motion_correction, 'mean_image', coregisteration, 'target' ) # target=mean
-        preprocessing.connect( gunzip_anat, 'out_file', coregisteration, 'source' ) # T1w=source anat
+        preprocessing.connect( motion_correction, 'mean_image', coregisteration, 'target') # target=mean
+        preprocessing.connect( gunzip_anat, 'out_file', coregisteration, 'source') # T1w=source anat
+        preprocessing.connect( coregisteration, 'coregistered_source', data_sink, 'preprocessing.@coregistered_source') # T1w=source anat
         
         # Get SPM Tissue Probability Maps file
         spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
@@ -151,7 +152,7 @@ class PipelineTeamL3V8(Pipeline):
             [(spm_tissues_file, 6), 2, (False,False), (False, False)]
         ]
         # segmentation connection
-        preprocessing.connect(coregisteration, 'coregistered_files', segmentation, 'channel_files' ) 
+        preprocessing.connect(coregisteration, 'coregistered_source', segmentation, 'channel_files') 
         preprocessing.connect(segmentation, 'bias_corrected_images', data_sink, 'preprocessing.@bias_corrected_images')
         preprocessing.connect(segmentation, 'native_class_images', data_sink, 'preprocessing.@native_class_images')
         preprocessing.connect(segmentation, 'forward_deformation_field', data_sink, 'preprocessing.@forward_deformation_field')
@@ -164,9 +165,11 @@ class PipelineTeamL3V8(Pipeline):
         normalization.inputs.write_voxel_sizes = [3, 3, 3]
         normalization.inputs.write_interp = 4
         normalization.inputs.warping_regularization = [0, 0.001, 0.5, 0.05, 0.2]
-        
+
         # normalization connection 
-        preprocessing.connect(segmentation, 'forward_deformation_field', normalization, 'deformation_file') 
+        preprocessing.connect(segmentation, 'forward_deformation_field', normalization, 'deformation_file')
+        preprocessing.connect(motion_correction, 'realigned_files', normalization, 'apply_to_files')
+         
         preprocessing.connect(normalization, 'normalized_files', data_sink, 'preprocessing.@normalized_files') 
         
     
@@ -186,7 +189,7 @@ class PipelineTeamL3V8(Pipeline):
     
     
     def get_run_level_analysis(self):
-        
+
         return
     def get_subject_level_analysis(self):
         return
