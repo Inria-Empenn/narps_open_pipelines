@@ -1,29 +1,15 @@
 #!/usr/bin/python 
 # coding: utf-8
 
-"""
-This template can be use to reproduce a pipeline using SPM as main software.
-
-- Replace all occurrences of 3C6G by the actual id of the team.
-- All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
-eventually.
-- Also remove lines starting with [TODO], once you did what they suggested.
-"""
-
-# [TODO] Only import modules you use further in te code, remove others from the import section
+""" Write the work of NARPS team 3C6G using Nipype """
 
 from os.path import join
 from itertools import product
 
-# [INFO] The import of base objects from Nipype, to create Workflows
 from nipype import Node, Workflow, MapNode
-
-# [INFO] a list of interfaces used to manpulate data
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
-
-# [INFO] a list of SPM-specific interfaces
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.interfaces.spm import (
    Realign, Coregister, NewSegment, Normalize12, Smooth,
@@ -35,27 +21,30 @@ from nipype.interfaces.fsl import (
     ExtractROI
     )
 
-# [INFO] In order to inherit from Pipeline
 from narps_open.pipelines import Pipeline
-
+from narps_open.core.common import get_voxel_dimensions
+from narps_open.data.task import TaskInformation
 
 class PipelineTeam3C6G(Pipeline):
     """ A class that defines the pipeline of team 3C6G """
 
     def __init__(self):
         super().__init__()
-        # [INFO] Remove the init method completely if unused
-        # [TODO] Init the attributes of the pipeline, if any other than the ones defined
-        # in the pipeline class
-
         self.fwhm = 6.0
         self.team_id = '3C6G'
         self.contrast_list = ['0001', '0002', '0003', '0004', '0005']
 
-    # [INFO] This function is used in the subject level analysis pipelines using SPM
-    # [TODO] Adapt this example to your specific pipeline
+        # Create contrasts
+        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
+        self.subject_level_contrasts = [
+            ['trial', 'T', conditions, [1, 0, 0]],
+            ['effect_of_gain', 'T', conditions, [0, 1, 0]],
+            ['neg_effect_of_gain', 'T', conditions, [0, -1, 0]],
+            ['effect_of_loss', 'T', conditions, [0, 0, 1]],
+            ['neg_effect_of_loss', 'T', conditions, [0, 0, -1]]
+            ]
 
-    def get_subject_infos(event_files: list, runs: list):
+    def get_subject_information(event_files: list, runs: list):
         """
          -MGT task (taken from .tsv files, duration = 4) with canonical HRF (no derivatives)
         -Parametric modulator gain (from "gain" column in event .tsv file)
@@ -137,261 +126,104 @@ class PipelineTeam3C6G(Pipeline):
 
         return subject_info
 
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts():
-        """
-        Create the list of tuples that represents contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # List of condition names
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
-
-        # Create contrasts
-        trial = ('trial', 'T', conditions, [1, 0, 0])
-        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        neg_effect_gain = ('neg_effect_of_gain', 'T', conditions, [0, -1, 0])
-        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
-        neg_effect_loss = ('neg_effect_of_loss', 'T', conditions, [0, 0, -1])
-
-        contrasts = [trial, effect_gain, effect_loss, neg_effect_gain, neg_effect_loss]
-
-        return contrasts
-
-    def get_vox_dims(volume : list) -> list:
-        ''' 
-        Function that gives the voxel dimension of an image. 
-        Not used here but if we use it, modify the connection to : 
-        (?, normalize_func, [('?', 'apply_to_files'),
-                                        (('?', get_vox_dims),
-                                         'write_voxel_sizes')])
-        Args:
-            volume: list | str
-                List of str or str that represent a path to a Nifti image. 
-        Returns: 
-            list: 
-                size of the voxels in the volume or in the first volume of the list.
-        '''
-        import nibabel as nb
-        if isinstance(volume, list):
-            volume = volume[0]
-        nii = nb.load(volume)
-        hdr = nii.header
-        voxdims = hdr.get_zooms()
-        return [float(voxdims[0]), float(voxdims[1]), float(voxdims[2])]
-
     def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
-        # [INFO] The following part stays the same for all preprocessing pipelines
-
-        # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(
-            IdentityInterface(fields=['subject_id', 'run_id']),
-            name='info_source'
-        )
-        info_source.iterables = [
-            ('subject_id', self.subject_list),
-            ('run_id', self.run_list),
-        ]
-
-        # Templates to select files node
-        file_templates = {
-            'anat': join(
-                'sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'
-                ),
-            'func': join(
-                'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz'
-                )
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(
-                file_templates, 
-                base_directory = self.directories.dataset_dir
-            ),
-            name='select_files'
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(
-                base_directory = self.directories.output_dir
-            ),
-            name='data_sink',
-        )
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-        gunzip_func = Node (
-            Gunzip(),
-            name='gunzip_func'
-        )
-
-        gunzip_anat = Node (
-            Gunzip(),
-            name='gunzip_anat'
-        )
-
-        # 1 - Rigid-body realignment in SPM12 using 1st scan as referenced scan and normalized mutual information. 
-        realign = Node(
-            Realign(
-                register_to_mean=False
-            ),
-            name='realign'
-        )
-
-        # Extract 1st image
-        extract_first = Node(
-            ExtractROI(
-                t_min = 1, 
-                t_size = 1,
-                output_type='NIFTI'
-                ),
-            name = 'extract_first'
-        )
-
-        # 2 - Co-registration in SPM12 using default parameters.
-        coregister = Node(
-            Coregister(
-                cost_function='nmi'
-            ),
-            name = 'coregister'
-        )
-
-        # 3 - Unified segmentation using tissue probability maps in SPM12. 
-        # Unified segmentation in SPM12 to MNI space (the MNI-space tissue probability maps used in segmentation) using default parameters.
-        # Bias-field correction in the context of unified segmentation in SPM12.
-        # Get SPM Tissue Probability Maps file
-        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
-
-        tissue1 = [(spm_tissues_file, 1), 1, (True,False), (True, False)]
-        tissue2 = [(spm_tissues_file, 2), 1, (True,False), (True, False)]
-        tissue3 = [(spm_tissues_file, 3), 2, (True,False), (True, False)]
-        tissue4 = [(spm_tissues_file, 4), 3, (True,False), (True, False)]
-        tissue5 = [(spm_tissues_file, 5), 4, (True,False), (True, False)]
-        tissue6 = [(spm_tissues_file, 6), 2, (True,False), (True, False)]
-        tissue_list = [tissue1, tissue2, tissue3, tissue4, tissue5, tissue6]
-
-        segment = Node(
-            NewSegment(
-                write_deformation_fields = [True, True], 
-                tissues = tissue_list
-            ),
-            name = 'segment'
-        )
-
-        # 4 - Spatial normalization of functional images
-        normalize = Node(
-            Normalize12(
-                jobtype = 'write'
-            ),
-            name = 'normalize'
-        )
-
-        # 5 - 6 mm fixed FWHM smoothing in MNI volume
-        smooth = Node(
-            Smooth(
-                fwhm=self.fwhm),
-            name = 'smooth'
-        )
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
+        # Workflow initialization
         preprocessing = Workflow(
             base_dir = self.directories.working_dir,
             name = 'preprocessing'
         )
 
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        preprocessing.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('subject_id', 'subject_id'), ('run_id', 'run_id')],
-                ),
-                (
-                    select_files,
-                    gunzip_anat, 
-                    [('anat', 'in_file')]
-                ),
-                (
-                    select_files,
-                    gunzip_func, 
-                    [('func', 'in_file')]
-                ),
-                (
-                    gunzip_func,
-                    realign,
-                    [('out_file', 'in_files')],
-                ),
-                (
-                    realign,
-                    extract_first,
-                    [('realigned_files', 'in_file')],
-                ),
-                (
-                    extract_first,
-                    coregister,
-                    [('roi_file', 'source')],
-                ),
-                (
-                    realign,
-                    coregister,
-                    [('realigned_files', 'apply_to_files')],
-                ),
-                (
-                    gunzip_anat,
-                    coregister,
-                    [('out_file', 'target')],
-                ),
-                (
-                    gunzip_anat,
-                    segment,
-                    [('out_file', 'channel_files')],
-                ),
-                (
-                    segment,
-                    normalize,
-                    [('forward_deformation_field', 'deformation_file')],
-                ),
-                (
-                    coregister,
-                    normalize,
-                    [('coregistered_files', 'apply_to_files')],
-                ),
-                (
-                    normalize,
-                    smooth,
-                    [('normalized_files', 'in_files')],
-                ),
-                (
-                    smooth,
-                    data_sink,
-                    [('smoothed_files', 'preprocessing.@smoothed')],
-                ),
-                (
-                    realign,
-                    data_sink,
-                    [('realignment_parameters', 'preprocessing.@motion_parameters')],
-                ),
-                (
-                    segment,
-                    data_sink,
-                    [('native_class_images', 'preprocessing.@segmented'),
-                    ('normalized_class_images', 'preprocessing.@segmented_normalized')],
-                ),
-
-            ]
+        # IDENTITY INTERFACE - allows to iterate over subjects and runs
+        information_source = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source'
         )
+        information_source.iterables = [
+            ('subject_id', self.subject_list),
+            ('run_id', self.run_list),
+        ]
 
-        # [INFO] Here we simply return the created workflow
+        # SELECT FILES - to select necessary files
+        file_templates = {
+            'anat': join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
+            'func': join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz')
+        }
+        select_files = Node(SelectFiles(file_templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(information_source, 'subject_id', select_files, 'subject_id')
+        preprocessing.connect(information_source, 'run_id', select_files, 'run_id')
+
+        # GUNZIP input files
+        gunzip_func = Node(Gunzip(), name = 'gunzip_func')
+        gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
+        preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
+        preprocessing.connect(select_files, 'anat', gunzip_anat, 'in_file')
+
+        # REALIGN - rigid-body realignment in SPM12 using 1st scan as referenced scan
+        # and normalized mutual information. 
+        realign = Node(Realign(), name = 'realign')
+        realign.inputs.register_to_mean = False
+        preprocessing.connect(gunzip_func, 'out_file', realign, 'in_files')
+
+        # EXTRACTROI - extracting the first image of func
+        extract_first_image = Node(ExtractROI(), name = 'extract_first_image')
+        extract_first_image.inputs.t_min = 1
+        extract_first_image.inputs.t_size = 1
+        extract_first_image.inputs.output_type='NIFTI'
+        preprocessing.connect(realign, 'realigned_files', extract_first_image, 'in_file')
+
+        # COREGISTER - Co-registration in SPM12 using default parameters.
+        coregister = Node(Coregister(), name = 'coregister')
+        coregister.inputs.cost_function='nmi'
+        preprocessing.connect(extract_first_image, 'roi_file', coregister, 'source')
+        preprocessing.connect(gunzip_anat, 'out_file', coregister, 'target')
+        preprocessing.connect(realign, 'realigned_files', coregister, 'apply_to_files')
+
+        # Get SPM Tissue Probability Maps file
+        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
+
+        # NEW SEGMENT - Unified segmentation using tissue probability maps in SPM12. 
+        # Unified segmentation in SPM12 to MNI space
+        # (the MNI-space tissue probability maps used in segmentation) using default parameters.
+        # Bias-field correction in the context of unified segmentation in SPM12.
+        segmentation = Node(NewSegment(), name = 'segmentation')
+        segmentation.inputs.write_deformation_fields = [True, True]
+        segmentation.inputs.tissues = [
+            [(spm_tissues_file, 1), 1, (True,False), (True, False)],
+            [(spm_tissues_file, 2), 1, (True,False), (True, False)],
+            [(spm_tissues_file, 3), 2, (True,False), (True, False)],
+            [(spm_tissues_file, 4), 3, (True,False), (True, False)],
+            [(spm_tissues_file, 5), 4, (True,False), (True, False)],
+            [(spm_tissues_file, 6), 2, (True,False), (True, False)]
+        ]
+        preprocessing.connect(gunzip_anat, 'out_file', segmentation, 'channel_files')
+
+        # NORMALIZE12 - Spatial normalization of functional images
+        normalize = Node(Normalize12(), name = 'normalize')
+        normalize.inputs.jobtype = 'write'
+        preprocessing.connect(segment, 'forward_deformation_field', normalize, 'deformation_file')
+        preprocessing.connect(coregister, 'coregistered_files', normalize, 'apply_to_files')
+
+        # SMOOTHING - 6 mm fixed FWHM smoothing in MNI volume
+        smoothing = Node(Smooth(), name = 'smoothing')
+        smoothing.inputs.fwhm = self.fwhm
+        preprocessing.connect(normalize, 'normalized_files', smoothing, 'in_files')
+
+        # DATASINK - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name='data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        preprocessing.connect(
+            segmentation, 'native_class_images', data_sink, 'preprocessing.@segmented')
+        preprocessing.connect(
+            segmentation, 'normalized_class_images',
+            data_sink, 'preprocessing.@segmented_normalized')
+        preprocessing.connect(
+            realign, 'realignment_parameters', data_sink, 'preprocessing.@motion_parameters')
+        preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocessing.@smoothed')
+
         return preprocessing
 
     def get_preprocessing_outputs(self):
@@ -429,8 +261,6 @@ class PipelineTeam3C6G(Pipeline):
 
         return return_list
 
-
-    # [INFO] There was no run level analysis for the pipelines using SPM
     def get_run_level_analysis(self):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
@@ -438,200 +268,110 @@ class PipelineTeam3C6G(Pipeline):
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
-        # [INFO] The following part stays the same for all pipelines
-
-        # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-                dataset_dir = self.directories.dataset_dir,
-                results_dir = self.directories.results_dir,
-                working_dir = self.directories.working_dir,
-                run_list = self.run_list
-            ),
-            name='info_source',
-        )
-        info_source.iterables = [('subject_id', self.subject_list)]
-
-        # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
-        templates = {
-            'func': join(
-                self.directories.output_dir,
-                'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
-            ),
-            'event': join(
-                self.directories.dataset_dir,
-                'sub-{subject_id}',
-                'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv',
-            ),
-            'parameters': join(
-                self.directories.output_dir,
-                'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
-                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
-            )
-        }
-
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
-            name = 'select_files'
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink'
-        )
-
-        # [INFO] This is the node executing the get_subject_infos_spm function
-        # Subject Infos node - get subject specific condition information
-        subject_infos = Node(
-            Function(
-                input_names = ['event_files', 'runs'],
-                output_names = ['subject_info'],
-                function = self.get_subject_infos,
-            ),
-            name = 'subject_infos',
-        )
-        subject_infos.inputs.runs = self.run_list
-
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
-        contrasts = Node(
-            Function(
-                output_names = ['contrasts'],
-                function = self.get_contrasts,
-            ),
-            name = 'contrasts',
-        )
-
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        # SpecifyModel - generates SPM-specific Model
-        specify_model = Node(
-            SpecifySPMModel(
-            concatenate_runs = True, 
-            input_units = 'secs', 
-            output_units = 'secs',
-            time_repetition = self.tr, 
-            high_pass_filter_cutoff = 128),
-            name = 'specify_model'
-        )
-
-        # Level1Design - generates an SPM design matrix
-        l1_design = Node(
-            Level1Design(
-            bases = {'hrf': {'derivs': [0, 0]}}, 
-            timing_units = 'secs',
-            interscan_interval = self.tr,
-            model_serial_correlations='AR(1)'),
-            name = 'l1_design'
-        )
-
-        # EstimateModel - estimate the parameters of the model
-        l1_estimate = Node(
-            EstimateModel(
-            estimation_method = {'Classical': 1}),
-            name = 'l1_estimate'
-        )
-
-        # EstimateContrast - estimates contrasts
-        contrast_estimate = Node(
-            EstimateContrast(),
-            name = 'contrast_estimate'
-        )
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
+        # Workflow initialization
         subject_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
             name = 'subject_level_analysis'
         )
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        subject_level_analysis.connect([
-            (
-                info_source,
-                select_files,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                select_files,
-                subject_infos,
-                [('event', 'event_files')]
-            ),
-            (
-                subject_infos, 
-                specify_model, 
-                [('subject_info', 'subject_info')]
-            ),
-            (
-                contrasts, 
-                contrast_estimate, 
-                [('contrasts', 'contrasts')]
-            ),
-            (
-                select_files,
-                specify_model, 
-                [('func', 'functional_runs'), ('parameters', 'realignment_parameters')]
-            ),
-            (
-                specify_model, 
-                l1_design, 
-                [('session_info', 'session_info')]
-            ),
-            (
-                l1_design, 
-                l1_estimate, 
-                [('spm_mat_file', 'spm_mat_file')]
-            ),
-            (
-                l1_estimate, 
-                contrast_estimate, 
-                [('spm_mat_file', 'spm_mat_file'),
-                ('beta_images', 'beta_images'),
-                ('residual_image', 'residual_image')]
-            ),
-            (
-                contrast_estimate, 
-                data_sink, 
-                [('con_images', 'l1_analysis.@con_images'),
-                ('spmT_images', 'l1_analysis.@spmT_images'),
-                ('spm_mat_file', 'l1_analysis.@spm_mat_file')]
-            ),
-        ])
 
-        # [INFO] Here we simply return the created workflow
+        # IDENTITY INTERFACE - Allows to iterate on subjects
+        information_source = Node(IdentityInterface(fields = ['subject_id']), name = 'information_source')
+        information_source.iterables = [('subject_id', self.subject_list)]
+
+        # SELECTFILES - to select necessary files
+        templates = {
+            'func': join(self.directories.output_dir, 'preprocessing',
+                '_run_id_*_subject_id_{subject_id}',
+                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
+            ),
+            'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_events.tsv',
+            ),
+            'parameters': join(self.directories.output_dir, 'preprocessing',
+                '_run_id_*_subject_id_{subject_id}',
+                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
+            )
+        }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+        subject_level_analysis.connect(information_source, 'subject_id', select_files, 'subject_id')
+
+        # FUNCTION node get_subject_information - get subject specific condition information
+        subject_information = Node(
+            Function(
+                input_names = ['event_files', 'runs'],
+                output_names = ['subject_info'],
+                function = self.get_subject_information,
+            ),
+            name = 'subject_information',
+        )
+        subject_information.inputs.runs = self.run_list
+        subject_level_analysis.connect(select_files, 'event', subject_information, 'event_files')
+
+        # SPECIFY MODEL - generates SPM-specific Model
+        specify_model = Node(SpecifySPMModel(), name = 'specify_model')
+        specify_model.inputs.concatenate_runs = True
+        specify_model.inputs.input_units = 'secs' 
+        specify_model.inputs.output_units = 'secs'
+        specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
+        specify_model.inputs.high_pass_filter_cutoff = 128
+        subject_level_analysis.connect(
+            subject_information, 'subject_info', specify_model, 'subject_info')
+        subject_level_analysis.connect(select_files, 'func', specify_model, 'functional_runs')
+        subject_level_analysis.connect(
+            select_files, 'parameters', specify_model, 'realignment_parameters')
+
+        # LEVEL1 DESIGN - generates an SPM design matrix
+        model_design = Node(Level1Design(), name = 'model_design')
+        model_design.inputs.bases = {'hrf': {'derivs': [0, 0]}}
+        model_design.inputs.timing_units = 'secs'
+        model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        model_design.inputs.model_serial_correlations = 'AR(1)'
+        subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
+
+        # ESTIMATE MODEL - estimate the parameters of the model
+        model_estimate = Node(EstimateModel(), name = 'model_estimate')
+        model_estimate.inputs.estimation_method = {'Classical': 1}
+        subject_level_analysis.connect(
+            model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
+
+        # ESTIMATE CONTRAST - estimates contrasts
+        contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
+        contrast_estimate.inputs.contrasts = self.subject_level_contrasts
+        subject_level_analysis.connect(
+            model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
+        subject_level_analysis.connect(
+            model_estimate, 'beta_images', contrast_estimate, 'beta_images')
+        subject_level_analysis.connect(
+            model_estimate, 'residual_image', contrast_estimate, 'residual_image')
+
+        # DataSink Node - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        subject_level_analysis.connect(
+            contrast_estimate, 'con_images', data_sink, 'subject_level_analysis.@con_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spmT_images', data_sink, 'subject_level_analysis.@spmT_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spm_mat_file', data_sink, 'subject_level_analysis.@spm_mat_file')
+
         return subject_level_analysis
 
     def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
 
         # Contrat maps
-        templates = [join(
-            self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+        templates = [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
 
         # SPM.mat file
-        templates += [join(
-            self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', 'SPM.mat')]
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', 'SPM.mat')]
 
         # spmT maps
-        templates += [join(
-            self.directories.output_dir,
-            'l1_analysis', '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
             for contrast_id in self.contrast_list]
 
         # Format with subject_ids
@@ -641,8 +381,6 @@ class PipelineTeam3C6G(Pipeline):
 
         return return_list
 
-    # [INFO] This function returns the list of ids and files of each group of participants
-    # to do analyses for both groups, and one between the two groups.
     def get_subset_contrasts(
         file_list, subject_list: list, participants_file: str
     ):
@@ -722,7 +460,7 @@ class PipelineTeam3C6G(Pipeline):
         templates = {
             # Contrast for all participants
             'contrast' : join(self.directories.output_dir,
-                'l1_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
+                'subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
             # Participants file
             'participants' : join(self.directories.dataset_dir, 'participants.tsv')
             }
