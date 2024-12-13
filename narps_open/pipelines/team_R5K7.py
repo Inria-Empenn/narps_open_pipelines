@@ -12,7 +12,7 @@ from nipype.interfaces.utility.base import Merge, Split, Select
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.spm import (
     Coregister, Segment, RealignUnwarp, FieldMap, Normalize,
-    Smooth, Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
+    Smooth, Level1Design, FactorialDesign,
     EstimateModel, EstimateContrast, Threshold, ApplyVDM
     )
 from nipype.interfaces.spm.base import Info as SPMInfo
@@ -40,9 +40,9 @@ class PipelineTeamR5K7(Pipeline):
         condition_names = ['task', 'taskxgain^1', 'taskxloss^1', 'taskxreaction_time^1']
         self.subject_level_contrasts = [
             ['task', 'T', condition_names, [1, 0, 0, 0]],
-            ['gain', 'T', condition_names, [0, 1, 0, 0]],
-            ['loss', 'T', condition_names, [0, 0, 1, 0]],
-            ['reaction_time', 'T', condition_names, [0, 0, 0, 1]]
+            ['effect_of_gain', 'T', condition_names, [0, 1, 0, 0]],
+            ['effect_of_loss', 'T', condition_names, [0, 0, 1, 0]],
+            ['effect_of_RT', 'T', condition_names, [0, 0, 0, 1]]
             ]
 
     def get_preprocessing(self):
@@ -258,9 +258,6 @@ class PipelineTeamR5K7(Pipeline):
                 loss_value.append(float(info[3]))
                 reaction_time.append(float(info[4]))
 
-        # TODO : SPM automatically mean-centers regressors ???
-        # TODO : SPM automatically orthoganalizes regressors ???
-
         # Fill Bunch
         return Bunch(
                 conditions = ['task'],
@@ -278,56 +275,6 @@ class PipelineTeamR5K7(Pipeline):
                 regressor_names = None,
                 regressors = None
             )
-
-    def get_confounds_file(
-        dvars_file: str,
-        dvars_inference_file: str,
-        realignement_parameters: str,
-        subject_id: str,
-        run_id: str) -> str:
-        """
-        Create a tsv file with only desired confounds per subject per run.
-
-        Parameters :
-        - dvars_file: str, path to the output values of DVARS computation
-        - dvars_inference_file: str, path to the output values of DVARS computation (inference)
-        - realignement_parameters : path to the realignment parameters file
-        - subject_id : related subject id
-        - run_id : related run id
-
-        Return :
-        - confounds_file : path to new file containing only desired confounds
-        """
-        from os.path import abspath
-
-        from pandas import DataFrame, read_csv
-        from numpy import array, insert, c_
-
-        # Get the dataframe containing the 6 head motion parameter regressors
-        realign_array = array(read_csv(realignement_parameters, sep = r'\s+', header = None))
-        nb_time_points = realign_array.shape[0]
-
-        # Get the dataframes containing dvars values
-        dvars_data_frame = read_csv(dvars_file, sep = '\t', header = 0)
-        dvars_inference_data_frame = read_csv(dvars_inference_file, sep = '\t', header = 0)
-
-        # Create a "corrupted points" regressor as indicated in the DVARS repo
-        #   find(Stat.pvals<0.05./(T-1) & Stat.DeltapDvar>5) %print corrupted DVARS data-points
-        dvars_regressor = insert(array(
-            (dvars_inference_data_frame['Pval'] < (0.05/(nb_time_points-1))) \
-            & (dvars_data_frame['DeltapDvar'] > 5.0)),
-            0, 0, axis = 0) # Add a value of 0 at the beginning (first frame)
-
-        # Concatenate all parameters
-        retained_parameters = DataFrame(c_[realign_array, dvars_regressor])
-
-        # Write confounds to a file
-        confounds_file = abspath(f'confounds_file_sub-{subject_id}_run-{run_id}.tsv')
-        with open(confounds_file, 'w', encoding = 'utf-8') as writer:
-            writer.write(retained_parameters.to_csv(
-                sep = '\t', index = False, header = False, na_rep = '0.0'))
-
-        return confounds_file
 
     def get_subject_level_analysis(self):
         """
@@ -377,25 +324,6 @@ class PipelineTeamR5K7(Pipeline):
             name = 'subject_information')
         subject_level.connect(select_files, 'event', subject_information, 'event_file')
 
-        # FUNCTION node get_confounds_file - generate files with confounds data
-        confounds = MapNode(
-            Function(
-                function = self.get_confounds_file,
-                input_names = ['dvars_file', 'dvars_inference_file', 'realignement_parameters',
-                    'subject_id', 'run_id'],
-                output_names = ['confounds_file']
-            ),
-            name = 'confounds',
-            iterfield = ['dvars_file', 'dvars_inference_file', 'realignement_parameters',
-                'run_id'])
-        confounds.inputs.run_id = self.run_list
-        subject_level.connect(information_source, 'subject_id', confounds, 'subject_id')
-        subject_level.connect(select_files, 'dvars_file', confounds, 'dvars_file')
-        subject_level.connect(
-            select_files, 'dvars_inference_file', confounds, 'dvars_inference_file')
-        subject_level.connect(
-            select_files, 'realignement_parameters', confounds, 'realignement_parameters')
-
         # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
         specify_model.inputs.input_units = 'secs'
@@ -403,7 +331,8 @@ class PipelineTeamR5K7(Pipeline):
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
         specify_model.inputs.high_pass_filter_cutoff = 128
         subject_level.connect(select_files, 'func', specify_model, 'functional_runs')
-        subject_level.connect(confounds, 'confounds_file', specify_model, 'realignment_parameters')
+        subject_level.connect(
+            select_files, 'realignement_parameters', specify_model, 'realignment_parameters')
         subject_level.connect(subject_information, 'subject_info', specify_model, 'subject_info')
 
         # LEVEL 1 DESIGN - Generates an SPM design matrix
@@ -471,23 +400,9 @@ class PipelineTeamR5K7(Pipeline):
 
     def get_group_level_analysis(self):
         """
-        Return all workflows for the group level analysis.
-
-        Returns;
-            - a list of nipype.WorkFlow
-        """
-
-        methods = ['equalRange', 'equalIndifference', 'groupComp']
-        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
-
-    def get_group_level_analysis_sub_workflow(self, method):
-        """
         Return a workflow for the group level analysis.
 
-        Parameters:
-            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
-
-        Returns:
+        Returns;
             - group_level_analysis: nipype.WorkFlow
         """
         # Compute the number of participants used to do the analysis
@@ -514,6 +429,9 @@ class PipelineTeamR5K7(Pipeline):
         # Datasink - save important files
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
+
+        # FactorialDesign
+        # {vector, name, interaction, centering}.
 
         # Function Node get_equal_range_subjects
         #   Get subjects in the equalRange group and in the subject_list
