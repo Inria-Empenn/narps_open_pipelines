@@ -56,33 +56,45 @@ class PipelineTeam3C6G(Pipeline):
             base_dir = self.directories.working_dir,
             name = 'preprocessing'
         )
-
-        # IDENTITY INTERFACE - allows to iterate over subjects and runs
-        information_source = Node(IdentityInterface(
-            fields = ['subject_id', 'run_id']),
-            name = 'information_source'
+        # IDENTITY INTERFACE - allows to iterate over subjects
+        information_source_subject = Node(IdentityInterface(
+            fields = ['subject_id']),
+            name = 'information_source_subject'
         )
-        information_source.iterables = [
-            ('subject_id', self.subject_list),
-            ('run_id', self.run_list),
-        ]
+        information_source_subject.iterables = ('subject_id', self.subject_list)
 
-        # SELECT FILES - to select necessary files
+        # IDENTITY INTERFACE - allows to iterate over runs
+        information_source_runs = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source_runs'
+        )
+        information_source_runs.iterables = ('run_id', self.run_list)
+        preprocessing.connect(
+            information_source_subject, 'subject_id', information_source_runs, 'subject_id')
+
+        # SELECT FILES - to select subject files
+        file_templates = {'anat': join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz')}
+        select_subject_files = Node(SelectFiles(file_templates), name = 'select_subject_files')
+        select_subject_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_subject, 'subject_id', select_subject_files, 'subject_id')
+
+        # SELECT FILES - to select run files
         file_templates = {
-            'anat': join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
             'func': join('sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz')
         }
-        select_files = Node(SelectFiles(file_templates), name = 'select_files')
-        select_files.inputs.base_directory = self.directories.dataset_dir
-        preprocessing.connect(information_source, 'subject_id', select_files, 'subject_id')
-        preprocessing.connect(information_source, 'run_id', select_files, 'run_id')
+        select_run_files = Node(SelectFiles(file_templates), name = 'select_run_files')
+        select_run_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_runs, 'subject_id', select_run_files, 'subject_id')
+        preprocessing.connect(information_source_runs, 'run_id', select_run_files, 'run_id')
 
         # GUNZIP input files
         gunzip_func = Node(Gunzip(), name = 'gunzip_func')
         gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
-        preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
-        preprocessing.connect(select_files, 'anat', gunzip_anat, 'in_file')
+        preprocessing.connect(select_run_files, 'func', gunzip_func, 'in_file')
+        preprocessing.connect(select_subject_files, 'anat', gunzip_anat, 'in_file')
 
         # REALIGN - rigid-body realignment in SPM12 using 1st scan as referenced scan
         # and normalized mutual information.
