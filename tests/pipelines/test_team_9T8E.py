@@ -50,11 +50,11 @@ class TestPipelinesTeam9T8E:
         pipeline = PipelineTeam9T8E()
         # 1 - 1 subject outputs
         pipeline.subject_list = ['001']
-        helpers.test_pipeline_outputs(pipeline, [0, 0, 5, 8*2*2 + 5*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 5, 6*2*2 + 4*2, 18])
 
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
-        helpers.test_pipeline_outputs(pipeline, [0, 0, 20, 8*2*2 + 5*2, 18])
+        helpers.test_pipeline_outputs(pipeline, [0, 0, 20, 6*2*2 + 4*2, 18])
 
     @staticmethod
     @mark.unit_test
