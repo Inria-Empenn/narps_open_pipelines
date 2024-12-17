@@ -10,10 +10,13 @@ Usage:
     pytest -q test_team_3C6G.py
     pytest -q test_team_3C6G.py -k <selected_test>
 """
+from os.path import join
 
 from pytest import helpers, mark
 from nipype import Workflow
+from nipype.interfaces.base import Bunch
 
+from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_3C6G import PipelineTeam3C6G
 
 class TestPipelinesTeam3C6G:
@@ -80,7 +83,7 @@ class TestPipelinesTeam3C6G:
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
 
-        bunch = PipelineTeam98BT.get_subject_information(test_file, 1)
+        bunch = PipelineTeam3C6G.get_subject_information(test_file, 1)
 
         # Compare bunches to expected
         assert isinstance(bunch, Bunch)

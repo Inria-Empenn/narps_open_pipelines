@@ -48,55 +48,6 @@ class PipelineTeam3C6G(Pipeline):
             ['neg_effect_of_loss', 'T', conditions, [0, 0, -1]]
             ]
 
-    def get_subject_information(event_file: str, short_run_id: int):
-        """
-        Create Bunchs of subject event information for specifySPMModel.
-
-        Parameters :
-        - event_file: str, events file for a run of a subject
-        - short_run_id: str, an identifier for the run corresponding to the event_file
-            must be '1' for the first run, '2' for the second run, etc.
-
-        Returns :
-        - subject_info : Bunch corresponding to the event file
-        """
-        from nipype.interfaces.base import Bunch
-
-        onsets = []
-        durations = []
-        weights_gain = []
-        weights_loss = []
-
-        # Parse event file
-        with open(event_file[short_run_id], 'rt') as file:
-            next(file)  # skip the header
-
-            for line in file:
-                info = line.strip().split()
-
-                onsets.append(float(info[0]))
-                durations.append(4.0)
-                weights_gain.append(float(info[2]))
-                weights_loss.append(float(info[3]))
-
-        # Create bunch
-        return Bunch(
-            conditions = [f'trial_run{short_run_id}'],
-            onsets = [onsets],
-            durations = [durations],
-            amplitudes = None,
-            tmod = None,
-            pmod = [
-                Bunch(
-                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
-                    poly = [1, 1],
-                    param = [weights_gain, weights_loss]
-                )
-            ],
-            regressor_names = None,
-            regressors = None
-        )
-
     def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
@@ -260,6 +211,55 @@ class PipelineTeam3C6G(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
+    def get_subject_information(event_file: str, short_run_id: int):
+        """
+        Create Bunchs of subject event information for specifySPMModel.
+
+        Parameters :
+        - event_file: str, events file for a run of a subject
+        - short_run_id: str, an identifier for the run corresponding to the event_file
+            must be '1' for the first run, '2' for the second run, etc.
+
+        Returns :
+        - subject_info : Bunch corresponding to the event file
+        """
+        from nipype.interfaces.base import Bunch
+
+        onsets = []
+        durations = []
+        weights_gain = []
+        weights_loss = []
+
+        # Parse event file
+        with open(event_file, 'rt') as file:
+            next(file)  # skip the header
+
+            for line in file:
+                info = line.strip().split()
+
+                onsets.append(float(info[0]))
+                durations.append(4.0)
+                weights_gain.append(float(info[2]))
+                weights_loss.append(float(info[3]))
+
+        # Create bunch
+        return Bunch(
+            conditions = [f'trial_run{short_run_id}'],
+            onsets = [onsets],
+            durations = [durations],
+            amplitudes = None,
+            tmod = None,
+            pmod = [
+                Bunch(
+                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
+                    poly = [1, 1],
+                    param = [weights_gain, weights_loss]
+                )
+            ],
+            regressor_names = None,
+            regressors = None
+        )
+
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
@@ -295,7 +295,7 @@ class PipelineTeam3C6G(Pipeline):
         # FUNCTION node get_subject_information - get subject specific condition information
         subject_information = MapNode(Function(
                 function = self.get_subject_information,
-                input_names = ['event_files', 'runs'],
+                input_names = ['event_files', 'short_run_id'],
                 output_names = ['subject_info']),
             name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
         subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
@@ -489,7 +489,7 @@ class PipelineTeam3C6G(Pipeline):
             estimate_contrast, 'spmT_images', threshold, 'stat_image')
 
         if method in ('equalRange', 'equalIndifference'):
-            estimate_contrast.inputs = [
+            estimate_contrast.inputs.contrasts = [
                 ('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])
                 ]
 
