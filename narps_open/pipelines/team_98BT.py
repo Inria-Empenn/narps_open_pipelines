@@ -59,7 +59,7 @@ class PipelineTeam98BT(Pipeline):
             - dartel : nipype.WorkFlow
         """
 
-        # Init workflow 
+        # Init workflow
         dartel_workflow = Workflow(
             base_dir = self.directories.working_dir, name = 'dartel_workflow')
 
@@ -94,7 +94,7 @@ class PipelineTeam98BT(Pipeline):
             name = 'rename_dartel')
         rename_dartel.inputs.subject_id = self.subject_list
         rename_dartel.inputs.keep_ext = True
-        dartel_workflow.connect(dartel_inputs, 'structural_files', rename_dartel)
+        dartel_workflow.connect(dartel_inputs, 'structural_files', rename_dartel, 'in_file')
 
         # DARTEL - Using a already existing workflow
         dartel_sub_workflow = create_DARTEL_template(name = 'dartel_sub_workflow')
@@ -198,8 +198,8 @@ class PipelineTeam98BT(Pipeline):
         }
         select_run_files = Node(SelectFiles(templates), name = 'select_run_files')
         select_run_files.inputs.base_directory = self.directories.dataset_dir
-        preprocessing.connect(information_source, 'subject_id', select_run_files, 'subject_id')
-        preprocessing.connect(information_source, 'run_id', select_run_files, 'run_id')
+        preprocessing.connect(information_source_runs, 'subject_id', select_run_files, 'subject_id')
+        preprocessing.connect(information_source_runs, 'run_id', select_run_files, 'run_id')
 
         # GUNZIP - gunzip files because SPM do not use .nii.gz files
         gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
@@ -209,7 +209,7 @@ class PipelineTeam98BT(Pipeline):
         preprocessing.connect(select_subject_files, 'anat', gunzip_anat, 'in_file'),
         preprocessing.connect(select_run_files, 'func', gunzip_func, 'in_file')
         preprocessing.connect(select_subject_files, 'phasediff', gunzip_phasediff, 'in_file')
-            
+
         # FUNCTION Node get_fieldmap_info - Retrieve magnitude and phasediff metadata to decide
         # which files to use for the fieldmap node, and what echo times
         fieldmap_info = Node(Function(
@@ -230,7 +230,7 @@ class PipelineTeam98BT(Pipeline):
         preprocessing.connect(gunzip_magnitude, 'out_file', fieldmap, 'magnitude_file')
         preprocessing.connect(gunzip_phasediff, 'out_file', fieldmap, 'phase_file')
         preprocessing.connect(gunzip_func, 'out_file', fieldmap, 'epi_file')
-            
+
         # Get SPM Tissue Probability Maps file
         spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
 
@@ -262,7 +262,7 @@ class PipelineTeam98BT(Pipeline):
         motion_correction.inputs.interp = 4
         preprocessing.connect(fieldmap, 'vdm', motion_correction, 'phase_map')
         preprocessing.connect(slice_timing, 'timecorrected_files', motion_correction, 'in_files')
-                              
+
         # Intrasubject coregistration
         extract_first = Node(ExtractROI(), name = 'extract_first')
         extract_first.inputs.t_min = 1
@@ -270,15 +270,15 @@ class PipelineTeam98BT(Pipeline):
         extract_first.inputs.output_type = 'NIFTI'
         preprocessing.connect(
             motion_correction, 'realigned_unwarped_files', extract_first, 'in_file')
-        preprocessing.connect(extract_first, 'roi_file', coregistration, 'source')
-            
+
         coregistration = Node(Coregister(), name = 'coregistration')
         coregistration.inputs.cost_function = 'nmi'
         coregistration.inputs.jobtype = 'estimate'
         preprocessing.connect(
             motion_correction, 'realigned_unwarped_files', coregistration, 'apply_to_files')
         preprocessing.connect(gunzip_anat, 'out_file', coregistration, 'target')
-            
+        preprocessing.connect(extract_first, 'roi_file', coregistration, 'source')
+
         dartel_norm_func = Node(DARTELNorm2MNI(), name = 'dartel_norm_func')
         dartel_norm_func.inputs.fwhm = self.fwhm
         dartel_norm_func.inputs.modulate = False
@@ -289,7 +289,7 @@ class PipelineTeam98BT(Pipeline):
             select_subject_files, 'dartel_template',  dartel_norm_func, 'template_file')
         preprocessing.connect(
             coregistration, 'coregistered_files', dartel_norm_func, 'apply_to_files')
-            
+
         dartel_norm_anat = Node(DARTELNorm2MNI(), name = 'dartel_norm_anat')
         dartel_norm_anat.inputs.fwhm = self.fwhm
         dartel_norm_anat.inputs.voxel_size = (1, 1, 1)
@@ -298,7 +298,7 @@ class PipelineTeam98BT(Pipeline):
         preprocessing.connect(
             select_subject_files, 'dartel_template', dartel_norm_anat, 'template_file')
         preprocessing.connect(gunzip_anat, 'out_file', dartel_norm_anat, 'apply_to_files')
-             
+
         # DataSink Node - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
@@ -559,7 +559,7 @@ class PipelineTeam98BT(Pipeline):
             name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
         subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
         subject_level_analysis.connect(select_files, 'events', subject_information, 'event_file')
-            
+
         # FUNCTION node get_parameters_file - Get subject parameters
         parameters = MapNode(Function(
             function = self.get_parameters_file,
@@ -593,7 +593,7 @@ class PipelineTeam98BT(Pipeline):
             subject_information, 'subject_info', specify_model, 'subject_info')
         subject_level_analysis.connect(
             parameters, 'new_parameters_file', specify_model, 'realignment_parameters')
-            
+
         # LEVEL1DESIGN - Generates an SPM design matrix
         model_design = Node(Level1Design(), name = 'model_design')
         model_design.inputs.bases = {'hrf': {'derivs': [1, 1]}}
