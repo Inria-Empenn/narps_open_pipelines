@@ -210,9 +210,9 @@ class PipelineTeam3C6G(Pipeline):
                 (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
                 (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
                 (realign, merge_removable_files, [('realigned_files', 'in3')]),
-                (extract_first_image, merge_removable_files, [('realigned_files', 'in4')]),
-                (coregister, merge_removable_files, [('realigned_files', 'in5')]),
-                (normalize, merge_removable_files, [('realigned_files', 'in6')]),
+                (extract_first_image, merge_removable_files, [('roi_file', 'in4')]),
+                (coregister, merge_removable_files, [('coregistered_files', 'in5')]),
+                (normalize, merge_removable_files, [('normalized_files', 'in6')]),
                 (smoothing, merge_removable_files, [('smoothed_files', 'in7')]),
                 (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
                 (data_sink, remove_after_datasink, [('out_file', '_')])
