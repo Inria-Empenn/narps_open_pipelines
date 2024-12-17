@@ -12,7 +12,7 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.interfaces.spm import (
     Smooth,
     OneSampleTTestDesign, EstimateModel, EstimateContrast,
-    Level1Design, TwoSampleTTestDesign, Threshold
+    Level1Design, TwoSampleTTestDesign
     )
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.algorithms.misc import Gunzip
@@ -366,6 +366,11 @@ class PipelineTeam9T8E(Pipeline):
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
 
+        # Create the group level workflow
+        group_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
+
         # Infosource - a function free node to iterate over the list of subject names
         info_source = Node(IdentityInterface(fields=['contrast_id']),
                           name = 'info_source')
@@ -379,10 +384,7 @@ class PipelineTeam9T8E(Pipeline):
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.sort_filelist = True
         select_files.inputs.base_directory = self.directories.dataset_dir
-
-        # Datasink - save important files
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(info_source, 'contrast_id', select_files, 'contrast_id')
 
         # Function Node get_group_subjects
         #   Get subjects in the group and in the subject_list
@@ -412,63 +414,47 @@ class PipelineTeam9T8E(Pipeline):
             ),
             name = 'get_contrasts', iterfield = 'input_str'
         )
+        group_level_analysis.connect(select_files, 'contrasts', get_contrasts, 'input_str')
+        group_level_analysis.connect(
+            get_group_subjects, ('out_list', complete_subject_ids), get_contrasts, 'elements')
 
         # One Sample T-Test Design - creates one sample T-Test Design
-        onesamplettestdes = Node(OneSampleTTestDesign(), name = 'onesampttestdes')
+        model_design = Node(OneSampleTTestDesign(), name = 'model_design')
+        group_level_analysis.connect(
+            get_contrasts, ('out_list', clean_list), model_design, 'in_files')
 
         # EstimateModel - estimate the parameters of the model
         # Even for second level it should be 'Classical': 1.
-        level2estimate = Node(EstimateModel(), name = 'level2estimate')
-        level2estimate.inputs.estimation_method = {'Classical': 1}
+        model_estimate = Node(EstimateModel(), name = 'model_estimate')
+        model_estimate.inputs.estimation_method = {'Classical': 1}
+        group_level_analysis.connect(model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
 
         # EstimateContrast - estimates simple group contrast
-        level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
-        level2conestimate.inputs.group_contrast = True
-        level2conestimate.inputs.contrasts = [
+        contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
+        contrast_estimate.inputs.group_contrast = True
+        contrast_estimate.inputs.contrasts = [
             ['Group', 'T', ['mean'], [1]], ['Group', 'T', ['mean'], [-1]]]
+        group_level_analysis.connect(
+            model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
+        group_level_analysis.connect(
+            model_estimate, 'beta_images', contrast_estimate, 'beta_images')
+        group_level_analysis.connect(
+            model_estimate, 'residual_image', contrast_estimate, 'residual_image')
 
         # Threshold Node - Create thresholded maps
-        threshold = MapNode(Threshold(), name = 'threshold',
-            iterfield = ['stat_image', 'contrast_index'])
-        threshold.inputs.use_fwe_correction = True
-        threshold.inputs.height_threshold_type = 'p-value'
-        threshold.inputs.force_activation = False
-        threshold.inputs.height_threshold = 0.05
-        threshold.inputs.contrast_index = [1, 2]
+        # This step has not been implemented yet, because it requires SnPM
 
-        # Create the group level workflow
-        group_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
-        group_level_analysis.connect([
-            (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (select_files, get_contrasts, [('contrasts', 'input_str')]),
-            (get_group_subjects, get_contrasts, [
-                (('out_list', complete_subject_ids), 'elements')
-                ]),
-            (get_contrasts, onesamplettestdes, [
-                (('out_list', clean_list), 'in_files')
-                ]),
-            #(select_files, onesamplettestdes, [('mask', 'explicit_mask_file')]),
-            (onesamplettestdes, level2estimate, [('spm_mat_file', 'spm_mat_file')]),
-            (level2estimate, level2conestimate, [
-                ('spm_mat_file', 'spm_mat_file'),
-                ('beta_images', 'beta_images'),
-                ('residual_image', 'residual_image')
-                ]),
-            (level2conestimate, threshold, [
-                ('spm_mat_file', 'spm_mat_file'),
-                ('spmT_images', 'stat_image')
-                ]),
-            (level2estimate, data_sink, [
-                ('mask_image', f'{group_level_analysis.name}.@mask')]),
-            (level2conestimate, data_sink, [
-                ('spm_mat_file', f'{group_level_analysis.name}.@spm_mat'),
-                ('spmT_images', f'{group_level_analysis.name}.@T'),
-                ('con_images', f'{group_level_analysis.name}.@con')]),
-            (threshold, data_sink, [
-                ('thresholded_map', f'{group_level_analysis.name}.@thresh')])
-            ])
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(
+            model_estimate, 'mask_image', data_sink, f'{group_level_analysis.name}.@mask')
+        group_level_analysis.connect(
+            contrast_estimate, 'spm_mat_file',  data_sink, f'{group_level_analysis.name}.@spm_mat')
+        group_level_analysis.connect(
+            contrast_estimate, 'spmT_images',  data_sink, f'{group_level_analysis.name}.@T')
+        group_level_analysis.connect(
+            contrast_estimate, 'con_images',  data_sink, f'{group_level_analysis.name}.@con')
 
         return group_level_analysis
 
@@ -482,6 +468,11 @@ class PipelineTeam9T8E(Pipeline):
         # Compute the number of participants used to do the analysis
         nb_subjects = len(self.subject_list)
 
+        # Create the group level workflow
+        group_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'group_level_analysis_groupComp_nsub_{nb_subjects}')
+
         # Infosource - a function free node to iterate over the list of subject names
         info_source = Node(IdentityInterface(fields=['contrast_id']),
                           name = 'info_source')
@@ -491,15 +482,11 @@ class PipelineTeam9T8E(Pipeline):
         templates = {
             'contrasts': join(self.directories.output_dir,
                 'subject_level', '_subject_id_*', 'con_{contrast_id}.nii'),
-            #'mask': join('derivatives/fmriprep/gr_mask_tmax.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.sort_filelist = True
         select_files.inputs.base_directory = self.directories.dataset_dir
-
-        # Datasink - save important files
-        data_sink = Node(DataSink(), name = 'data_sink')
-        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(info_source, 'contrast_id', select_files, 'contrast_id')
 
         # Function Node get_group_subjects
         #   Get subjects in the group and in the subject_list
@@ -541,6 +528,12 @@ class PipelineTeam9T8E(Pipeline):
             ),
             name = 'get_equal_indifference_contrasts', iterfield = 'input_str'
         )
+        group_level_analysis.connect(
+            select_files, 'contrasts', get_equal_indifference_contrasts, 'input_str')
+        group_level_analysis.connect(
+            get_equal_indifference_subjects, ('out_list', complete_subject_ids),
+            get_equal_indifference_contrasts, 'elements')
+
         get_equal_range_contrasts = MapNode(Function(
             function = elements_in_string,
             input_names = ['input_str', 'elements'],
@@ -548,70 +541,54 @@ class PipelineTeam9T8E(Pipeline):
             ),
             name = 'get_equal_range_contrasts', iterfield = 'input_str'
         )
+        group_level_analysis.connect(
+            select_files, 'contrasts', get_equal_range_contrasts, 'input_str')
+        group_level_analysis.connect(
+            get_equal_range_subjects, ('out_list', complete_subject_ids),
+            get_equal_range_contrasts, 'elements')
 
         # Two Sample T-Test Design
-        twosampttest = Node(TwoSampleTTestDesign(), name = 'twosampttest')
+        model_design = Node(TwoSampleTTestDesign(), name = 'model_design')
+        group_level_analysis.connect(
+            get_equal_range_contrasts, ('out_list', clean_list),
+            model_design, 'group1_files')
+        group_level_analysis.connect(
+            get_equal_indifference_contrasts, ('out_list', clean_list),
+             model_design, 'group2_files')
 
         # EstimateModel - estimate the parameters of the model
         # Even for second level it should be 'Classical': 1.
-        level2estimate = Node(EstimateModel(), name = 'level2estimate')
-        level2estimate.inputs.estimation_method = {'Classical': 1}
+        model_estimate = Node(EstimateModel(), name = 'model_estimate')
+        model_estimate.inputs.estimation_method = {'Classical': 1}
+        group_level_analysis.connect(model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
 
         # EstimateContrast - estimates simple group contrast
-        level2conestimate = Node(EstimateContrast(), name = 'level2conestimate')
-        level2conestimate.inputs.group_contrast = True
-        level2conestimate.inputs.contrasts = [
+        contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
+        contrast_estimate.inputs.group_contrast = True
+        contrast_estimate.inputs.contrasts = [
             ['Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1]]
         ]
+        group_level_analysis.connect(
+            model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
+        group_level_analysis.connect(
+            model_estimate, 'beta_images', contrast_estimate, 'beta_images')
+        group_level_analysis.connect(
+            model_estimate, 'residual_image', contrast_estimate, 'residual_image')
 
         # Threshold Node - Create thresholded maps
-        threshold = Node(Threshold(), name = 'threshold')
-        threshold.inputs.use_fwe_correction = True
-        threshold.inputs.height_threshold_type = 'p-value'
-        threshold.inputs.force_activation = False
-        threshold.inputs.height_threshold = 0.05
-        threshold.inputs.contrast_index = 1
+        # This step has not been implemented yet, because it requires SnPM
 
-        # Create the group level workflow
-        group_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = f'group_level_analysis_groupComp_nsub_{nb_subjects}')
-        group_level_analysis.connect([
-            (info_source, select_files, [('contrast_id', 'contrast_id')]),
-            (select_files, get_equal_range_contrasts, [('contrasts', 'input_str')]),
-            (select_files, get_equal_indifference_contrasts, [('contrasts', 'input_str')]),
-            (get_equal_range_subjects, get_equal_range_contrasts, [
-                (('out_list', complete_subject_ids), 'elements')
-                ]),
-            (get_equal_indifference_subjects, get_equal_indifference_contrasts, [
-                (('out_list', complete_subject_ids), 'elements')
-                ]),
-            (get_equal_range_contrasts, twosampttest, [
-                (('out_list', clean_list), 'group1_files')
-                ]),
-            (get_equal_indifference_contrasts, twosampttest, [
-                (('out_list', clean_list), 'group2_files')
-                ]),
-            #(select_files, twosampttest, [('mask', 'explicit_mask_file')]),
-            (twosampttest, level2estimate, [('spm_mat_file', 'spm_mat_file')]),
-            (level2estimate, level2conestimate, [
-                ('spm_mat_file', 'spm_mat_file'),
-                ('beta_images', 'beta_images'),
-                ('residual_image', 'residual_image')
-                ]),
-            (level2conestimate, threshold, [
-                ('spm_mat_file', 'spm_mat_file'),
-                ('spmT_images', 'stat_image')
-                ]),
-            (level2estimate, data_sink, [
-                ('mask_image', f'{group_level_analysis.name}.@mask')]),
-            (level2conestimate, data_sink, [
-                ('spm_mat_file', f'{group_level_analysis.name}.@spm_mat'),
-                ('spmT_images', f'{group_level_analysis.name}.@T'),
-                ('con_images', f'{group_level_analysis.name}.@con')]),
-            (threshold, data_sink, [
-                ('thresholded_map', f'{group_level_analysis.name}.@thresh')])
-            ])
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(
+            model_estimate, 'mask_image', data_sink, f'{group_level_analysis.name}.@mask')
+        group_level_analysis.connect(
+            contrast_estimate, 'spm_mat_file', data_sink, f'{group_level_analysis.name}.@spm_mat')
+        group_level_analysis.connect(
+            contrast_estimate, 'spmT_images', data_sink, f'{group_level_analysis.name}.@T')
+        group_level_analysis.connect(
+            contrast_estimate, 'con_images', f'{group_level_analysis.name}.@con')
 
         return group_level_analysis
 
@@ -624,8 +601,7 @@ class PipelineTeam9T8E(Pipeline):
             'method': ['equalRange', 'equalIndifference'],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
-                'spmT_0001.nii', 'spmT_0002.nii',
-                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                'spmT_0001.nii', 'spmT_0002.nii'
                 ],
             'nb_subjects' : [str(len(self.subject_list))]
         }
@@ -645,8 +621,7 @@ class PipelineTeam9T8E(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['groupComp'],
             'file': [
-                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
-                join('_threshold0', 'spmT_0001_thr.nii')
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii'
                 ],
             'nb_subjects' : [str(len(self.subject_list))]
         }
@@ -663,52 +638,45 @@ class PipelineTeam9T8E(Pipeline):
         return return_list
 
     def get_hypotheses_outputs(self):
-        """ Return all hypotheses output file names. """
+        """ Return all hypotheses output file names.
+        Thresholded files could not be computed for this pipeline.
+        """
         nb_sub = len(self.subject_list)
         files = [
             # Hypothesis 1
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
             # Hypothesis 2
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
             # Hypothesis 3
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
             # Hypothesis 4
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0001', 'spmT_0001.nii'),
             # Hypothesis 5
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            '',
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0002.nii'),
             # Hypothesis 6
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            '',
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0002.nii'),
             # Hypothesis 7
-            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
             # Hypothesis 8
-            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii'),
             # Hypothesis 9
-            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            '',
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
                 '_contrast_id_0002', 'spmT_0001.nii')
         ]
