@@ -5,24 +5,23 @@
 from os.path import join
 from itertools import product
 
-from nipype import Workflow, Node, MapNode, JoinNode
-from nipype.interfaces.utility import IdentityInterface, Function, Rename, Merge
+from nipype import Workflow, Node, MapNode
+from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
 from nipype.interfaces.spm import (
     Coregister, OneSampleTTestDesign,
     EstimateModel, EstimateContrast, Level1Design,
-    TwoSampleTTestDesign, RealignUnwarp, NewSegment, SliceTiming,
-    DARTELNorm2MNI, FieldMap, Threshold
+    TwoSampleTTestDesign, RealignUnwarp, NewSegment,
+    FieldMap, Threshold, Normalize12, Smooth
     )
 from nipype.interfaces.spm.base import Info as SPMInfo
 from nipype.interfaces.fsl import ExtractROI
 from nipype.algorithms.modelgen import SpecifySPMModel
-from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
-from narps_open.data.participants import get_group
+from narps_open.data.participants import get_group, get_participants_information
 from narps_open.core.common import (
     remove_parent_directory, list_intersection, elements_in_string, clean_list
     )
@@ -143,7 +142,7 @@ class PipelineTeam0I4U(Pipeline):
         preprocessing.connect(gunzip_anat, 'out_file', coregistration, 'target')
         preprocessing.connect(extract_first_image, 'roi_file', coregistration, 'source')
         preprocessing.connect(
-            motion_correction, 'realigned_unwarped_files', coregister, 'apply_to_files')
+            motion_correction, 'realigned_unwarped_files', coregistration, 'apply_to_files')
 
         # Get SPM Tissue Probability Maps file
         spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
@@ -210,7 +209,7 @@ class PipelineTeam0I4U(Pipeline):
                 (motion_correction, merge_removable_files, [('realigned_unwarped_files', 'in6')]),
                 (extract_first_image, merge_removable_files, [('roi_file', 'in7')]),
                 (segmentation, merge_removable_files, [('forward_deformation_field', 'in8')]),
-                (coregistration, merge_removable_files, [('coregistered_files', 'in8')]),
+                (coregistration, merge_removable_files, [('coregistered_files', 'in9')]),
                 (normalize, merge_removable_files, [('normalized_files', 'in10')]),
                 (smoothing, merge_removable_files, [('smoothed_files', 'in11')]),
                 (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
@@ -275,15 +274,15 @@ class PipelineTeam0I4U(Pipeline):
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
 
-                for line in file:
-                    info = line.strip().split()
+            for line in file:
+                info = line.strip().split()
 
-                    onset_trial.append(float(info[0]))
-                    duration_trial.append(4.0)
-                    weights_gain.append(float(info[2]))
-                    weights_loss.append(float(info[3]))
-                    onset_button.append(float(info[0]) + float(info[4]))
-                    duration_button.append(0.0)
+                onset_trial.append(float(info[0]))
+                duration_trial.append(4.0)
+                weights_gain.append(float(info[2]))
+                weights_loss.append(float(info[3]))
+                onset_button.append(float(info[0]) + float(info[4]))
+                duration_button.append(0.0)
 
         # Create bunch
         return Bunch(
@@ -302,8 +301,6 @@ class PipelineTeam0I4U(Pipeline):
             regressor_names = None,
             regressors = None
         )
-
-        return subject_info
 
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
@@ -434,7 +431,8 @@ class PipelineTeam0I4U(Pipeline):
             Covariate dictionary {vector, name, interaction, centering}
         """
         # Filter participant data
-        sub_list = [f'sub-{s}' for s in subject_list].sort()
+        sub_list = [f'sub-{s}' for s in subject_list]
+        sub_list.sort()
         filtered = participants[participants['participant_id'].isin(sub_list)]
 
         # Create age and gender covariates
@@ -462,9 +460,11 @@ class PipelineTeam0I4U(Pipeline):
             Covariate dictionary {vector, name, interaction, centering}
         """
         # Filter participant data
-        sub_list_g1 = [f'sub-{s}' for s in subject_list_g1].sort()
+        sub_list_g1 = [f'sub-{s}' for s in subject_list_g1]
+        sub_list_g1.sort()
         filtered_g1 = participants[participants['participant_id'].isin(sub_list_g1)]
-        sub_list_g2 = [f'sub-{s}' for s in subject_list_g2].sort()
+        sub_list_g2 = [f'sub-{s}' for s in subject_list_g2]
+        sub_list_g2.sort()
         filtered_g2 = participants[participants['participant_id'].isin(sub_list_g2)]
 
         # Create age and gender covariates
@@ -474,10 +474,11 @@ class PipelineTeam0I4U(Pipeline):
         genders_g2 = [0.0 if g =='M' else 1.0 for g in filtered_g2['gender'].tolist()]
 
         # Complement lists to get covariates for both groups (first group placed before second)
+        # TODO : do we need to add one list of each per group ???
         ages_g1 += [0.0 for a in subject_list_g2]
-        gender_g1 += [0.0 for a in subject_list_g2]
+        genders_g1 += [0.0 for a in subject_list_g2]
         ages_g2 = [0.0 for a in subject_list_g1] + ages_g2
-        gender_g2 = [0.0 for a in subject_list_g1] + gender_g2
+        genders_g2 = [0.0 for a in subject_list_g1] + genders_g2
 
         # Return covariates dict
         return [
@@ -612,7 +613,7 @@ class PipelineTeam0I4U(Pipeline):
             # Function Node get_covariates_single_group
             #   Get covariates for the single group analysis model
             get_covariates = Node(Function(
-                function = get_covariates_single_group,
+                function = self.get_covariates_single_group,
                 input_names = ['subject_list', 'participants'],
                 output_names = ['covariates']
                 ),
@@ -674,10 +675,10 @@ class PipelineTeam0I4U(Pipeline):
                 get_equal_indifference_subjects, ('out_list', complete_subject_ids),
                 get_contrasts_2, 'elements')
 
-            # Function Node get_covariates_single_group
-            #   Get covariates for the single group analysis model
+            # Function Node get_covariates_group_comp
+            #   Get covariates for the group comparison analysis model
             get_covariates = Node(Function(
-                function = get_covariates_group_comp,
+                function = self.get_covariates_group_comp,
                 input_names = ['subject_list_g1', 'subject_list_g2', 'participants'],
                 output_names = ['covariates']
                 ),
