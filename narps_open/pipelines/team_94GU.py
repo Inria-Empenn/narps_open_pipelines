@@ -61,7 +61,7 @@ class PipelineTeam94GU(Pipeline):
         """
             Preprocessing workflow
 
-            1) Fieldmap distorsion calculation;
+            1) Fieldmap distortion calculation;
             2) functional Realignment & unwarp & phase correction (subject motion estimation and correction);
             3) functional Indirect Segmentation & Normalization (
                 coregister functional/structural;
@@ -100,7 +100,7 @@ class PipelineTeam94GU(Pipeline):
         preprocessing.connect(select_files, 'magnitude', fieldmap_infos, 'magnitude_files')
         # Unzip magnitude file
 
-        # FIELDMAP DISTORSION CALCULATION
+        # FIELDMAP DISTORTION CALCULATION
         # inputs : echo_times + magnitude_file + phase_diff + func
         fieldmap = self.get_fieldmap()
         preprocessing.connect(fieldmap_infos, 'echo_times', fieldmap, 'echo_times')
@@ -194,7 +194,7 @@ class PipelineTeam94GU(Pipeline):
 
     def get_fieldmap(self):
         """
-        FieldMap() node for fieldmap distorsion calculation;
+        FieldMap() node for fieldmap distortion calculation;
         """
 
         # FieldMap Node -
@@ -205,7 +205,7 @@ class PipelineTeam94GU(Pipeline):
 
     def get_motion_correction(self) -> Node:
         """
-        RealignUnwarp() node for func motion correction, distorsion correction
+        RealignUnwarp() node for func motion correction, distortion correction
 
         Motion correction was performed in SPM12 (realign and unwarp and the fielmap toolbox).
         Default parameters were used:
@@ -248,7 +248,7 @@ class PipelineTeam94GU(Pipeline):
         Coregister() node for anat/func coregistration
 
         Coregistration was performed in SPM12 (coregister: estimate and reslice). Type of
-        transformation: rigid body model. Cost function = mutual infrormation. Interpolation
+        transformation: rigid body model. Cost function = mutual information. Interpolation
         method = B-spline.
         """
         node = Node(interface=Coregister(), name="coregistration")
