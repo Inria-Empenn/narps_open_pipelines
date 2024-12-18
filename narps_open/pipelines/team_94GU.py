@@ -1,10 +1,9 @@
 from os.path import join
 
 from nipype import Workflow, Node, IdentityInterface, SelectFiles, Function, DataSink
-from nipype.interfaces.spm.base import Info as SPMInfo
 from nipype.algorithms.misc import Gunzip
-from nipype.interfaces.spm import RealignUnwarp, FieldMap, Smooth, Normalize12, Segment, Coregister, Normalize, \
-    NewSegment
+from nipype.interfaces.spm import RealignUnwarp, FieldMap, Smooth, Normalize12, Coregister, NewSegment
+from nipype.interfaces.spm.base import Info as SPMInfo
 
 from narps_open.data.task import TaskInformation
 from narps_open.pipelines import Pipeline
