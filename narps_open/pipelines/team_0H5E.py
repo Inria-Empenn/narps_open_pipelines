@@ -51,44 +51,6 @@ class PipelineTeam0H5E(Pipeline):
     def get_preprocessing(self):  #TODO
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
-        # TODO preprocessing order
-        # * Removal of "dummy" scans (deleting the first four volumes from each run -- timing files were adjusted accordingly)
-        # * motion correction
-        """
-            SPM8 "Realign" command -- Estimation parameters as follows: Quality=1 (highest), separation=4mm (default), smoothing=5mm (default), number of passes="register to mean" (does a first pass registering everything to the first image in the run, creates a temporary mean image, and then does a second pass registering everything to that mean), interpolation="7th Degree B-spline" (although we do not permanently write out the interpolated images at this step; we save only a mean image and the affine transformations in the NIfTI headers [see below]), wrapping="No wrap", weighting=none. Reslicing parameters: Resliced images="Mean image only", interpolation="7th Degree B-spline", wrapping="No wrap", masking="Mask images".
-            Other notes: No non-rigid registration at this stage; no unwarping; similarity metric is least squares (no option to change in SPM8), no slice timing correction as noted above.
-        """
-        # * rigid coregistration ("Coregister" SPM command) of subject anatomical to MNI template
-        # * rigid coregistration of each subject's functional data to their coregistered anatomical image
-        """
-             SPM8 "Coregister" command, "Estimate" procedure only (we do not write out interpolated images at this stage; we only save the affine transformations in the NIfTI headers, as with motion correction). Reference image=subject's anatomical (already coregistered to MNI template in an earlier step), source image=mean image from each run (generated during motion correction), other images=all other images from that run (post motion correction), objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default).
-            Other notes: All rigid at this stage.
-        """
-        # * resample images with all of those linear operations applied
-        """
-        The one pre-processing step we did that wasn't discussed here (but which was mentioned in our description of overal pre-processing sequence) was a resampling step we did between all the linear transformations on the functional images and the nonlinear (warping) transformation. We only do this as a separate step because we try to avoid resampling the functional images a bunch of times without need if all the transformations are doing is updating the NIfTI header's affine transformation matrix, which is true for our initial motion correction and linear coregistration steps, but we do like to save a resampled copy of the images with all of those affine transformations applied before any subsequent steps. (This is normally so we can do certain statistical analyses in individual-subject space that has been loosely affine-registered with standard space but not warped... we did not have to do any such analyses in this particular case but it is part of our standard processing stream, so we left it in.) Unfortunately SPM8's coregistration routine has a weird feature where it will only resample output images at the same voxel size as the reference image (even though the normalization routine will let you freely select a bounding box and voxel size). We did not want to resample all functional images at the resolution of our anatomical template, and unfortunately SPM8 does not provide a pure image-resampling function, so our hacked-together solution is to generate a spatial normalization matrix defining a null transformation and apply that to the functional images through the SPM8 normalization routine, which effectively resamples the images to the desired resolution without transforming them (but with any affine transformations from the NIfTI header applied prior to resampling and then zero'ed out in the resampled images). We chose to resample to 2.5mm isotropic voxels as that is the usual size at which we currently acquire our own fMRI data (and a convenient size to work with in general), although arguments could be made that another size could be more optimal for the NARPS dataset that was originally acquired at a different voxel size.
-        """
-        # * non-rigid registration/warping ("Normalise" SPM command) of anatomical to MNI template
-        # * application of warping ("Normalise" again -- but only writing the transformation, not estimating it) to functional images
-        # * spatial smoothing
-        """
-            SPM8 "Smooth" command. Options: Images to smooth=all the images from each run (after all other pre-processing steps), FWHM=9mm x 9mm x 9mm, data type="same", implicit masking=none.
-            Other notes: Basic fixed (non-iterative) 9mm FWHM isotropic Gaussian smoothing kernel. All in volume space after all registration steps (i.e., after all subjects are in MNI space). True confession time: We originally used a 6mm kernel but after running some preliminary sanity checks on the group analyses, we decided too many voxels were getting masked out of the group analysis due to anatomical inconsistencies between subjects, so we re-ran the smoothing at 9mm and used that for the final analyses. We would normally use a smaller kernel but also our typical sample sizes are smaller than in this dataset (closer to N=20 and a single subject group), and because of the way SPM masks out voxels from group analyses, the higher the N, the more voxels are going to get masked out -- hence our decision to smooth more in order not to over-mask the group analyses. (This still did not work perfectly in the case of amygdala and ventral striatum, but we did our best.)
-        """
-
-
-        """
-            Two main steps -- rigid and non-rigid (see overall order of pre-processing above).
-
-Rigid intersubject registration: SPM8 "Coregister" command, "Estimate" and "Reslice" procedures. "Estimate" options: Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels), source image=subject's raw T1 anatomical, other images=none, objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default). "Reslice" options: Interpolation="7th degree b-spline", wrapping="No wrap", masking="Don't mask images".
-
-Non-rigid registration: SPM8 "Normalise" command, "Estimate" and "Write" procedures. "Estimate" options: Source image=subject's T1 anatomical (post rigid coregistration), source weighting image=none, images to write=normalized version of same T1 anatomical (no other images written out at this stage), template image=MNI T1.nii template (same as for coregistration), template weighting image=none, source image smoothing=8mm [default], template image smoothing=none, affine regularisation="ICBM space template", nonlinear frequency cutoff=25 (default), nonlinear iterations=16 (default), nonlinear regularisation=1 (default). "Write" options: Preserve="preserve concentrations" (default), bounding box=default coordinates, voxel sizes=2mm x 2mm x 2mm, interpolation="7th degree b-spline", wrapping=none.
-
-Non-rigid registration parameters from the anatomical non-rigid registration were then applied to all functional images from that subject (after rigid coregistration of the functional images to the subject's anatomical image), with all of the same "Write" options under the SPM8 "Normalise" command except for voxel size, which was set to 2.5mm isotropic.
-
-Other notes: No surface-based registration; all volume-based. All based on T1 anatomical; no bias field correction, no segmentation, no Talairach transformations.
-        """
-
         # Workflow initialization
         preprocessing = Workflow(
             base_dir = self.directories.working_dir,
@@ -134,11 +96,67 @@ Other notes: No surface-based registration; all volume-based. All based on T1 an
         preprocessing.connect(select_run_files, 'func', gunzip_func, 'in_file')
         preprocessing.connect(select_subject_files, 'anat', gunzip_anat, 'in_file')
 
-        # REALIGN - rigid-body realignment in SPM12 using 1st scan as referenced scan
-        # and normalized mutual information.
+        # EXTRACTROI - remove first image of func
+        # > Removal of "dummy" scans (deleting the first four volumes from each run)
+        remove_first_image = Node(ExtractROI(), name = 'remove_first_image')
+        remove_first_image.inputs.t_min = 4
+        remove_first_image.inputs.t_size = 449 # number of time points - 4
+        remove_first_image.inputs.output_type='NIFTI'
+        preprocessing.connect(gunzip_func, 'out_file', remove_first_image, 'in_file')
+
+        # REALIGN - motion correction
         realign = Node(Realign(), name = 'realign')
-        realign.inputs.register_to_mean = False
+        Estimation
+        realign.inputs.quality = 1
+        realign.inputs.smoothing = 5.0 #mm
+        realign.inputs.separation = 4.0 #mm
+        realign.inputs.register_to_mean = True
+        realign.inputs.interpolation = "7th Degree B-spline" 
+        realign.inputs.wrapping = "No wrap"
+        realign.inputs.weighting = None
+
+        Reslicing parameters
+        Resliced images="Mean image only"
+        interpolation="7th Degree B-spline"
+        wrapping="No wrap"
+        masking="Mask images"
         preprocessing.connect(gunzip_func, 'out_file', realign, 'in_files')
+
+        # TODO preprocessing order
+
+        """
+        # * rigid coregistration ("Coregister" SPM command) of subject anatomical to MNI template
+        # * rigid coregistration of each subject's functional data to their coregistered anatomical image
+        """
+             SPM8 "Coregister" command, "Estimate" procedure only (we do not write out interpolated images at this stage; we only save the affine transformations in the NIfTI headers, as with motion correction). Reference image=subject's anatomical (already coregistered to MNI template in an earlier step), source image=mean image from each run (generated during motion correction), other images=all other images from that run (post motion correction), objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default).
+            Other notes: All rigid at this stage.
+        """
+        # * resample images with all of those linear operations applied
+        """
+        The one pre-processing step we did that wasn't discussed here (but which was mentioned in our description of overal pre-processing sequence) was a resampling step we did between all the linear transformations on the functional images and the nonlinear (warping) transformation. We only do this as a separate step because we try to avoid resampling the functional images a bunch of times without need if all the transformations are doing is updating the NIfTI header's affine transformation matrix, which is true for our initial motion correction and linear coregistration steps, but we do like to save a resampled copy of the images with all of those affine transformations applied before any subsequent steps. (This is normally so we can do certain statistical analyses in individual-subject space that has been loosely affine-registered with standard space but not warped... we did not have to do any such analyses in this particular case but it is part of our standard processing stream, so we left it in.) Unfortunately SPM8's coregistration routine has a weird feature where it will only resample output images at the same voxel size as the reference image (even though the normalization routine will let you freely select a bounding box and voxel size). We did not want to resample all functional images at the resolution of our anatomical template, and unfortunately SPM8 does not provide a pure image-resampling function, so our hacked-together solution is to generate a spatial normalization matrix defining a null transformation and apply that to the functional images through the SPM8 normalization routine, which effectively resamples the images to the desired resolution without transforming them (but with any affine transformations from the NIfTI header applied prior to resampling and then zero'ed out in the resampled images). We chose to resample to 2.5mm isotropic voxels as that is the usual size at which we currently acquire our own fMRI data (and a convenient size to work with in general), although arguments could be made that another size could be more optimal for the NARPS dataset that was originally acquired at a different voxel size.
+        """
+        # * non-rigid registration/warping ("Normalise" SPM command) of anatomical to MNI template
+        # * application of warping ("Normalise" again -- but only writing the transformation, not estimating it) to functional images
+        # * spatial smoothing
+        """
+            SPM8 "Smooth" command. Options: Images to smooth=all the images from each run (after all other pre-processing steps), FWHM=9mm x 9mm x 9mm, data type="same", implicit masking=none.
+            Other notes: Basic fixed (non-iterative) 9mm FWHM isotropic Gaussian smoothing kernel. All in volume space after all registration steps (i.e., after all subjects are in MNI space). True confession time: We originally used a 6mm kernel but after running some preliminary sanity checks on the group analyses, we decided too many voxels were getting masked out of the group analysis due to anatomical inconsistencies between subjects, so we re-ran the smoothing at 9mm and used that for the final analyses. We would normally use a smaller kernel but also our typical sample sizes are smaller than in this dataset (closer to N=20 and a single subject group), and because of the way SPM masks out voxels from group analyses, the higher the N, the more voxels are going to get masked out -- hence our decision to smooth more in order not to over-mask the group analyses. (This still did not work perfectly in the case of amygdala and ventral striatum, but we did our best.)
+        """
+
+
+        """
+            Two main steps -- rigid and non-rigid (see overall order of pre-processing above).
+
+Rigid intersubject registration: SPM8 "Coregister" command, "Estimate" and "Reslice" procedures. "Estimate" options: Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels), source image=subject's raw T1 anatomical, other images=none, objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default). "Reslice" options: Interpolation="7th degree b-spline", wrapping="No wrap", masking="Don't mask images".
+
+Non-rigid registration: SPM8 "Normalise" command, "Estimate" and "Write" procedures. "Estimate" options: Source image=subject's T1 anatomical (post rigid coregistration), source weighting image=none, images to write=normalized version of same T1 anatomical (no other images written out at this stage), template image=MNI T1.nii template (same as for coregistration), template weighting image=none, source image smoothing=8mm [default], template image smoothing=none, affine regularisation="ICBM space template", nonlinear frequency cutoff=25 (default), nonlinear iterations=16 (default), nonlinear regularisation=1 (default). "Write" options: Preserve="preserve concentrations" (default), bounding box=default coordinates, voxel sizes=2mm x 2mm x 2mm, interpolation="7th degree b-spline", wrapping=none.
+
+Non-rigid registration parameters from the anatomical non-rigid registration were then applied to all functional images from that subject (after rigid coregistration of the functional images to the subject's anatomical image), with all of the same "Write" options under the SPM8 "Normalise" command except for voxel size, which was set to 2.5mm isotropic.
+
+Other notes: No surface-based registration; all volume-based. All based on T1 anatomical; no bias field correction, no segmentation, no Talairach transformations.
+        """
+
+
 
         # EXTRACTROI - extracting the first image of func
         extract_first_image = Node(ExtractROI(), name = 'extract_first_image')
