@@ -49,14 +49,14 @@ class PipelineTeam0I4U(Pipeline):
         """
         Return the preprocessing workflow.
 
-        Returns: a nipype.WorkFlow 
+        Returns: a nipype.WorkFlow
         """
 
         # Initialize workflow
         preprocessing = Workflow(
             base_dir = self.directories.working_dir,
             name = 'preprocessing'
-        )        
+        )
 
         # IDENTITY INTERFACE - allows to iterate over subjects
         information_source_subject = Node(IdentityInterface(
@@ -264,7 +264,7 @@ class PipelineTeam0I4U(Pipeline):
         - subject_info : Bunch corresponding to the event file
         """
         from nipype.interfaces.base import Bunch
-        
+
         onset_trial = []
         duration_trial = []
         weights_gain = []
@@ -274,10 +274,10 @@ class PipelineTeam0I4U(Pipeline):
 
         with open(event_file, 'rt') as file:
             next(file)  # skip the header
-            
+
                 for line in file:
                     info = line.strip().split()
-                    
+
                     onset_trial.append(float(info[0]))
                     duration_trial.append(4.0)
                     weights_gain.append(float(info[2]))
@@ -345,7 +345,7 @@ class PipelineTeam0I4U(Pipeline):
             name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
         subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
         subject_level_analysis.connect(select_files, 'event', subject_information, 'event_file')
-        
+
         # SPECIFY MODEL - Generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name='specify_model')
         specify_model.inputs.concatenate_runs = False
@@ -396,77 +396,96 @@ class PipelineTeam0I4U(Pipeline):
 
         return subject_level_analysis
 
-    def get_subset_contrasts(file_list, subject_list, participants_file, method):
-        """ 
+    def get_subject_level_outputs(self):
+        """ Return the names of the files the subject level analysis is supposed to generate. """
+
+        # Contrat maps
+        templates = [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # SPM.mat file
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', 'SPM.mat')]
+
+        # spmT maps
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
+            for contrast_id in self.contrast_list]
+
+        # Format with subject_ids
+        return_list = []
+        for template in templates:
+            return_list += [template.format(subject_id = s) for s in self.subject_list]
+
+        return return_list
+
+    def get_covariates_single_group(subject_list: list, participants):
+        """
+        From a list of subjects, create covariates (age, gender) for the groupe level model,
+        in the case of single group (equalRange or equalIndifference) models.
+
         Parameters :
-        - file_list : original file list selected by selectfiles node 
         - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants characteristics
-        - method: str, one of "equalRange", "equalIndifference" or "groupComp"
-        
-        This function return the file list containing only the files belonging to subject in the wanted group.
-        """
-        equalIndifference_id = []
-        equalRange_id = []
-        equalIndifference_files = []
-        equalRange_files = []
-        equalRange_covar_val = [[], []]
-        equalIndifference_covar_val = [[], []]
-        """
-        covariates (a list of items which are a dictionary with keys which are ‘vector’ or ‘name’ or ‘interaction’ 
-        or ‘centering’ and with values which are any value) – Covariate dictionary {vector, name, interaction,
-        centering}.
-        """
+            note that this list will be sorted
+        - participants: pandas.DataFrame, file containing participants characteristics
 
-        with open(participants_file, 'rt') as f:
-                next(f)  # skip the header
-                
-                for line in f:
-                    info = line.strip().split()
-                    
-                    if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                        equalIndifference_id.append(info[0][-3:])
-                        equalIndifference_covar_val[0].append(float(info[3]))
-                        equalIndifference_covar_val[1].append(0 if info[2]=='M' else 1)
-                    elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                        equalRange_id.append(info[0][-3:])
-                        equalRange_covar_val[0].append(float(info[3]))
-                        equalRange_covar_val[1].append(0 if info[2]=='M' else 1)
-        
-        for file in file_list:
-            sub_id = file.split('/')
-            if sub_id[-2][-3:] in equalIndifference_id:
-                equalIndifference_files.append(file)
-            elif sub_id[-2][-3:] in equalRange_id:
-                equalRange_files.append(file)
-                
-        equalRange_covar = [dict(vector=equalRange_covar_val[0], name='age', centering=[1]),
-                            dict(vector=equalRange_covar_val[1], name='sex', centering=[1])]
-        
-        equalIndifference_covar = [dict(vector=equalIndifference_covar_val[0], name='age', centering=[1]),
-                                   dict(vector=equalIndifference_covar_val[1], name='sex', centering=[1])]
-        
-        nb_eqRange = len(equalRange_id)
-        nb_eqIndifference = len(equalIndifference_id)
-        
-        global_covar = []
-        
-        if method == 'groupComp':
-            global_covar = [dict(vector=equalRange_covar_val[0], name='eqRange_age'),
-                            dict(vector=equalIndifference_covar_val[0], name='eqIndifference_age'),
-                            dict(vector=equalRange_covar_val[1], name='eqRange_sex'),
-                            dict(vector=equalIndifference_covar_val[1], name='eqIndifference_sex')]
+        Returns : list, formatted covariates for group level analysis. As specified in nipype doc:
+            Covariate dictionary {vector, name, interaction, centering}
+        """
+        # Filter participant data
+        sub_list = [f'sub-{s}' for s in subject_list].sort()
+        filtered = participants[participants['participant_id'].isin(sub_list)]
 
-            for i in range(4):
-                if i in [0, 2]:
-                    for k in range(nb_eqIndifference):
-                        global_covar[i]['vector'].append(0)
-                elif i in [1, 3]:
-                    for k in range(nb_eqRange):
-                        global_covar[i]['vector'].insert(0 ,0)
-        
-                
-        return equalIndifference_id, equalRange_id, equalIndifference_files, equalRange_files, equalRange_covar, equalIndifference_covar, global_covar 
+        # Create age and gender covariates
+        ages = [float(a) for a in filtered['age'].tolist()]
+        genders = [0 if g =='M' else 1 for g in filtered['gender'].tolist()]
+
+        # Return covariates dict
+        return [
+            {'vector': ages, 'name': 'age', 'centering': [1]},
+            {'vector': genders, 'name': 'gender', 'centering': [1]}
+            ]
+
+    def get_covariates_group_comp(subject_list_g1: list, subject_list_g2: list, participants):
+        """
+        From a list of subjects, create covariates (age, gender) for the groupe level model.
+
+        Parameters :
+        - subject_list_g1 : list of subject ids in the analysis and in the first group
+            note that this list will be sorted
+        - subject_list_g2 : list of subject ids in the analysis and in the second group
+            note that this list will be sorted
+        - participants: pandas.DataFrame, file containing participants characteristics
+
+        Returns : list, formatted covariates for group level analysis. As specified in nipype doc:
+            Covariate dictionary {vector, name, interaction, centering}
+        """
+        # Filter participant data
+        sub_list_g1 = [f'sub-{s}' for s in subject_list_g1].sort()
+        filtered_g1 = participants[participants['participant_id'].isin(sub_list_g1)]
+        sub_list_g2 = [f'sub-{s}' for s in subject_list_g2].sort()
+        filtered_g2 = participants[participants['participant_id'].isin(sub_list_g2)]
+
+        # Create age and gender covariates
+        ages_g1 = [float(a) for a in filtered_g1['age'].tolist()]
+        genders_g1 = [0.0 if g =='M' else 1.0 for g in filtered_g1['gender'].tolist()]
+        ages_g2 = [float(a) for a in filtered_g2['age'].tolist()]
+        genders_g2 = [0.0 if g =='M' else 1.0 for g in filtered_g2['gender'].tolist()]
+
+        # Complement lists to get covariates for both groups (first group placed before second)
+        ages_g1 += [0.0 for a in subject_list_g2]
+        gender_g1 += [0.0 for a in subject_list_g2]
+        ages_g2 = [0.0 for a in subject_list_g1] + ages_g2
+        gender_g2 = [0.0 for a in subject_list_g1] + gender_g2
+
+        # Return covariates dict
+        return [
+            {'vector': ages_g1, 'name': 'age_group_1'},
+            {'vector': ages_g2, 'name': 'age_group_2'},
+            {'vector': genders_g1, 'name': 'gender_group_1'},
+            {'vector': genders_g2, 'name': 'gender_group_2'}
+            ]
 
     def get_group_level_analysis(self):
         """
@@ -504,92 +523,297 @@ class PipelineTeam0I4U(Pipeline):
                 name = 'information_source')
         information_source.iterables = [('contrast_id', self.contrast_list)]
 
-        # SelectFiles
-        contrast_file = opj(result_dir, output_dir, 'l1_analysis', '_subject_id_*', "con_00{contrast_id}.nii")
+        # SELECT FILES - select contrasts for all subjects
+        templates = {
+            'contrast' : join('subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii'),
+            'participants' : join(self.directories.dataset_dir, 'participants.tsv')
+            }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.output_dir
+        select_files.inputs.force_list = True
+        group_level_analysis.connect(
+            information_source, 'contrast_id', select_files, 'contrast_id')
 
-        participants_file = opj(exp_dir, 'participants.tsv')
-        
-        mask_file = opj(data_dir, 'NARPS-0I4U', 'hypo1_unthresh.nii.gz')
+        # Function Node get_equal_range_subjects
+        #   Get subjects in the equalRange group and in the subject_list
+        get_equal_range_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_range_subjects'
+        )
+        get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+        get_equal_range_subjects.inputs.list_2 = self.subject_list
 
-        templates = {'contrast' : contrast_file, 'participants' : participants_file, 'mask':mask_file}
-        
-        selectfiles_groupanalysis = Node(SelectFiles(templates, base_directory=result_dir, force_list= True),
-                           name="selectfiles_groupanalysis")
-        
-        # Datasink node : to save important files 
-        datasink_groupanalysis = Node(DataSink(base_directory = result_dir, container = output_dir), 
-                                      name = 'datasink_groupanalysis')
-        
-        gunzip_mask = Node(Gunzip(), name='gunzip_mask')
-        # Node to select subset of contrasts
-        sub_contrasts = Node(Function(input_names = ['file_list', 'subject_list', 'participants_file', 'method'],
-                                     output_names = ['equalIndifference_id', 'equalRange_id', 
-                                                     'equalIndifference_files', 'equalRange_files',
-                                                    'equalRange_covar', 'equalIndifference_covar', 'global_covar'],
-                                     function = get_subset_contrasts),
-                            name = 'sub_contrasts')
-        
-        sub_contrasts.inputs.method = method
+        # Function Node get_equal_indifference_subjects
+        #   Get subjects in the equalIndifference group and in the subject_list
+        get_equal_indifference_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_indifference_subjects'
+        )
+        get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+        get_equal_indifference_subjects.inputs.list_2 = self.subject_list
 
-        ## Estimate model 
-        estimate_model = Node(EstimateModel(estimation_method={'Classical':1}), name = "estimate_model")
+        # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
+        #   If not complete, subject id '001' in search patterns
+        #   would match all contrast files with 'con_0001.nii'.
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
 
-        ## Estimate contrasts
-        estimate_contrast = Node(EstimateContrast(group_contrast=True),
-                                 name = "estimate_contrast")
+        # Function Node elements_in_string
+        #   Get contrast files for required subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_contrasts', iterfield = 'input_str'
+        )
+        group_level_analysis.connect(select_files, 'contrasts', get_contrasts, 'input_str')
 
-        ## Create thresholded maps 
-        threshold = MapNode(Threshold(use_fwe_correction=True,
-                                      height_threshold_type='p-value',
-                                      force_activation = False), name = "threshold", 
-                            iterfield = ["stat_image", "contrast_index"])
-        
+        # ESTIMATE MODEL - (inputs are set below, depending on the method used)
+        estimate_model = Node(EstimateModel(), name = 'estimate_model')
+        estimate_model.inputs.estimation_method = {'Classical':1}
 
-        l2_analysis = Workflow(base_dir = opj(result_dir, working_dir), name = f"l2_analysis_{method}_nsub_{n_sub}")
+        # ESTIMATE CONTRASTS
+        estimate_contrast = Node(EstimateContrast(), name = 'estimate_contrast')
+        estimate_contrast.inputs.group_contrast = True
+        group_level_analysis.connect(
+            estimate_model, 'spm_mat_file', estimate_contrast, 'spm_mat_file')
+        group_level_analysis.connect(
+            estimate_model, 'residual_image', estimate_contrast, 'residual_image')
+        group_level_analysis.connect(
+            estimate_model, 'beta_images', estimate_contrast, 'beta_images')
 
-        l2_analysis.connect([(infosource_groupanalysis, selectfiles_groupanalysis, [('contrast_id', 'contrast_id')]),
-            (infosource_groupanalysis, sub_contrasts, [('subjects', 'subject_list')]),
-            (selectfiles_groupanalysis, sub_contrasts, [('contrast', 'file_list'),
-                                                        ('participants', 'participants_file')]),
-            (selectfiles_groupanalysis, gunzip_mask, [('mask', 'in_file')]),
-            (estimate_model, estimate_contrast, [('spm_mat_file', 'spm_mat_file'),
-                ('residual_image', 'residual_image'),
-                ('beta_images', 'beta_images')]),
-            (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),('spmT_images', 'stat_image')]),
-            (threshold, datasink_groupanalysis, [('thresholded_map', f"l2_analysis_{method}_nsub_{n_sub}.@thresh")]),
-            (estimate_model, datasink_groupanalysis, [('mask_image', f"l2_analysis_{method}_nsub_{n_sub}.@mask")]),
-            (estimate_contrast, datasink_groupanalysis, [('spm_mat_file', f"l2_analysis_{method}_nsub_{n_sub}.@spm_mat"),
-                ('spmT_images', f"l2_analysis_{method}_nsub_{n_sub}.@T"),
-                ('con_images', f"l2_analysis_{method}_nsub_{n_sub}.@con")])])
-        
-        
-        if method=='equalRange' or method=='equalIndifference':
-            contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])] 
-            ## Specify design matrix 
-            one_sample_t_test_design = Node(OneSampleTTestDesign(use_implicit_threshold=True), name = "one_sample_t_test_design")
+        # Create thresholded maps
+        threshold = MapNode(Threshold(),
+            name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
+        threshold.inputs.use_fwe_correction = True
+        threshold.inputs.height_threshold_type = 'p-value'
+        threshold.inputs.force_activation = False
+        group_level_analysis.connect(
+            estimate_contrast, 'spm_mat_file', threshold, 'spm_mat_file')
+        group_level_analysis.connect(
+            estimate_contrast, 'spmT_images', threshold, 'stat_image')
 
-            l2_analysis.connect([(sub_contrasts, one_sample_t_test_design, [(f"{method}_files", 'in_files'), 
-                                                                           (f"{method}_covar", "covariates")]),
-                                 (gunzip_mask, one_sample_t_test_design, [('out_file', 'explicit_mask_file')]),
-                (one_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])])
-            
+        if method in ('equalRange', 'equalIndifference'):
+            estimate_contrast.inputs.contrasts = [
+                ('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])
+                ]
+
             threshold.inputs.contrast_index = [1, 2]
             threshold.synchronize = True
 
-        elif method == 'groupComp':
-            contrasts = [('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])]
-            # Node for the design matrix
-            two_sample_t_test_design = Node(TwoSampleTTestDesign(unequal_variance = True, use_implicit_threshold=True), 
-                                            name = 'two_sample_t_test_design')
+            # Function Node get_covariates_single_group
+            #   Get covariates for the single group analysis model
+            get_covariates = Node(Function(
+                function = get_covariates_single_group,
+                input_names = ['subject_list', 'participants'],
+                output_names = ['covariates']
+                ),
+                name = 'get_covariates'
+            )
+            get_covariates.inputs.participants = get_participants_information()
 
-            l2_analysis.connect([(sub_contrasts, two_sample_t_test_design, [('equalRange_files', "group1_files"), 
-                ('equalIndifference_files', 'group2_files'), ('global_covar', 'covariates')]),
-                (gunzip_mask, two_sample_t_test_design, [('out_file', 'explicit_mask_file')]),
-                (two_sample_t_test_design, estimate_model, [("spm_mat_file", "spm_mat_file")])])
-            
+            # Specify design matrix
+            one_sample_t_test_design = Node(OneSampleTTestDesign(),
+                name = 'one_sample_t_test_design')
+            group_level_analysis.connect(
+                one_sample_t_test_design, 'spm_mat_file', estimate_model, 'spm_mat_file')
+            group_level_analysis.connect(
+                get_contrasts, ('out_list', clean_list), one_sample_t_test_design, 'in_files')
+            group_level_analysis.connect(
+                get_covariates, 'covariates', one_sample_t_test_design, 'covariates')
+
+        if method == 'equalRange':
+            group_level_analysis.connect(
+                get_equal_range_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
+            group_level_analysis.connect(
+                get_equal_range_subjects, 'out_list', get_covariates, 'subject_list')
+
+        elif method == 'equalIndifference':
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, 'out_list' , get_covariates, 'subject_list')
+
+        elif method == 'groupComp':
+            estimate_contrast.inputs.contrasts = [
+                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1])
+                ]
+
             threshold.inputs.contrast_index = [1]
             threshold.synchronize = True
 
-        estimate_contrast.inputs.contrasts = contrasts
+            group_level_analysis.connect(
+                get_equal_range_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements')
 
-        return l2_analysis
+            # Function Node elements_in_string
+            #   Get contrast files for required subjects
+            # Note : using a MapNode with elements_in_string requires using clean_list to remove
+            #   None values from the out_list
+            get_contrasts_2 = MapNode(Function(
+                function = elements_in_string,
+                input_names = ['input_str', 'elements'],
+                output_names = ['out_list']
+                ),
+                name = 'get_contrasts_2', iterfield = 'input_str'
+            )
+            group_level_analysis.connect(select_files, 'contrasts', get_contrasts_2, 'input_str')
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, ('out_list', complete_subject_ids),
+                get_contrasts_2, 'elements')
+
+            # Function Node get_covariates_single_group
+            #   Get covariates for the single group analysis model
+            get_covariates = Node(Function(
+                function = get_covariates_group_comp,
+                input_names = ['subject_list_g1', 'subject_list_g2', 'participants'],
+                output_names = ['covariates']
+                ),
+                name = 'get_covariates'
+            )
+            get_covariates.inputs.participants = get_participants_information()
+            group_level_analysis.connect(
+                get_equal_range_subjects, 'out_list' , get_covariates, 'subject_list_g1')
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, 'out_list' , get_covariates, 'subject_list_g2')
+
+            # Node for the design matrix
+            two_sample_t_test_design = Node(TwoSampleTTestDesign(),
+                name = 'two_sample_t_test_design')
+            group_level_analysis.connect(
+                get_contrasts, ('out_list', clean_list),
+                two_sample_t_test_design, 'group1_files')
+            group_level_analysis.connect(
+                get_contrasts_2, ('out_list', clean_list),
+                two_sample_t_test_design, 'group2_files')
+            group_level_analysis.connect(
+                get_covariates, 'covariates', two_sample_t_test_design, 'covariates')
+
+            # Connect to model estimation
+            group_level_analysis.connect(
+                two_sample_t_test_design, 'spm_mat_file', estimate_model, 'spm_mat_file')
+
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(estimate_model, 'mask_image',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@mask')
+        group_level_analysis.connect(estimate_contrast, 'spm_mat_file',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@spm_mat')
+        group_level_analysis.connect(estimate_contrast, 'spmT_images',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@T')
+        group_level_analysis.connect(estimate_contrast, 'con_images',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@con')
+        group_level_analysis.connect(threshold, 'thresholded_map',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh')
+
+        return group_level_analysis
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}', '_contrast_id_{contrast_id}',
+            '{file}')
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0005', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0005', 'spmT_0001.nii'),
+            # Hypothesis 6
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0005', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0005', 'spmT_0001.nii'),
+            # Hypothesis 7
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 9
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
