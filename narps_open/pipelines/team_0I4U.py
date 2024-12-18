@@ -1,177 +1,218 @@
-# pylint: skip-file
-from nipype.interfaces.spm import (Coregister, Smooth, OneSampleTTestDesign, EstimateModel, EstimateContrast, 
-                                   Level1Design, TwoSampleTTestDesign, RealignUnwarp, FieldMap, NewSegment, 
-                                   Normalize12, Reslice)
-from nipype.interfaces.spm import Threshold 
-from nipype.interfaces.fsl import ApplyMask, ExtractROI, ImageMaths
-from nipype.algorithms.modelgen import SpecifySPMModel
-from nipype.interfaces.utility import IdentityInterface, Function
+#!/usr/bin/python
+# coding: utf-8
+
+""" Write the work of NARPS team 0I4U using Nipype """
+from os.path import join
+from itertools import product
+
+from nipype import Workflow, Node, MapNode, JoinNode
+from nipype.interfaces.utility import IdentityInterface, Function, Rename, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
-from nipype import Workflow, Node, MapNode, JoinNode
-from nipype.interfaces.base import Bunch
+from nipype.interfaces.spm import (
+    Coregister, OneSampleTTestDesign,
+    EstimateModel, EstimateContrast, Level1Design,
+    TwoSampleTTestDesign, RealignUnwarp, NewSegment, SliceTiming,
+    DARTELNorm2MNI, FieldMap, Threshold
+    )
+from nipype.interfaces.spm.base import Info as SPMInfo
+from nipype.interfaces.fsl import ExtractROI
+from nipype.algorithms.modelgen import SpecifySPMModel
+from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
-from os.path import join as opj
-import os
-import json
+from narps_open.pipelines import Pipeline
+from narps_open.data.task import TaskInformation
+from narps_open.data.participants import get_group
+from narps_open.core.common import (
+    remove_parent_directory, list_intersection, elements_in_string, clean_list
+    )
+from narps_open.utils.configuration import Configuration
 
-def rm_preproc_files(files, run_id, subject_id, result_dir, working_dir):
-    import shutil
-    from os.path import join as opj
-    import os
+class PipelineTeam0I4U(Pipeline):
+    """ A class that defines the pipeline of team 0I4U. """
 
-    preproc_dir = opj(result_dir, working_dir, 'preprocessing', f"_run_id_{run_id}_subject_id_{subject_id}")
-    dir_to_rm = ['coregistration']
-    for dirs in dir_to_rm:
-        try:
-            shutil.rmtree(opj(preproc_dir, dirs))
-        except OSError as e:
-            print(e)
-        else:
-            print(f"The directory {dirs} is deleted successfully")
-    
-    return files
+    def __init__(self):
+        super().__init__()
+        self.fwhm = 5.0
+        self.team_id = '0I4U'
+        self.contrast_list = ['0001', '0002']
 
-def rm_gunzip_files(files, run_id, subject_id, result_dir, working_dir):
-    import shutil
-    from os.path import join as opj
+        # Define contrasts
+        gain_conditions = [f'trial_run{r}xgain_run{r}^1' for r in range(1,len(self.run_list) + 1)]
+        loss_conditions = [f'trial_run{r}xloss_run{r}^1' for r in range(1,len(self.run_list) + 1)]
+        self.subject_level_contrasts = [
+            ('gain', 'T', gain_conditions, [1] * len(self.run_list)),
+            ('loss', 'T', loss_conditions, [1] * len(self.run_list))
+            ]
 
-    preproc_dir = opj(result_dir, working_dir, 'preprocessing', f"_run_id_{run_id}_subject_id_{subject_id}")
+    def get_preprocessing(self):
+        """
+        Return the preprocessing workflow.
 
-    dir_to_rm = ['gunzip_func', 'gunzip_magnitude', 'gunzip_phasediff', 'fieldmap', 'extract_first']
-    for dirs in dir_to_rm:
-        try:
-            shutil.rmtree(opj(preproc_dir, dirs))
-        except OSError as e:
-            print(e)
-        else:
-            print(f"The directory {dirs} is deleted successfully")
+        Returns: a nipype.WorkFlow 
+        """
 
-    return files    
+        # Initialize workflow
+        preprocessing = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'preprocessing'
+        )        
 
-def get_preprocessing(exp_dir, result_dir, working_dir, output_dir, subject_list, run_list, fwhm, TR, 
-                      total_readout_time):
-    """
-    Returns the preprocessing workflow.
+        # IDENTITY INTERFACE - allows to iterate over subjects
+        information_source_subject = Node(IdentityInterface(
+            fields = ['subject_id']),
+            name = 'information_source_subject'
+        )
+        information_source_subject.iterables = ('subject_id', self.subject_list)
 
-    Parameters: 
-        - exp_dir: str, directory where raw data are stored
-        - result_dir: str, directory where results will be stored
-        - working_dir: str, name of the sub-directory for intermediate results
-        - output_dir: str, name of the sub-directory for final results
-        - subject_list: list of str, list of subject for which you want to do the preprocessing
-        - run_list: list of str, list of runs for which you want to do the preprocessing 
-        - fwhm: float, fwhm for smoothing step
-        - TR: float, time repetition used during acquisition
-        - total_readout_time: float, time taken to acquire all of the phase encode steps required to cover k-space (i.e., one image slice)
+        # IDENTITY INTERFACE - allows to iterate over runs
+        information_source_runs = Node(IdentityInterface(
+            fields = ['subject_id', 'run_id']),
+            name = 'information_source_runs'
+        )
+        information_source_runs.iterables = ('run_id', self.run_list)
+        preprocessing.connect(
+            information_source_subject, 'subject_id', information_source_runs, 'subject_id')
 
-    Returns: 
-        - preprocessing: Nipype WorkFlow 
-    """
-    # Templates to select files node
-    infosource_preproc = Node(IdentityInterface(fields = ['subject_id', 'run_id']), 
-        name = 'infosource_preproc')
+        # SELECT FILES - select subject files
+        templates = {
+            'anat' : join('sub-{subject_id}', 'anat', 'sub-{subject_id}_T1w.nii.gz'),
+            'magnitude' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz'),
+            'phasediff' : join('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
+        }
+        select_subject_files = Node(SelectFiles(templates), name = 'select_subject_files')
+        select_subject_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_subject, 'subject_id', select_subject_files, 'subject_id')
 
-    infosource_preproc.iterables = [('subject_id', subject_list), ('run_id', run_list)]
+        # SELECT FILES - select run files
+        template = {
+            'func' : join('sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz')
+        }
+        select_run_files = Node(SelectFiles(template), name = 'select_run_files')
+        select_run_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(
+            information_source_runs, 'subject_id', select_run_files, 'subject_id')
+        preprocessing.connect(information_source_runs, 'run_id', select_run_files, 'run_id')
 
-    # Templates to select files node
-    anat_file = opj('sub-{subject_id}', 'anat', 
-                    'sub-{subject_id}_T1w.nii.gz')
+        # GUNZIP NODE - SPM do not use .nii.gz files
+        gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
+        gunzip_func = Node(Gunzip(), name = 'gunzip_func')
+        gunzip_magnitude = Node(Gunzip(), name = 'gunzip_magnitude')
+        gunzip_phasediff = Node(Gunzip(), name = 'gunzip_phasediff')
+        preprocessing.connect(select_subject_files, 'anat', gunzip_anat, 'in_file')
+        preprocessing.connect(select_subject_files, 'magnitude', gunzip_magnitude, 'in_file')
+        preprocessing.connect(select_subject_files, 'phasediff', gunzip_phasediff, 'in_file')
+        preprocessing.connect(select_run_files, 'func', gunzip_func, 'in_file')
 
-    func_file = opj('sub-{subject_id}', 'func', 
-                    'sub-{subject_id}_task-MGT_run-{run_id}_bold.nii.gz')
-    
-    magnitude_file = opj('sub-{subject_id}', 'fmap', 'sub-{subject_id}_magnitude1.nii.gz')
+        # FIELDMAP - create field map from phasediff and magnitude file
+        fieldmap = Node(FieldMap(), name = 'fieldmap')
+        fieldmap.inputs.blip_direction = -1
+        fieldmap.inputs.echo_times = (4.92, 7.38)
+        fieldmap.inputs.total_readout_time = 29.15
+        fieldmap.inputs.matchanat = True
+        fieldmap.inputs.matchvdm = True
+        fieldmap.inputs.writeunwarped = True
+        fieldmap.inputs.maskbrain = False
+        fieldmap.inputs.thresh = 0
+        preprocessing.connect(gunzip_anat, 'out_file', fieldmap, 'anat_file')
+        preprocessing.connect(gunzip_magnitude, 'out_file', fieldmap, 'magnitude_file')
+        preprocessing.connect(gunzip_phasediff, 'out_file', fieldmap, 'phase_file')
+        preprocessing.connect(gunzip_func, 'out_file', fieldmap, 'epi_file')
 
-    phasediff_file = opj('sub-{subject_id}', 'fmap', 'sub-{subject_id}_phasediff.nii.gz')
-    
-    template = {'anat' : anat_file, 'func' : func_file, 'magnitude' : magnitude_file, 'phasediff' : phasediff_file}
+        # REALIGN UNWARP - motion correction
+        motion_correction = Node(RealignUnwarp(), name = 'motion_correction')
+        motion_correction.inputs.interp = 4
+        motion_correction.inputs.register_to_mean = False
+        preprocessing.connect(fieldmap, 'vdm', motion_correction, 'phase_map')
+        preprocessing.connect(gunzip_func, 'out_file', motion_correction, 'in_files')
 
-    # SelectFiles node - to select necessary files
-    selectfiles_preproc = Node(SelectFiles(template, base_directory=exp_dir), name = 'selectfiles_preproc')
+        # EXTRACTROI - extracting the first image of func
+        extract_first_image = Node(ExtractROI(), name = 'extract_first_image')
+        extract_first_image.inputs.t_min = 1
+        extract_first_image.inputs.t_size = 1
+        extract_first_image.inputs.output_type='NIFTI'
+        preprocessing.connect(
+            motion_correction, 'realigned_unwarped_files', extract_first_image, 'in_file')
 
-    # GUNZIP NODE : SPM do not use .nii.gz files
-    gunzip_anat = Node(Gunzip(), name = 'gunzip_anat')
+        # COREGISTER - Co-registration in SPM12 using default parameters.
+        coregistration = Node(Coregister(), name = 'coregistration')
+        coregistration.inputs.jobtype = 'estimate'
+        coregistration.inputs.write_mask = False
+        preprocessing.connect(gunzip_anat, 'out_file', coregistration, 'target')
+        preprocessing.connect(extract_first_image, 'roi_file', coregistration, 'source')
+        preprocessing.connect(
+            motion_correction, 'realigned_unwarped_files', coregister, 'apply_to_files')
 
-    gunzip_func = Node(Gunzip(), name = 'gunzip_func')
+        # Get SPM Tissue Probability Maps file
+        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
 
-    gunzip_magnitude = Node(Gunzip(), name = 'gunzip_magnitude')
+        # NEW SEGMENT - Unified segmentation using tissue probability maps in SPM12.
+        segmentation = Node(NewSegment(), name = 'segmentation')
+        segmentation.inputs.write_deformation_fields = [False, True]
+        segmentation.inputs.tissues = [
+            [(spm_tissues_file, 1), 1, (True, False), (True, False)],
+            [(spm_tissues_file, 2), 1, (True, False), (True, False)],
+            [(spm_tissues_file, 3), 2, (True, False), (True, False)],
+            [(spm_tissues_file, 4), 3, (True, False), (True, False)],
+            [(spm_tissues_file, 5), 4, (True, False), (True, False)],
+            [(spm_tissues_file, 6), 2, (True, False), (True, False)]
+        ]
+        preprocessing.connect(gunzip_anat, 'out_file', segmentation, 'channel_files')
 
-    gunzip_phasediff = Node(Gunzip(), name = 'gunzip_phasediff')
+        # NORMALIZE12 - Spatial normalization of functional images
+        normalize = Node(Normalize12(), name = 'normalize')
+        normalize.inputs.write_voxel_sizes = [1.5, 1.5, 1.5]
+        normalize.inputs.jobtype = 'write'
+        preprocessing.connect(
+            segmentation, 'forward_deformation_field', normalize, 'deformation_file')
+        preprocessing.connect(coregistration, 'coregistered_files', normalize, 'apply_to_files')
 
-    fieldmap = Node(FieldMap(blip_direction = -1, echo_times=(4.92, 7.38), 
-                            total_readout_time = 29.15, matchanat=True,
-                            matchvdm=True, writeunwarped = True, maskbrain = False, thresh = 0), name = 'fieldmap')
+        # MASKING - Mask func using segmented and normalized grey matter mask
+        preprocessing.connect(segmentation, 'normalized_class_images', masking, 'mask') # Or modulated_class_images
 
-    motion_correction = Node(RealignUnwarp(interp = 4, register_to_mean = True),
-                             name = 'motion_correction')
-    
-    extract_epi = Node(ExtractROI(t_min = 1, t_size=1, output_type = 'NIFTI'), name = 'extract_ROI')
-    
-    extract_first = Node(ExtractROI(t_min = 1, t_size=1, output_type = 'NIFTI'), name = 'extract_first')
+        # SMOOTHING - 5 mm fixed FWHM smoothing
+        smoothing = Node(Smooth(), name = 'smoothing')
+        smoothing.inputs.fwhm = self.fwhm
+        preprocessing.connect(normalize, 'normalized_files', smoothing, 'in_files')
 
-    coregistration = Node(Coregister(jobtype = 'estimate', write_mask = False), name = 'coregistration')
-    
-    tissue1 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 1), 1, (True,False), (True, False)]
-    tissue2 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 2), 1, (True,False), (True, False)]
-    tissue3 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 3), 2, (True,False), (True, False)]
-    tissue4 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 4), 3, (True,False), (True, False)]
-    tissue5 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 5), 4, (True,False), (True, False)]
-    tissue6 = [('/opt/spm12-r7771/spm12_mcr/spm12/tpm/TPM.nii', 6), 2, (True,False), (True, False)]
-    tissue_list = [tissue1, tissue2, tissue3, tissue4, tissue5, tissue6]
-    
-    segmentation = Node(NewSegment(write_deformation_fields = [True, True], tissues = tissue_list), name = 'segmentation')
-    
-    normalize = Node(Normalize12(write_voxel_sizes=[1.5, 1.5, 1.5], jobtype = 'write'), name = 'normalize')
+        # DATASINK - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name='data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        preprocessing.connect(segmentation, 'normalized_class_images', data_sink, 'preprocess.@gm') #TODO
+        preprocessing.connect(
+            motion_correction,'realignment_parameters', data_sink, 'preprocess.@realign_par')
+        preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocessing.@smoothed')
 
-    rm_files = Node(Function(input_names = ['files', 'run_id', 'subject_id', 'result_dir', 'working_dir'],
-                            output_names = ['files'], function = rm_preproc_files), name = 'rm_files')
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
 
-    rm_files.inputs.result_dir = result_dir
-    rm_files.inputs.working_dir = working_dir
+            # Merge Node - Merge file names to be removed after datasink node is performed
+            merge_removable_files = Node(Merge(7), name = 'merge_removable_files')
+            merge_removable_files.inputs.ravel_inputs = True
 
-    rm_gunzip = Node(Function(input_names = ['files', 'run_id', 'subject_id', 'result_dir', 'working_dir'],
-                            output_names = ['files'], function = rm_gunzip_files), name = 'rm_gunzip')
+            # Function Nodes remove_files - Remove sizeable files once they aren't needed
+            remove_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_after_datasink', iterfield = 'file_name')
+#TODOTODOTODOTOD
+            # Add connections
+            preprocessing.connect([
+                (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
+                (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
+                (realign, merge_removable_files, [('realigned_files', 'in3')]),
+                (extract_first_image, merge_removable_files, [('roi_file', 'in4')]),
+                (coregister, merge_removable_files, [('coregistered_files', 'in5')]),
+                (normalize, merge_removable_files, [('normalized_files', 'in6')]),
+                (smoothing, merge_removable_files, [('smoothed_files', 'in7')]),
+                (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
+                (data_sink, remove_after_datasink, [('out_file', '_')])
+            ])
 
-    rm_gunzip.inputs.result_dir = result_dir
-    rm_gunzip.inputs.working_dir = working_dir
-
-    # DataSink Node - store the wanted results in the wanted repository
-    datasink_preproc = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink_preproc')
-
-    preprocessing =  Workflow(base_dir = opj(result_dir, working_dir), name = "preprocessing")
-
-    preprocessing.connect([(infosource_preproc, selectfiles_preproc, [('subject_id', 'subject_id'),
-                                                                     ('run_id', 'run_id')]), 
-                          (infosource_preproc, rm_files, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-                          (infosource_preproc, rm_gunzip, [('subject_id', 'subject_id'), ('run_id', 'run_id')]),
-                          (selectfiles_preproc, gunzip_anat, [('anat', 'in_file')]),
-                          (selectfiles_preproc, gunzip_func, [('func', 'in_file')]),
-                          (selectfiles_preproc, gunzip_phasediff, [('phasediff', 'in_file')]),
-                          (selectfiles_preproc, gunzip_magnitude, [('magnitude', 'in_file')]),
-                          (gunzip_anat, segmentation, [('out_file', 'channel_files')]),
-                          (gunzip_anat, fieldmap, [('out_file', 'anat_file')]),
-                          (gunzip_magnitude, fieldmap, [('out_file', 'magnitude_file')]),
-                          (gunzip_phasediff, fieldmap, [('out_file', 'phase_file')]),
-                          (gunzip_func, extract_first, [('out_file', 'in_file')]),
-                          (extract_first, fieldmap, [('roi_file', 'epi_file')]),
-                          (fieldmap, motion_correction, [('vdm', 'phase_map')]),
-                          (gunzip_func, motion_correction, [('out_file', 'in_files')]), 
-                          (motion_correction, rm_gunzip, [('realigned_unwarped_files', 'files')]),
-                          (rm_gunzip, coregistration, [('files', 'apply_to_files')]),
-                          (motion_correction, coregistration, [('mean_image', 'source')]),
-                          (coregistration, normalize, [('coregistered_files', 'apply_to_files')]),
-                          (gunzip_anat, coregistration, [('out_file', 'target')]),
-                          (segmentation, normalize, [('forward_deformation_field', 'deformation_file')]),
-                          (normalize, rm_files, [('normalized_files', 'files')]), 
-                          (rm_files, datasink_preproc, [('files', 'preprocess.@norm')]),
-                          (motion_correction, datasink_preproc, [('realignment_parameters', 
-                                                                  'preprocess.@realign_par')]),
-                          (segmentation, datasink_preproc, [('normalized_class_images', 'preprocess.@gm')])
-                          ])
-    
-    return preprocessing
-
+        return preprocessing
 
 def get_subject_infos(event_files, runs):
     '''
@@ -254,42 +295,6 @@ def get_subject_infos(event_files, runs):
 
     return subject_info
 
-def get_contrasts(subject_id):
-    '''
-    Create the list of tuples that represents contrasts. 
-    Each contrast is in the form : 
-    (Name,Stat,[list of condition names],[weights on those conditions])
-
-    Parameters:
-        - subject_id: str, ID of the subject 
-
-    Returns:
-        - contrasts: list of tuples, list of contrasts to analyze
-    '''
-    runs = 4
-
-    gain = []
-    loss = []
-    for ir in range(runs):
-        ir += 1
-        gain.append('trial_run%ixgain_run%i^1' % (ir, ir))
-        loss.append('trial_run%ixloss_run%i^1' % (ir, ir))
-
-    pos_1 = [1] * runs
-
-    gain = (
-        'gain', 'T',
-        gain, pos_1)
-
-    loss = (
-        'loss', 'T',
-        loss, pos_1)
-
-    contrasts = [gain, loss]
-
-    return contrasts
-
-
 def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir, output_dir):
     """
     Returns the first level analysis workflow.
@@ -332,9 +337,6 @@ def get_l1_analysis(subject_list, TR, run_list, exp_dir, result_dir, working_dir
     
     # DataSink Node - store the wanted results in the wanted repository
     datasink = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink')
-    
-    # Smoothing
-    smooth = Node(Smooth(fwhm = 5), name = 'smooth')
 
     # Get Subject Info - get subject specific condition information
     subject_infos = Node(Function(input_names=['event_files', 'runs'],
