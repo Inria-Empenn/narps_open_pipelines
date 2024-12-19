@@ -37,8 +37,8 @@ class PipelineTeam0I4U(Pipeline):
         self.contrast_list = ['0001', '0002']
 
         # Define contrasts
-        gain_conditions = [f'trial_run{r}xgain_run{r}^1' for r in range(1,len(self.run_list) + 1)]
-        loss_conditions = [f'trial_run{r}xloss_run{r}^1' for r in range(1,len(self.run_list) + 1)]
+        gain_conditions = [f'trial_run{r}xgain^1' for r in range(1,len(self.run_list) + 1)]
+        loss_conditions = [f'trial_run{r}xloss^1' for r in range(1,len(self.run_list) + 1)]
         self.subject_level_contrasts = [
             ('gain', 'T', gain_conditions, [1] * len(self.run_list)),
             ('loss', 'T', loss_conditions, [1] * len(self.run_list))
@@ -293,7 +293,7 @@ class PipelineTeam0I4U(Pipeline):
             tmod = None,
             pmod = [
                 Bunch(
-                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
+                    name = ['gain', 'loss'],
                     poly = [1, 1],
                     param = [weights_gain, weights_loss]
                 )

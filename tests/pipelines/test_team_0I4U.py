@@ -83,7 +83,7 @@ class TestPipelinesTeam0I4U:
         assert bunch.regressors is None
         pmod = bunch.pmod[0]
         assert isinstance(pmod, Bunch)
-        assert pmod.name == ['gain_run1', 'loss_run1']
+        assert pmod.name == ['gain', 'loss']
         assert pmod.poly == [1, 1]
         helpers.compare_float_2d_arrays(pmod.param, [
             [14.0, 34.0, 38.0, 10.0, 16.0],
