@@ -11,7 +11,7 @@ implemented_pipelines = {
     '08MQ': 'PipelineTeam08MQ',
     '0C7Q': None,
     '0ED6': None,
-    '0H5E': None,
+    '0H5E': 'PipelineTeam0H5E',
     '0I4U': None,
     '0JO0': None,
     '16IN': None,
