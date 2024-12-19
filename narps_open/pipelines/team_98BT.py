@@ -38,8 +38,8 @@ class PipelineTeam98BT(Pipeline):
         self.contrast_list = ['0001', '0002', '0003', '0004']
 
         # Define contrasts
-        gain_conditions = [f'gamble_run{r}xgain_run{r}^1' for r in range(1,len(self.run_list) + 1)]
-        loss_conditions = [f'gamble_run{r}xloss_run{r}^1' for r in range(1,len(self.run_list) + 1)]
+        gain_conditions = [f'gamble_run{r}xgain^1' for r in range(1,len(self.run_list) + 1)]
+        loss_conditions = [f'gamble_run{r}xloss^1' for r in range(1,len(self.run_list) + 1)]
         self.subject_level_contrasts = [
             ('pos_gain', 'T', gain_conditions, [1, 1, 1, 1]),
             ('pos_loss', 'T', loss_conditions, [1, 1, 1, 1]),
@@ -498,10 +498,7 @@ class PipelineTeam98BT(Pipeline):
             tmod = None,
             pmod = [
                 Bunch(
-                    name = [
-                        f'gain_run{short_run_id}',
-                        f'loss_run{short_run_id}',
-                        f'answers_run{short_run_id}'],
+                    name = ['gain', 'loss', 'answers'],
                     poly = [1, 1, 1],
                     param = [weights_gain, weights_loss, answers]
                 )
@@ -599,6 +596,7 @@ class PipelineTeam98BT(Pipeline):
         model_design.inputs.bases = {'hrf': {'derivs': [1, 1]}}
         model_design.inputs.timing_units = 'secs'
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        model_design.inputs.volterra_expansion_order = 2
         subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
 
         # ESTIMATE MODEL - estimate the parameters of the model
