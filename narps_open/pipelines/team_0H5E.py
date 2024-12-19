@@ -569,10 +569,9 @@ class PipelineTeam0H5E(Pipeline):
         # Create thresholded maps
         threshold = MapNode(Threshold(),
             name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
-        threshold.inputs.height_threshold = 0.001
+        threshold.inputs.use_topo_fdr = True
         threshold.inputs.height_threshold_type = 'p-value'
-        threshold.inputs.extent_fdr_p_threshold = 0.05
-        threshold.inputs.force_activation = True
+        threshold.inputs.extent_threshold = 5
         group_level_analysis.connect(
             estimate_contrast, 'spm_mat_file', threshold, 'spm_mat_file')
         group_level_analysis.connect(
