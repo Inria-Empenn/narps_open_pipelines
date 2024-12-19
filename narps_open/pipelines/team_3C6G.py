@@ -198,19 +198,6 @@ class PipelineTeam3C6G(Pipeline):
             'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
             'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')]
 
-        # Segmentation maps
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
-            f'c{i}'+'sub-{subject_id}_T1w.nii')\
-            for i in range(1,7)]
-
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
-            f'wc{i}'+'sub-{subject_id}_T1w.nii')\
-            for i in range(1,7)]
-
         # Format with subject_ids
         return_list = []
         for template in templates:

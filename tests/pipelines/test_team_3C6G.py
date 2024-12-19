@@ -51,7 +51,7 @@ class TestPipelinesTeam3C6G:
         # 1 - 1 subject - 1 run outputs
         pipeline.subject_list = ['001']
         pipeline.run_list = ['01']
-        assert len(pipeline.get_preprocessing_outputs()) == 14
+        assert len(pipeline.get_preprocessing_outputs()) == 2
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 11
         assert len(pipeline.get_group_level_outputs()) == 105
@@ -60,7 +60,7 @@ class TestPipelinesTeam3C6G:
         # 2 - 1 subject - 4 runs outputs
         pipeline.subject_list = ['001']
         pipeline.run_list = ['01', '02', '03', '04']
-        assert len(pipeline.get_preprocessing_outputs()) == 56
+        assert len(pipeline.get_preprocessing_outputs()) == 2 * 4
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 11
         assert len(pipeline.get_group_level_outputs()) == 105
@@ -69,7 +69,7 @@ class TestPipelinesTeam3C6G:
         # 2 - 4 subjects outputs
         pipeline.subject_list = ['001', '002', '003', '004']
         pipeline.run_list = ['01', '02', '03', '04']
-        assert len(pipeline.get_preprocessing_outputs()) == 224
+        assert len(pipeline.get_preprocessing_outputs()) == 2 * 4 * 4
         assert len(pipeline.get_run_level_outputs()) == 0
         assert len(pipeline.get_subject_level_outputs()) == 44
         assert len(pipeline.get_group_level_outputs()) == 105
