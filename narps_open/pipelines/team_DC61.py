@@ -334,6 +334,8 @@ class PipelineTeamDC61(Pipeline):
             range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
             indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
             return [
+                range_con,
+                indiff_con,
                 ['loss_param_range_f', 'F', [range_con]],
                 ['loss_param_indiff_f', 'F', [indiff_con]]
             ]
@@ -349,12 +351,19 @@ class PipelineTeamDC61(Pipeline):
         """
         from narps_open.data.participants import get_group
 
+        # Sort the subject list to match with the collected contrast file list that
+        # is going to be sorted as well
+        sorted_subjects = subjects
+        sorted_subjects.sort()
+
         return [
             dict(
-                vector = [1.0 if s in get_group('equalRange') else 0.0 for s in subjects],
+                vector = [1.0 if s in get_group('equalRange')\
+                              else 0.0 for s in sorted_subjects],
                 name = 'equalRange'),
             dict(
-                vector = [1.0 if s in get_group('equalIndifference') else 0.0 for s in subjects],
+                vector = [1.0 if s in get_group('equalIndifference')\
+                              else 0.0 for s in sorted_subjects],
                 name = 'equalIndifference')
         ]
 

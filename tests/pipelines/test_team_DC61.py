@@ -145,26 +145,18 @@ class TestPipelinesTeamDC61:
         assert PipelineTeamDC61.get_group_level_contrasts('wrong') is None
 
         # effect_of_gain parameter
-        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_gain') 
-
-        # effect_of_loss parameter
-        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_loss') 
-        [
-                ['gain_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
-                ['gain_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
+        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_gain') == [
+            ['gain_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
+            ['gain_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
         ]
 
-        if subject_level_contrast == 'effect_of_loss':
-            range_con = ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]
-            indiff_con = ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]
-            return [
-                ['loss_param_range_f', 'F', [range_con], [1]],
-                ['loss_param_indiff_f', 'F', [indiff_con], [1]]
-            ]
-
-
-
-
+        # effect_of_loss parameter
+        assert PipelineTeamDC61.get_group_level_contrasts('effect_of_loss') == [
+            ['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]],
+            ['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]],
+            ['loss_param_range_f', 'F', [['loss_param_range', 'T', ['equalIndifference', 'equalRange'], [0, 1]]]],
+            ['loss_param_indiff_f', 'F', [['loss_param_indiff', 'T', ['equalIndifference', 'equalRange'], [1, 0]]]]
+        ]
 
     @staticmethod
     @mark.unit_test
@@ -177,8 +169,8 @@ class TestPipelinesTeamDC61:
         ]
         subjects = ['001', '003', '002', '004']
         assert PipelineTeamDC61.get_group_covariates(subjects) == [
-            dict(vector = [0, 0, 1, 1], name = 'equalRange'),
-            dict(vector = [1, 1, 0, 0], name = 'equalIndifference')
+            dict(vector = [0, 1, 0, 1], name = 'equalRange'),
+            dict(vector = [1, 0, 1, 0], name = 'equalIndifference')
         ]
 
     @staticmethod
