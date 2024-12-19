@@ -120,10 +120,13 @@ class PipelineTeam0H5E(Pipeline):
         realign.inputs.write_mask = True # 'Mask images'
         preprocessing.connect(remove_first_image, 'roi_file', realign, 'in_files')
 
+        # Get MNI template file from SPM
+        mni_template_file = join(SPMInfo.getinfo()['path'], 'toolbox', 'OldNorm', 'T1.nii')
+
         # COREGISTER - Rigid coregistration of subject anatomical to MNI template
         coregister_anat = Node(Coregister(), name = 'coregister_anat')
         # Estimation parameters
-        coregister_anat.inputs.target = '' # TODO Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels),
+        coregister_anat.inputs.target = mni_template_file
         coregister_anat.inputs.cost_function = 'nmi' # 'Normalized Mututal Information'
         coregister_anat.inputs.separation = [4.0, 2.0]
         coregister_anat.inputs.fwhm = [7.0, 7.0]
@@ -136,7 +139,7 @@ class PipelineTeam0H5E(Pipeline):
         # NORMALIZE - Non-rigid registration of subject anatomical to MNI template
         normalize_anat = Node(Normalize(), name = 'normalize_anat')
         # Estimation parameters
-        normalize_anat.inputs.template = '' # TODO template image=MNI T1.nii template (same as for coregistration),
+        normalize_anat.inputs.template = mni_template_file
         normalize_anat.inputs.source_image_smoothing = 8.0 #mm
         affine_regularization_type = 'mni' # 'ICBM space template'
         normalize_anat.inputs.DCT_period_cutoff = 25.0
@@ -152,7 +155,7 @@ class PipelineTeam0H5E(Pipeline):
         # COREGISTER - Rigid coregistration of functional data to coregistered anatomical image
         coregister_func = Node(Coregister(), name = 'coregister_func')
         # Estimation parameters
-        coregister_func.inputs.target = '' # TODO Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels),
+        coregister_func.inputs.target = mni_template_file
         coregister_func.inputs.cost_function = 'nmi' # 'Normalized Mututal Information'
         coregister_func.inputs.separation = [4.0, 2.0]
         coregister_func.inputs.fwhm = [7.0, 7.0]
@@ -164,26 +167,9 @@ class PipelineTeam0H5E(Pipeline):
         preprocessing.connect(coregister_anat, 'coregistered_source', coregister_func, 'target')
         preprocessing.connect(realign, 'realigned_files', coregister_func, 'apply_to_files')
 
-        # * resample images with all of those linear operations applied
-        """
-        The one pre-processing step we did that wasn"t discussed here (but which was mentioned in our description of overal pre-processing sequence)
-        was a resampling step we did between all the linear transformations on the functional images and the nonlinear (warping) transformation.
-        We only do this as a separate step because we try to avoid resampling the functional images a bunch of times without need if all
-        the transformations are doing is updating the NIfTI header's affine transformation matrix, which is true for our initial motion correction
-        and linear coregistration steps, but we do like to save a resampled copy of the images with all of those affine transformations applied
-        before any subsequent steps. (This is normally so we can do certain statistical analyses in individual-subject space that has been loosely
-            affine-registered with standard space but not warped... we did not have to do any such analyses in this particular case but it is part
-            of our standard processing stream, so we left it in.)
-        Unfortunately SPM8's coregistration routine has a weird feature where it will only resample output images at the same voxel size as the reference image
-        (even though the normalization routine will let you freely select a bounding box and voxel size).
-        We did not want to resample all functional images at the resolution of our anatomical template, and unfortunately SPM8 does not provide a
-        pure image-resampling function, so our hacked-together solution is to generate a spatial normalization matrix defining a null transformation and
-        apply that to the functional images through the SPM8 normalization routine, which effectively resamples the images to the desired resolution without
-        transforming them (but with any affine transformations from the NIfTI header applied prior to resampling and then zero'ed out in the resampled images).
-            We chose to resample to 2.5mm isotropic voxels as that is the usual size at which we currently acquire our own fMRI data (and a convenient size to work
-                with in general), although arguments could be made that another size could be more optimal for the NARPS dataset that was originally acquired at a
-            different voxel size.
-        """
+        # RESAMPLING - Resample functional image after linear transforms
+        #   This step was performed as part of the standard processing stream of the team,
+        #   but we don't need its output data here.
 
         # NORMALIZE - Non-rigid registration of functional data to MNI template
         normalize_func = Node(Normalize(), name = 'normalize_func')
@@ -194,7 +180,7 @@ class PipelineTeam0H5E(Pipeline):
         normalize_func.inputs.write_interp = 7 # '7th degree b-spline'
         normalize_func.inputs.write_wrap = [0, 0, 0] # 'No wrap'
         preprocessing.connect(
-            normalize_func, 'normalization_parameters', normalize_func, 'parameter_file')
+            normalize_anat, 'normalization_parameters', normalize_func, 'parameter_file')
         preprocessing.connect(
             coregister_func, 'coregistered_files', coregister_func, 'apply_to_files')
 
@@ -215,7 +201,7 @@ class PipelineTeam0H5E(Pipeline):
         if Configuration()['pipelines']['remove_unused_data']:
 
             # Merge Node - Merge file names to be removed after datasink node is performed
-            merge_removable_files = Node(Merge(7), name = 'merge_removable_files')
+            merge_removable_files = Node(Merge(9), name = 'merge_removable_files')
             merge_removable_files.inputs.ravel_inputs = True
 
             # Function Nodes remove_files - Remove sizeable files once they aren't needed
@@ -230,12 +216,12 @@ class PipelineTeam0H5E(Pipeline):
                 (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
                 (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
                 (realign, merge_removable_files, [('realigned_files', 'in3')]),
-                (remove_first_image, merge_removable_files, [('roi_file', 'in3')]),
+                (remove_first_image, merge_removable_files, [('roi_file', 'in4')]),
                 (coregister_anat, merge_removable_files, [('coregistered_source', 'in5')]),
-
-                (coregister, merge_removable_files, [('coregistered_files', 'in5')]),
-                (normalize, merge_removable_files, [('normalized_files', 'in6')]),
-                (smoothing, merge_removable_files, [('smoothed_files', 'in7')]),
+                (normalize_anat, merge_removable_files, [('normalized_source', 'in6')]),
+                (coregister_func, merge_removable_files, [('coregistered_files', 'in7')]),
+                (normalize_func, merge_removable_files, [('normalized_files', 'in8')]),
+                (smoothing, merge_removable_files, [('smoothed_files', 'in9')]),
                 (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
                 (data_sink, remove_after_datasink, [('out_file', '_')])
             ])
@@ -256,19 +242,6 @@ class PipelineTeam0H5E(Pipeline):
             self.directories.output_dir,
             'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
             'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')]
-
-        # Segmentation maps
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
-            f'c{i}'+'sub-{subject_id}_T1w.nii')\
-            for i in range(1,7)]
-
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
-            f'wc{i}'+'sub-{subject_id}_T1w.nii')\
-            for i in range(1,7)]
 
         # Format with subject_ids
         return_list = []
