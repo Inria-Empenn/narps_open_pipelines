@@ -12,7 +12,7 @@ from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.interfaces.spm import (
-   Realign, Coregister, NewSegment, Normalize12, Smooth,
+   Realign, Coregister, Normalize, Smooth,
    Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
    EstimateModel, EstimateContrast, Threshold
    )
@@ -36,19 +36,14 @@ class PipelineTeam0H5E(Pipeline):
         super().__init__()
         self.fwhm = 9.0
         self.team_id = '0H5E'
-        self.contrast_list = ['0001', '0002', '0003', '0004', '0005'] #TODO
+        self.subject_level_models = ['gainfirst', 'lossfirst']
 
-        # Create contrasts
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1'] #TODO
-        self.subject_level_contrasts = [ #TODO
-            ['trial', 'T', conditions, [1, 0, 0]],
-            ['effect_of_gain', 'T', conditions, [0, 1, 0]],
-            ['neg_effect_of_gain', 'T', conditions, [0, -1, 0]],
-            ['effect_of_loss', 'T', conditions, [0, 0, 1]],
-            ['neg_effect_of_loss', 'T', conditions, [0, 0, -1]]
-            ]
+        # Contrast '0001' corresponds to:
+        #  - effect_of_loss in the 'gainfirst' model
+        #  - effect_of_gain in the 'lossfirst' model
+        self.contrast_list = ['0001'] 
 
-    def get_preprocessing(self):  #TODO
+    def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
 
         # Workflow initialization
@@ -141,7 +136,7 @@ class PipelineTeam0H5E(Pipeline):
         # Estimation parameters
         normalize_anat.inputs.template = mni_template_file
         normalize_anat.inputs.source_image_smoothing = 8.0 #mm
-        affine_regularization_type = 'mni' # 'ICBM space template'
+        normalize_anat.inputs.affine_regularization_type = 'mni' # 'ICBM space template'
         normalize_anat.inputs.DCT_period_cutoff = 25.0
         normalize_anat.inputs.nonlinear_iterations = 16
         normalize_anat.inputs.nonlinear_regularization = 1.0
@@ -182,7 +177,7 @@ class PipelineTeam0H5E(Pipeline):
         preprocessing.connect(
             normalize_anat, 'normalization_parameters', normalize_func, 'parameter_file')
         preprocessing.connect(
-            coregister_func, 'coregistered_files', coregister_func, 'apply_to_files')
+            coregister_func, 'coregistered_files', normalize_func, 'apply_to_files')
 
         # SMOOTHING - 9 mm fixed FWHM smoothing in MNI volume
         smoothing = Node(Smooth(), name = 'smoothing')
@@ -235,7 +230,7 @@ class PipelineTeam0H5E(Pipeline):
         templates = [join(
             self.directories.output_dir,
             'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
-            'swrrsub-{subject_id}_task-MGT_run-{run_id}_bold.nii')]
+            'swrrsub-{subject_id}_task-MGT_run-{run_id}_bold.nii')]#TODO
 
         # Motion parameters file
         templates += [join(
@@ -255,7 +250,7 @@ class PipelineTeam0H5E(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
-    def get_subject_information(event_file: str, short_run_id: int):  #TODO
+    def get_subject_information(event_file: str, short_run_id: int, first_pmod: str):
         """
         Create Bunchs of subject event information for specifySPMModel.
 
@@ -263,9 +258,12 @@ class PipelineTeam0H5E(Pipeline):
         - event_file: str, events file for a run of a subject
         - short_run_id: str, an identifier for the run corresponding to the event_file
             must be '1' for the first run, '2' for the second run, etc.
+        - first_pmod: str, either 'gain' or 'loss'
+            if 'gain': output Bunch contains the gain values as first parametric modulator
+            else: output Bunch contains the loss values as first parametric modulator
 
         Returns :
-        - subject_info : Bunch corresponding to the event file
+        - subject_info : a Bunch corresponding to the event file
         """
         from nipype.interfaces.base import Bunch
 
@@ -281,10 +279,28 @@ class PipelineTeam0H5E(Pipeline):
             for line in file:
                 info = line.strip().split()
 
-                onsets.append(float(info[0]))
-                durations.append(4.0)
-                weights_gain.append(float(info[2]))
-                weights_loss.append(float(info[3]))
+                # Remove 4 seconds to onset
+                onset = float(info[0]) - 4.0
+
+                if onset > 0.0:
+                    onsets.append(onset)
+                    durations.append(4.0)
+                    weights_gain.append(float(info[2]))
+                    weights_loss.append(float(info[3]))
+
+        # Parametric modulators
+        if first_pmod == 'gain':
+            pmods = Bunch(
+                name = ['gain', 'loss'],
+                poly = [1, 1],
+                param = [weights_gain, weights_loss]
+            )
+        else:
+            pmods = Bunch(
+                name = ['loss', 'gain'],
+                poly = [1, 1],
+                param = [weights_loss, weights_gain]
+            )
 
         # Create bunch
         return Bunch(
@@ -293,24 +309,32 @@ class PipelineTeam0H5E(Pipeline):
             durations = [durations],
             amplitudes = None,
             tmod = None,
-            pmod = [
-                Bunch(
-                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
-                    poly = [1, 1],
-                    param = [weights_gain, weights_loss]
-                )
-            ],
+            pmod = [pmods],
             regressor_names = None,
             regressors = None
         )
 
-    def get_subject_level_analysis(self):  #TODO
-        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
+    def get_subject_level_analysis(self):
+        """ Return workflows describing the subject level analysis part of the pipeline """
+
+        return [self.get_subject_level_analysis_sub_workflow(m) for m in self.subject_level_models]
+
+    def get_subject_level_analysis_sub_workflow(self, model: str):
+        """
+        Return a Nipype workflow describing one model of the subject level analysis
+        part of the pipeline.
+
+        Parameters:
+        - model: str, either 'gainfirst' or 'lossfirst'
+
+        Returns: a nipype.Workflow describing the subject level analysis corresponding to
+        the gainfirst model (resp. lossfirst model)
+        """
 
         # Workflow initialization
         subject_level_analysis = Workflow(
             base_dir = self.directories.working_dir,
-            name = 'subject_level_analysis'
+            name = f'subject_level_analysis_{model}'
         )
 
         # IDENTITY INTERFACE - Allows to iterate on subjects
@@ -322,14 +346,14 @@ class PipelineTeam0H5E(Pipeline):
         templates = {
             'func': join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
-                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
+                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii', #TODO
             ),
             'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
             ),
             'parameters': join(self.directories.output_dir, 'preprocessing',
                 '_run_id_*_subject_id_{subject_id}',
-                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
+                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt', #TODO
             )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
@@ -337,12 +361,14 @@ class PipelineTeam0H5E(Pipeline):
         subject_level_analysis.connect(information_source, 'subject_id', select_files, 'subject_id')
 
         # FUNCTION node get_subject_information - get subject specific condition information
+        #   for 'gainfirst' model (gain as first parametric modulator)
         subject_information = MapNode(Function(
                 function = self.get_subject_information,
-                input_names = ['event_files', 'short_run_id'],
+                input_names = ['event_files', 'short_run_id', 'first_pmod'],
                 output_names = ['subject_info']),
             name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
         subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
+        subject_information.inputs.first_pmod = 'gain' if model == 'gainfirst' else 'loss'
         subject_level_analysis.connect(select_files, 'event', subject_information, 'event_files')
 
         # SPECIFY MODEL - generates SPM-specific Model
@@ -364,6 +390,10 @@ class PipelineTeam0H5E(Pipeline):
         model_design.inputs.timing_units = 'secs'
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = 'AR(1)'
+        model_design.inputs.microtime_resolution = 16
+        model_design.inputs.microtime_onset = 1.0
+        model_design.inputs.volterra_expansion_order = 1 #no
+        model_design.inputs.global_intensity_normalization = 'none'
         subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
 
         # ESTIMATE MODEL - estimate the parameters of the model
@@ -372,9 +402,24 @@ class PipelineTeam0H5E(Pipeline):
         subject_level_analysis.connect(
             model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
 
+        # Create contrasts
+        nb_runs = len(self.run_list)
+        if model == 'gainfirst':
+            subject_level_contrast = [
+                'effect_of_loss', 'T',
+                [f'trial_run{r}xloss^1' for r in range(1, nb_runs + 1)],
+                [1.0 / nb_runs] * nb_runs
+            ]
+        else:
+            subject_level_contrast = [
+                'effect_of_gain', 'T',
+                [f'trial_run{r}xgain^1' for r in range(1, nb_runs + 1)],
+                [1.0 / nb_runs] * nb_runs
+            ]
+
         # ESTIMATE CONTRAST - estimates contrasts
         contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
-        contrast_estimate.inputs.contrasts = self.subject_level_contrasts
+        contrast_estimate.inputs.contrasts = [subject_level_contrast]
         subject_level_analysis.connect(
             model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
         subject_level_analysis.connect(
@@ -394,22 +439,23 @@ class PipelineTeam0H5E(Pipeline):
 
         return subject_level_analysis
 
-    def get_subject_level_outputs(self):  #TODO
+    def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
 
         # Contrat maps
-        templates = [join(self.directories.output_dir, 'subject_level_analysis',
-            '_subject_id_{subject_id}', f'con_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
+        templates = [join(self.directories.output_dir, f'subject_level_analysis_{m}',
+            '_subject_id_{subject_id}', f'con_{c}.nii')\
+            for c in self.contrast_list for m in self.subject_level_models]
 
         # SPM.mat file
-        templates += [join(self.directories.output_dir, 'subject_level_analysis',
-            '_subject_id_{subject_id}', 'SPM.mat')]
+        templates += [join(self.directories.output_dir, f'subject_level_analysis_{m}',
+            '_subject_id_{subject_id}', 'SPM.mat')\
+            for m in self.subject_level_models]
 
         # spmT maps
-        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+        templates += [join(self.directories.output_dir, f'subject_level_analysis{m}',
             '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
+            for contrast_id in self.contrast_list for m in self.subject_level_models]
 
         # Format with subject_ids
         return_list = []
@@ -418,7 +464,7 @@ class PipelineTeam0H5E(Pipeline):
 
         return return_list
 
-    def get_group_level_analysis(self): #TODO
+    def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
 
@@ -429,7 +475,7 @@ class PipelineTeam0H5E(Pipeline):
         methods = ['equalRange', 'equalIndifference', 'groupComp']
         return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
 
-    def get_group_level_analysis_sub_workflow(self, method): #TODO
+    def get_group_level_analysis_sub_workflow(self, method):
         """
         Return a workflow for the group level analysis.
 
@@ -450,19 +496,19 @@ class PipelineTeam0H5E(Pipeline):
         # IDENTITY INTERFACE - iterate over the list of contrasts
         information_source = Node(
             IdentityInterface(
-                fields = ['contrast_id', 'subjects']),
+                fields = ['subjects', 'model']),
                 name = 'information_source')
-        information_source.iterables = [('contrast_id', self.contrast_list)]
+        information_source.iterables = [('model', self.subject_level_models)]
 
         # SELECT FILES - select contrasts for all subjects
         templates = {
-            'contrast' : join('subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii')
+            'contrast' : join('subject_level_analysis_{model}', '_subject_id_*', 'con_*.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.output_dir
         select_files.inputs.force_list = True
         group_level_analysis.connect(
-            information_source, 'contrast_id', select_files, 'contrast_id')
+            information_source, 'model', select_files, 'model')
 
         # Function Node get_equal_range_subjects
         #   Get subjects in the equalRange group and in the subject_list
@@ -543,6 +589,10 @@ class PipelineTeam0H5E(Pipeline):
             # Specify design matrix
             one_sample_t_test_design = Node(OneSampleTTestDesign(),
                 name = 'one_sample_t_test_design')
+            one_sample_t_test_design.inputs.use_implicit_threshold = True #implicit masking only
+            one_sample_t_test_design.inputs.global_calc_omit = True
+            one_sample_t_test_design.inputs.no_grand_mean_scaling = True
+            one_sample_t_test_design.inputs.global_normalization = 1 #None
             group_level_analysis.connect(
                 one_sample_t_test_design, 'spm_mat_file', estimate_model, 'spm_mat_file')
             group_level_analysis.connect(
@@ -583,7 +633,11 @@ class PipelineTeam0H5E(Pipeline):
             # Node for the design matrix
             two_sample_t_test_design = Node(TwoSampleTTestDesign(),
                 name = 'two_sample_t_test_design')
-
+            two_sample_t_test_design.inputs.unequal_variance = True
+            two_sample_t_test_design.inputs.no_grand_mean_scaling = True # no "overall grand mean scaling"
+            two_sample_t_test_design.inputs.global_normalization = 1 # ANCOVA=no, no normalisation
+            two_sample_t_test_design.inputs.use_implicit_threshold = True # implicit masking only
+            two_sample_t_test_design.inputs.global_calc_omit = True # no "global calculation"
             group_level_analysis.connect([
                 (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
                 (get_equal_range_subjects, get_contrasts, [
@@ -617,12 +671,12 @@ class PipelineTeam0H5E(Pipeline):
 
         return group_level_analysis
 
-    def get_group_level_outputs(self): #TODO
+    def get_group_level_outputs(self):
         """ Return all names for the files the group level analysis is supposed to generate. """
 
         # Handle equalRange and equalIndifference
         parameters = {
-            'contrast_id': self.contrast_list,
+            'model': self.subject_level_models,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
                 'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
@@ -633,7 +687,7 @@ class PipelineTeam0H5E(Pipeline):
         }
         parameter_sets = product(*parameters.values())
         template = join(self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_{nb_subjects}', '_contrast_id_{contrast_id}',
+            'group_level_analysis_{method}_nsub_{nb_subjects}', '_model_{model}',
             '{file}')
 
         return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
@@ -641,8 +695,7 @@ class PipelineTeam0H5E(Pipeline):
 
         # Handle groupComp
         parameters = {
-            'contrast_id': self.contrast_list,
-            'method': ['groupComp'],
+            'model': self.subject_level_models,
             'file': [
                 'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
                 join('_threshold0', 'spmT_0001_thr.nii')
@@ -652,8 +705,8 @@ class PipelineTeam0H5E(Pipeline):
         parameter_sets = product(*parameters.values())
         template = join(
             self.directories.output_dir,
-            'group_level_analysis_{method}_nsub_{nb_subjects}',
-            '_contrast_id_{contrast_id}',
+            'group_level_analysis_groupComp_nsub_{nb_subjects}',
+            '_model_{model}',
             '{file}'
             )
 
@@ -662,54 +715,54 @@ class PipelineTeam0H5E(Pipeline):
 
         return return_list
 
-    def get_hypotheses_outputs(self): #TODO
+    def get_hypotheses_outputs(self):
         """ Return all hypotheses output file names. """
         nb_sub = len(self.subject_list)
         files = [
-            # Hypothesis 1
+            # Hypothesis 1 - Positive parametric effect of gains
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_lossfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
-            # Hypothesis 2
+                '_model_lossfirst', 'spmT_0001.nii'),
+            # Hypothesis 2 - Positive parametric effect of gains
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_lossfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
-            # Hypothesis 3
+                '_model_lossfirst', 'spmT_0001.nii'),
+            # Hypothesis 3 - Positive parametric effect of gains
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_lossfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
-            # Hypothesis 4
+                '_model_lossfirst', 'spmT_0001.nii'),
+            # Hypothesis 4 - Positive parametric effect of gains
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_lossfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0002', 'spmT_0001.nii'),
-            # Hypothesis 5
+                '_model_lossfirst', 'spmT_0001.nii'),
+            # Hypothesis 5 - Negative parametric effect of losses
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0005', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_gainfirst', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0005', 'spmT_0001.nii'),
-            # Hypothesis 6
+                '_model_gainfirst', 'spmT_0002.nii'),
+            # Hypothesis 6 - Negative parametric effect of losses
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0005', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_gainfirst', '_threshold1', 'spmT_0002_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0005', 'spmT_0001.nii'),
-            # Hypothesis 7
+                '_model_gainfirst', 'spmT_0002.nii'),
+            # Hypothesis 7 - Positive parametric effect of losses
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_gainfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
-            # Hypothesis 8
+                '_model_gainfirst', 'spmT_0001.nii'),
+            # Hypothesis 8 - Positive parametric effect of losses
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_gainfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii'),
+                '_model_gainfirst', 'spmT_0001.nii'),
             # Hypothesis 9
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+                '_model_gainfirst', '_threshold0', 'spmT_0001_thr.nii'),
             join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
-                '_contrast_id_0003', 'spmT_0001.nii')
+                '_model_gainfirst', 'spmT_0001.nii')
         ]
         return [join(self.directories.output_dir, f) for f in files]
