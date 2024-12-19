@@ -419,7 +419,7 @@ class PipelineTeam0I4U(Pipeline):
 
     def get_covariates_single_group(subject_list: list, participants):
         """
-        From a list of subjects, create covariates (age, gender) for the groupe level model,
+        From a list of subjects, create covariates (age, gender) for the group level model,
         in the case of single group (equalRange or equalIndifference) models.
 
         Parameters :
@@ -447,7 +447,8 @@ class PipelineTeam0I4U(Pipeline):
 
     def get_covariates_group_comp(subject_list_g1: list, subject_list_g2: list, participants):
         """
-        From a list of subjects, create covariates (age, gender) for the groupe level model.
+        From a list of subjects, create covariates (age, gender) for the group level model,
+            in the case of group comparison model.
 
         Parameters :
         - subject_list_g1 : list of subject ids in the analysis and in the first group
@@ -468,24 +469,15 @@ class PipelineTeam0I4U(Pipeline):
         filtered_g2 = participants[participants['participant_id'].isin(sub_list_g2)]
 
         # Create age and gender covariates
-        ages_g1 = [float(a) for a in filtered_g1['age'].tolist()]
-        genders_g1 = [0.0 if g =='M' else 1.0 for g in filtered_g1['gender'].tolist()]
-        ages_g2 = [float(a) for a in filtered_g2['age'].tolist()]
-        genders_g2 = [0.0 if g =='M' else 1.0 for g in filtered_g2['gender'].tolist()]
-
-        # Complement lists to get covariates for both groups (first group placed before second)
-        # TODO : do we need to add one list of each per group ???
-        ages_g1 += [0.0 for a in subject_list_g2]
-        genders_g1 += [0.0 for a in subject_list_g2]
-        ages_g2 = [0.0 for a in subject_list_g1] + ages_g2
-        genders_g2 = [0.0 for a in subject_list_g1] + genders_g2
+        ages = [float(a) for a in filtered_g1['age'].tolist()]
+        ages += [float(a) for a in filtered_g2['age'].tolist()]
+        genders = [0.0 if g =='M' else 1.0 for g in filtered_g1['gender'].tolist()]
+        genders += [0.0 if g =='M' else 1.0 for g in filtered_g2['gender'].tolist()]
 
         # Return covariates dict
         return [
-            {'vector': ages_g1, 'name': 'age_group_1'},
-            {'vector': ages_g2, 'name': 'age_group_2'},
-            {'vector': genders_g1, 'name': 'gender_group_1'},
-            {'vector': genders_g2, 'name': 'gender_group_2'}
+            {'vector': ages, 'name': 'age', 'centering': [1]},
+            {'vector': genders, 'name': 'gender', 'centering': [1]},
             ]
 
     def get_group_level_analysis(self):

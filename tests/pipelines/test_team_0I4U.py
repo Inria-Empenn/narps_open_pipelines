@@ -134,27 +134,23 @@ class TestPipelinesTeam0I4U:
         subject_list_g2 = ['003', '004']
         covariates = PipelineTeam0I4U.get_covariates_group_comp(
             subject_list_g1, subject_list_g2, participants_info)
-        assert covariates[0]['vector'] == [24.0, 25.0, 0.0, 0.0]
-        assert covariates[0]['name'] == 'age_group_1'
-        assert covariates[1]['vector'] == [0.0, 0.0, 27.0, 25.0]
-        assert covariates[1]['name'] == 'age_group_2'
-        assert covariates[2]['vector'] == [0.0, 0.0, 0.0, 0.0]
-        assert covariates[2]['name'] == 'gender_group_1'
-        assert covariates[3]['vector'] == [0.0, 0.0, 1.0, 0.0]
-        assert covariates[3]['name'] == 'gender_group_2'
+        assert covariates[0]['vector'] == [24.0, 25.0, 27.0, 25.0]
+        assert covariates[0]['name'] == 'age'
+        assert covariates[0]['centering'] == [1]
+        assert covariates[1]['vector'] == [0.0, 0.0, 1.0, 0.0]
+        assert covariates[1]['name'] == 'gender'
+        assert covariates[1]['centering'] == [1]
 
         subject_list_g1 = ['004', '001']
         subject_list_g2 = ['003', '002']
         covariates = PipelineTeam0I4U.get_covariates_group_comp(
             subject_list_g1, subject_list_g2, participants_info)
-        assert covariates[0]['vector'] == [24.0, 25.0, 0.0, 0.0]
-        assert covariates[0]['name'] == 'age_group_1'
-        assert covariates[1]['vector'] == [0.0, 0.0, 25.0, 27.0]
-        assert covariates[1]['name'] == 'age_group_2'
-        assert covariates[2]['vector'] == [0.0, 0.0, 0.0, 0.0]
-        assert covariates[2]['name'] == 'gender_group_1'
-        assert covariates[3]['vector'] == [0.0, 0.0, 0.0, 1.0]
-        assert covariates[3]['name'] == 'gender_group_2'
+        assert covariates[0]['vector'] == [24.0, 25.0, 25.0, 27.0]
+        assert covariates[0]['name'] == 'age'
+        assert covariates[0]['centering'] == [1]
+        assert covariates[1]['vector'] == [0.0, 0.0, 0.0, 1.0]
+        assert covariates[1]['name'] == 'gender'
+        assert covariates[1]['centering'] == [1]
 
     @staticmethod
     @mark.pipeline_test
