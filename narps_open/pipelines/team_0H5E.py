@@ -106,102 +106,103 @@ class PipelineTeam0H5E(Pipeline):
 
         # REALIGN - motion correction
         realign = Node(Realign(), name = 'realign')
-        Estimation
-        realign.inputs.quality = 1
-        realign.inputs.smoothing = 5.0 #mm
+        # Estimation parameters
+        realign.inputs.quality = 1.0
+        realign.inputs.fwhm = 5.0 #mm
         realign.inputs.separation = 4.0 #mm
-        realign.inputs.register_to_mean = True
-        realign.inputs.interpolation = "7th Degree B-spline" 
-        realign.inputs.wrapping = "No wrap"
-        realign.inputs.weighting = None
+        realign.inputs.register_to_mean = True # 'Register to mean'
+        realign.inputs.interp = 7 # '7th Degree B-Spline'
+        realign.inputs.wrap = [0, 0, 0] # 'No wrap'
+        # Reslicing parameters
+        realign.inputs.write_which = [0, 1] # 'Mean Image Only'
+        realign.inputs.write_interp = 7 # '7th Degree B-Spline'
+        realign.inputs.write_wrap = [0, 0, 0] # 'No wrap'
+        realign.inputs.write_mask = True # 'Mask images'
+        preprocessing.connect(remove_first_image, 'roi_file', realign, 'in_files')
 
-        Reslicing parameters
-        Resliced images="Mean image only"
-        interpolation="7th Degree B-spline"
-        wrapping="No wrap"
-        masking="Mask images"
-        preprocessing.connect(gunzip_func, 'out_file', realign, 'in_files')
+        # COREGISTER - Rigid coregistration of subject anatomical to MNI template
+        coregister_anat = Node(Coregister(), name = 'coregister_anat')
+        # Estimation parameters
+        coregister_anat.inputs.target = '' # TODO Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels),
+        coregister_anat.inputs.cost_function = 'nmi' # 'Normalized Mututal Information'
+        coregister_anat.inputs.separation = [4.0, 2.0]
+        coregister_anat.inputs.fwhm = [7.0, 7.0]
+        # Reslicing parameters
+        coregister_anat.inputs.write_interp = 7 # '7th Degree B-Spline'
+        coregister_anat.inputs.write_wrap = [0, 0, 0] # 'No wrap'
+        coregister_anat.inputs.write_mask = False # 'Don't mask images'
+        preprocessing.connect(gunzip_anat, 'out_file', coregister_anat, 'source')
 
-        # TODO preprocessing order
+        # NORMALIZE - Non-rigid registration of subject anatomical to MNI template
+        normalize_anat = Node(Normalize(), name = 'normalize_anat')
+        # Estimation parameters
+        normalize_anat.inputs.template = '' # TODO template image=MNI T1.nii template (same as for coregistration),
+        normalize_anat.inputs.source_image_smoothing = 8.0 #mm
+        affine_regularization_type = 'mni' # 'ICBM space template'
+        normalize_anat.inputs.DCT_period_cutoff = 25.0
+        normalize_anat.inputs.nonlinear_iterations = 16
+        normalize_anat.inputs.nonlinear_regularization = 1.0
+        # Write parameters
+        normalize_anat.inputs.write_preserve = True # 'preserve concentrations'
+        normalize_anat.inputs.write_voxel_sizes = [2.0, 2.0, 2.0] # mm
+        normalize_anat.inputs.write_interp = 7 # '7th degree b-spline'
+        normalize_anat.inputs.write_wrap = [0, 0, 0] # 'No wrap'
+        preprocessing.connect(coregister_anat, 'coregistered_source', normalize_anat, 'source')
 
-        """
-        # * rigid coregistration ("Coregister" SPM command) of subject anatomical to MNI template
-        # * rigid coregistration of each subject's functional data to their coregistered anatomical image
-        """
-             SPM8 "Coregister" command, "Estimate" procedure only (we do not write out interpolated images at this stage; we only save the affine transformations in the NIfTI headers, as with motion correction). Reference image=subject's anatomical (already coregistered to MNI template in an earlier step), source image=mean image from each run (generated during motion correction), other images=all other images from that run (post motion correction), objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default).
-            Other notes: All rigid at this stage.
-        """
+        # COREGISTER - Rigid coregistration of functional data to coregistered anatomical image
+        coregister_func = Node(Coregister(), name = 'coregister_func')
+        # Estimation parameters
+        coregister_func.inputs.target = '' # TODO Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels),
+        coregister_func.inputs.cost_function = 'nmi' # 'Normalized Mututal Information'
+        coregister_func.inputs.separation = [4.0, 2.0]
+        coregister_func.inputs.fwhm = [7.0, 7.0]
+        # Reslicing parameters
+        coregister_func.inputs.write_interp = 7 # '7th Degree B-Spline'
+        coregister_func.inputs.write_wrap = [0, 0, 0] # 'No wrap'
+        coregister_func.inputs.write_mask = False # 'Don't mask images'
+        preprocessing.connect(realign, 'mean_image', coregister_func, 'source')
+        preprocessing.connect(coregister_anat, 'coregistered_source', coregister_func, 'target')
+        preprocessing.connect(realign, 'realigned_files', coregister_func, 'apply_to_files')
+
         # * resample images with all of those linear operations applied
         """
-        The one pre-processing step we did that wasn't discussed here (but which was mentioned in our description of overal pre-processing sequence) was a resampling step we did between all the linear transformations on the functional images and the nonlinear (warping) transformation. We only do this as a separate step because we try to avoid resampling the functional images a bunch of times without need if all the transformations are doing is updating the NIfTI header's affine transformation matrix, which is true for our initial motion correction and linear coregistration steps, but we do like to save a resampled copy of the images with all of those affine transformations applied before any subsequent steps. (This is normally so we can do certain statistical analyses in individual-subject space that has been loosely affine-registered with standard space but not warped... we did not have to do any such analyses in this particular case but it is part of our standard processing stream, so we left it in.) Unfortunately SPM8's coregistration routine has a weird feature where it will only resample output images at the same voxel size as the reference image (even though the normalization routine will let you freely select a bounding box and voxel size). We did not want to resample all functional images at the resolution of our anatomical template, and unfortunately SPM8 does not provide a pure image-resampling function, so our hacked-together solution is to generate a spatial normalization matrix defining a null transformation and apply that to the functional images through the SPM8 normalization routine, which effectively resamples the images to the desired resolution without transforming them (but with any affine transformations from the NIfTI header applied prior to resampling and then zero'ed out in the resampled images). We chose to resample to 2.5mm isotropic voxels as that is the usual size at which we currently acquire our own fMRI data (and a convenient size to work with in general), although arguments could be made that another size could be more optimal for the NARPS dataset that was originally acquired at a different voxel size.
-        """
-        # * non-rigid registration/warping ("Normalise" SPM command) of anatomical to MNI template
-        # * application of warping ("Normalise" again -- but only writing the transformation, not estimating it) to functional images
-        # * spatial smoothing
-        """
-            SPM8 "Smooth" command. Options: Images to smooth=all the images from each run (after all other pre-processing steps), FWHM=9mm x 9mm x 9mm, data type="same", implicit masking=none.
-            Other notes: Basic fixed (non-iterative) 9mm FWHM isotropic Gaussian smoothing kernel. All in volume space after all registration steps (i.e., after all subjects are in MNI space). True confession time: We originally used a 6mm kernel but after running some preliminary sanity checks on the group analyses, we decided too many voxels were getting masked out of the group analysis due to anatomical inconsistencies between subjects, so we re-ran the smoothing at 9mm and used that for the final analyses. We would normally use a smaller kernel but also our typical sample sizes are smaller than in this dataset (closer to N=20 and a single subject group), and because of the way SPM masks out voxels from group analyses, the higher the N, the more voxels are going to get masked out -- hence our decision to smooth more in order not to over-mask the group analyses. (This still did not work perfectly in the case of amygdala and ventral striatum, but we did our best.)
-        """
-
-
-        """
-            Two main steps -- rigid and non-rigid (see overall order of pre-processing above).
-
-Rigid intersubject registration: SPM8 "Coregister" command, "Estimate" and "Reslice" procedures. "Estimate" options: Reference image=MNI T1.nii template provided with SPM8 (2mm isotropic voxels), source image=subject's raw T1 anatomical, other images=none, objective function="Normalized Mututal Information", separation=[4 2] (default), tolerances=default values (a 12-item matrix), histogram smoothing=[7 7] (default). "Reslice" options: Interpolation="7th degree b-spline", wrapping="No wrap", masking="Don't mask images".
-
-Non-rigid registration: SPM8 "Normalise" command, "Estimate" and "Write" procedures. "Estimate" options: Source image=subject's T1 anatomical (post rigid coregistration), source weighting image=none, images to write=normalized version of same T1 anatomical (no other images written out at this stage), template image=MNI T1.nii template (same as for coregistration), template weighting image=none, source image smoothing=8mm [default], template image smoothing=none, affine regularisation="ICBM space template", nonlinear frequency cutoff=25 (default), nonlinear iterations=16 (default), nonlinear regularisation=1 (default). "Write" options: Preserve="preserve concentrations" (default), bounding box=default coordinates, voxel sizes=2mm x 2mm x 2mm, interpolation="7th degree b-spline", wrapping=none.
-
-Non-rigid registration parameters from the anatomical non-rigid registration were then applied to all functional images from that subject (after rigid coregistration of the functional images to the subject's anatomical image), with all of the same "Write" options under the SPM8 "Normalise" command except for voxel size, which was set to 2.5mm isotropic.
-
-Other notes: No surface-based registration; all volume-based. All based on T1 anatomical; no bias field correction, no segmentation, no Talairach transformations.
+        The one pre-processing step we did that wasn"t discussed here (but which was mentioned in our description of overal pre-processing sequence)
+        was a resampling step we did between all the linear transformations on the functional images and the nonlinear (warping) transformation.
+        We only do this as a separate step because we try to avoid resampling the functional images a bunch of times without need if all
+        the transformations are doing is updating the NIfTI header's affine transformation matrix, which is true for our initial motion correction
+        and linear coregistration steps, but we do like to save a resampled copy of the images with all of those affine transformations applied
+        before any subsequent steps. (This is normally so we can do certain statistical analyses in individual-subject space that has been loosely
+            affine-registered with standard space but not warped... we did not have to do any such analyses in this particular case but it is part
+            of our standard processing stream, so we left it in.)
+        Unfortunately SPM8's coregistration routine has a weird feature where it will only resample output images at the same voxel size as the reference image
+        (even though the normalization routine will let you freely select a bounding box and voxel size).
+        We did not want to resample all functional images at the resolution of our anatomical template, and unfortunately SPM8 does not provide a
+        pure image-resampling function, so our hacked-together solution is to generate a spatial normalization matrix defining a null transformation and
+        apply that to the functional images through the SPM8 normalization routine, which effectively resamples the images to the desired resolution without
+        transforming them (but with any affine transformations from the NIfTI header applied prior to resampling and then zero'ed out in the resampled images).
+            We chose to resample to 2.5mm isotropic voxels as that is the usual size at which we currently acquire our own fMRI data (and a convenient size to work
+                with in general), although arguments could be made that another size could be more optimal for the NARPS dataset that was originally acquired at a
+            different voxel size.
         """
 
-
-
-        # EXTRACTROI - extracting the first image of func
-        extract_first_image = Node(ExtractROI(), name = 'extract_first_image')
-        extract_first_image.inputs.t_min = 1
-        extract_first_image.inputs.t_size = 1
-        extract_first_image.inputs.output_type='NIFTI'
-        preprocessing.connect(realign, 'realigned_files', extract_first_image, 'in_file')
-
-        # COREGISTER - Co-registration in SPM12 using default parameters.
-        coregister = Node(Coregister(), name = 'coregister')
-        coregister.inputs.cost_function='nmi'
-        preprocessing.connect(extract_first_image, 'roi_file', coregister, 'source')
-        preprocessing.connect(gunzip_anat, 'out_file', coregister, 'target')
-        preprocessing.connect(realign, 'realigned_files', coregister, 'apply_to_files')
-
-        # Get SPM Tissue Probability Maps file
-        spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
-
-        # NEW SEGMENT - Unified segmentation using tissue probability maps in SPM12.
-        # Unified segmentation in SPM12 to MNI space
-        # (the MNI-space tissue probability maps used in segmentation) using default parameters.
-        # Bias-field correction in the context of unified segmentation in SPM12.
-        segmentation = Node(NewSegment(), name = 'segmentation')
-        segmentation.inputs.write_deformation_fields = [True, True]
-        segmentation.inputs.tissues = [
-            [(spm_tissues_file, 1), 1, (True,False), (True, False)],
-            [(spm_tissues_file, 2), 1, (True,False), (True, False)],
-            [(spm_tissues_file, 3), 2, (True,False), (True, False)],
-            [(spm_tissues_file, 4), 3, (True,False), (True, False)],
-            [(spm_tissues_file, 5), 4, (True,False), (True, False)],
-            [(spm_tissues_file, 6), 2, (True,False), (True, False)]
-        ]
-        preprocessing.connect(gunzip_anat, 'out_file', segmentation, 'channel_files')
-
-        # NORMALIZE12 - Spatial normalization of functional images
-        normalize = Node(Normalize12(), name = 'normalize')
-        normalize.inputs.jobtype = 'write'
+        # NORMALIZE - Non-rigid registration of functional data to MNI template
+        normalize_func = Node(Normalize(), name = 'normalize_func')
+        normalize_func.inputs.jobtype = 'write'
+        # Write parameters
+        normalize_func.inputs.write_preserve = True # 'preserve concentrations'
+        normalize_func.inputs.write_voxel_sizes = [2.5, 2.5, 2.5] # mm
+        normalize_func.inputs.write_interp = 7 # '7th degree b-spline'
+        normalize_func.inputs.write_wrap = [0, 0, 0] # 'No wrap'
         preprocessing.connect(
-            segmentation, 'forward_deformation_field', normalize, 'deformation_file')
-        preprocessing.connect(coregister, 'coregistered_files', normalize, 'apply_to_files')
+            normalize_func, 'normalization_parameters', normalize_func, 'parameter_file')
+        preprocessing.connect(
+            coregister_func, 'coregistered_files', coregister_func, 'apply_to_files')
 
-        # SMOOTHING - 6 mm fixed FWHM smoothing in MNI volume
+        # SMOOTHING - 9 mm fixed FWHM smoothing in MNI volume
         smoothing = Node(Smooth(), name = 'smoothing')
         smoothing.inputs.fwhm = self.fwhm
-        preprocessing.connect(normalize, 'normalized_files', smoothing, 'in_files')
+        smoothing.inputs.implicit_masking = False
+        preprocessing.connect(normalize_func, 'normalized_files', smoothing, 'in_files')
 
         # DATASINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name='data_sink')
@@ -229,7 +230,9 @@ Other notes: No surface-based registration; all volume-based. All based on T1 an
                 (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
                 (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
                 (realign, merge_removable_files, [('realigned_files', 'in3')]),
-                (extract_first_image, merge_removable_files, [('roi_file', 'in4')]),
+                (remove_first_image, merge_removable_files, [('roi_file', 'in3')]),
+                (coregister_anat, merge_removable_files, [('coregistered_source', 'in5')]),
+
                 (coregister, merge_removable_files, [('coregistered_files', 'in5')]),
                 (normalize, merge_removable_files, [('normalized_files', 'in6')]),
                 (smoothing, merge_removable_files, [('smoothed_files', 'in7')]),
