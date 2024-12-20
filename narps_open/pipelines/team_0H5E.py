@@ -381,12 +381,12 @@ class PipelineTeam0H5E(Pipeline):
         #   for 'gainfirst' model (gain as first parametric modulator)
         subject_information = MapNode(Function(
                 function = self.get_subject_information,
-                input_names = ['event_files', 'short_run_id', 'first_pmod'],
+                input_names = ['event_file', 'short_run_id', 'first_pmod'],
                 output_names = ['subject_info']),
             name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
         subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
         subject_information.inputs.first_pmod = 'gain' if model == 'gainfirst' else 'loss'
-        subject_level_analysis.connect(select_files, 'event', subject_information, 'event_files')
+        subject_level_analysis.connect(select_files, 'event', subject_information, 'event_file')
 
         # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
