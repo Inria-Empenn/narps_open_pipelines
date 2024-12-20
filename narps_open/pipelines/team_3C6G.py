@@ -189,13 +189,13 @@ class PipelineTeam3C6G(Pipeline):
         # Smoothed maps
         templates = [join(
             self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
+            'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
             'swrrsub-{subject_id}_task-MGT_run-{run_id}_bold.nii')]
 
         # Motion parameters file
         templates += [join(
             self.directories.output_dir,
-            'preprocessing', '_run_id_{run_id}_subject_id_{subject_id}',
+            'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
             'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')]
 
         # Format with subject_ids
@@ -276,14 +276,14 @@ class PipelineTeam3C6G(Pipeline):
         # SELECTFILES - to select necessary files
         templates = {
             'func': join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
+                '_subject_id_{subject_id}', '_run_id_*',
                 'swrrsub-{subject_id}_task-MGT_run-*_bold.nii',
             ),
             'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
             ),
             'parameters': join(self.directories.output_dir, 'preprocessing',
-                '_run_id_*_subject_id_{subject_id}',
+                '_subject_id_{subject_id}', '_run_id_*',
                 'rp_sub-{subject_id}_task-MGT_run-*_bold.txt',
             )
         }
