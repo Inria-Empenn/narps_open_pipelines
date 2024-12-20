@@ -109,7 +109,7 @@ class PipelineTeam0H5E(Pipeline):
         realign.inputs.interp = 7 # '7th Degree B-Spline'
         realign.inputs.wrap = [0, 0, 0] # 'No wrap'
         # Reslicing parameters
-        realign.inputs.write_which = [0, 1] # 'Mean Image Only'
+        # realign.inputs.write_which = [0, 1] # 'Mean Image Only'
         realign.inputs.write_interp = 7 # '7th Degree B-Spline'
         realign.inputs.write_wrap = [0, 0, 0] # 'No wrap'
         realign.inputs.write_mask = True # 'Mask images'
@@ -195,31 +195,48 @@ class PipelineTeam0H5E(Pipeline):
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
 
-            # Merge Node - Merge file names to be removed after datasink node is performed
-            merge_removable_files = Node(Merge(9), name = 'merge_removable_files')
-            merge_removable_files.inputs.ravel_inputs = True
+            # Merge Node - Merge func file names to be removed after datasink node is performed
+            merge_removable_func_files = Node(Merge(6), name = 'merge_removable_func_files')
+            merge_removable_func_files.inputs.ravel_inputs = True
 
             # Function Nodes remove_files - Remove sizeable files once they aren't needed
-            remove_after_datasink = MapNode(Function(
+            remove_func_after_datasink = MapNode(Function(
                 function = remove_parent_directory,
                 input_names = ['_', 'file_name'],
                 output_names = []
-                ), name = 'remove_after_datasink', iterfield = 'file_name')
+                ), name = 'remove_func_after_datasink', iterfield = 'file_name')
+            preprocessing.connect(gunzip_func, 'out_file', merge_removable_func_files, 'in1')
+            preprocessing.connect(realign, 'realigned_files', merge_removable_func_files, 'in2')
+            preprocessing.connect(
+                coregister_func, 'coregistered_files', merge_removable_func_files, 'in3')
+            preprocessing.connect(
+                normalize_func, 'normalized_files', merge_removable_func_files, 'in4')
+            preprocessing.connect(smoothing, 'smoothed_files', merge_removable_func_files, 'in5')
+            preprocessing.connect(
+                remove_first_image, 'roi_file', merge_removable_func_files, 'in6')
+            preprocessing.connect(
+                merge_removable_func_files, 'out', remove_func_after_datasink, 'file_name')
+            preprocessing.connect(data_sink, 'out_file', remove_func_after_datasink, '_')
 
-            # Add connections
-            preprocessing.connect([
-                (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
-                (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
-                (realign, merge_removable_files, [('realigned_files', 'in3')]),
-                (remove_first_image, merge_removable_files, [('roi_file', 'in4')]),
-                (coregister_anat, merge_removable_files, [('coregistered_source', 'in5')]),
-                (normalize_anat, merge_removable_files, [('normalized_source', 'in6')]),
-                (coregister_func, merge_removable_files, [('coregistered_files', 'in7')]),
-                (normalize_func, merge_removable_files, [('normalized_files', 'in8')]),
-                (smoothing, merge_removable_files, [('smoothed_files', 'in9')]),
-                (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
-                (data_sink, remove_after_datasink, [('out_file', '_')])
-            ])
+            # Merge Node - Merge anat file names to be removed after datasink node is performed
+            merge_removable_anat_files = Node(Merge(3), name = 'merge_removable_anat_files')
+            merge_removable_anat_files.inputs.ravel_inputs = True
+
+            # Function Nodes remove_files - Remove sizeable files once they aren't needed
+            remove_anat_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_anat_after_datasink', iterfield = 'file_name')
+            preprocessing.connect(gunzip_anat, 'out_file', merge_removable_anat_files, 'in1')
+            preprocessing.connect(
+                coregister_anat, 'coregistered_source', merge_removable_anat_files, 'in2')
+            preprocessing.connect(
+                normalize_anat, 'normalized_source', merge_removable_anat_files, 'in3')
+            preprocessing.connect(
+                merge_removable_anat_files, 'out', remove_anat_after_datasink, 'file_name')
+            preprocessing.connect(
+                data_sink, 'out_file', remove_anat_after_datasink, '_')
 
         return preprocessing
 
