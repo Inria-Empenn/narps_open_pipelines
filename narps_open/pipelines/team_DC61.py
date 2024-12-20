@@ -54,60 +54,54 @@ class PipelineTeamDC61(Pipeline):
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
-    def get_subject_information(event_files: list):
+    def get_subject_information(event_file: str, short_run_id: str):
         """ Create Bunchs for SpecifySPMModel.
 
         Parameters :
-        - event_files: list of str, list of events files (one per run) for the subject
+        - event_file: str, events file for the run
+        - short_run_id: int, 1-based shortened run id (1 for for first run, etc...)
 
         Returns :
-        - subject_info : list of Bunch for 1st level analysis.
+        - subject_info: Bunch with event info for 1st level analysis
         """
         from nipype.interfaces.base import Bunch
 
-        subject_info = []
+        onsets = []
+        durations = []
+        gain_value = []
+        loss_value = []
+        reaction_time = []
 
-        for run_id, event_file in enumerate(event_files):
+        # Parse the events file
+        with open(event_file, 'rt') as file:
+            next(file)  # skip the header
 
-            onsets = []
-            durations = []
-            gain_value = []
-            loss_value = []
-            reaction_time = []
+            for line in file:
+                info = line.strip().split()
 
-            # Parse the events file
-            with open(event_file, 'rt') as file:
-                next(file)  # skip the header
+                onsets.append(float(info[0]))
+                durations.append(float(info[1]))
+                gain_value.append(float(info[2]))
+                loss_value.append(float(info[3]))
+                reaction_time.append(float(info[4]))
 
-                for line in file:
-                    info = line.strip().split()
-
-                    onsets.append(float(info[0]))
-                    durations.append(float(info[1]))
-                    gain_value.append(float(info[2]))
-                    loss_value.append(float(info[3]))
-                    reaction_time.append(float(info[4]))
-
-            # Create a Bunch for the run
-            subject_info.append(
-                Bunch(
-                    conditions = [f'gamble_run{run_id + 1}'],
-                    onsets = [onsets],
-                    durations = [durations],
-                    amplitudes = None,
-                    tmod = None,
-                    pmod = [
-                        Bunch(
-                            name = ['gain_param', 'loss_param', 'rt_param'],
-                            poly = [1, 1, 1],
-                            param = [gain_value, loss_value, reaction_time]
-                        )
-                    ],
-                    regressor_names = None,
-                    regressors = None
-                ))
-
-        return subject_info
+        # Create a Bunch for the run
+        return Bunch(
+                conditions = [f'gamble_run{short_run_id}'],
+                onsets = [onsets],
+                durations = [durations],
+                amplitudes = None,
+                tmod = None,
+                pmod = [
+                    Bunch(
+                        name = ['gain_param', 'loss_param', 'rt_param'],
+                        poly = [1, 1, 1],
+                        param = [gain_value, loss_value, reaction_time]
+                    )
+                ],
+                regressor_names = None,
+                regressors = None
+            )
 
     # @staticmethod # Starting python 3.10, staticmethod should be used here
     # Otherwise it produces a TypeError: 'staticmethod' object is not callable
@@ -209,13 +203,14 @@ class PipelineTeamDC61(Pipeline):
         subject_level.connect(gunzip, 'out_file', smooth, 'in_files')
 
         # Function node get_subject_info - get subject specific condition information
-        subject_info = Node(Function(
+        subject_info = MapNode(Function(
             function = self.get_subject_information,
-            input_names = ['event_files'],
+            input_names = ['event_file', 'short_run_id'],
             output_names = ['subject_info']
             ),
-            name = 'subject_info')
-        subject_level.connect(select_files, 'events', subject_info, 'event_files')
+            name = 'subject_info', iterfield = ['event_file', 'short_run_id'])
+        subject_info.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
+        subject_level.connect(select_files, 'events', subject_info, 'event_file')
 
         # Function node get_confounds_file - Generate confounds files
         confounds = MapNode(Function(

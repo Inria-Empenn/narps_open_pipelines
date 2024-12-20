@@ -78,29 +78,11 @@ class TestPipelinesTeamDC61:
 
         # Get test files
         test_file = join(Configuration()['directories']['test_data'], 'pipelines', 'events.tsv')
-        info = PipelineTeamDC61.get_subject_information([test_file, test_file])
+        bunch = PipelineTeamDC61.get_subject_information(test_file, 1)
 
         # Compare bunches to expected
-        bunch = info[0]
         assert isinstance(bunch, Bunch)
         assert bunch.conditions == ['gamble_run1']
-        helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
-        helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
-        assert bunch.amplitudes is None
-        assert bunch.tmod is None
-        assert bunch.pmod[0].name == ['gain_param', 'loss_param', 'rt_param']
-        assert bunch.pmod[0].poly == [1, 1, 1]
-        helpers.compare_float_2d_arrays(bunch.pmod[0].param, [
-            [14.0, 34.0, 38.0, 10.0, 16.0],
-            [6.0, 14.0, 19.0, 15.0, 17.0],
-            [2.388, 2.289, 0.0, 2.08, 2.288]
-            ])
-        assert bunch.regressor_names is None
-        assert bunch.regressors is None
-
-        bunch = info[1]
-        assert isinstance(bunch, Bunch)
-        assert bunch.conditions == ['gamble_run2']
         helpers.compare_float_2d_arrays(bunch.onsets, [[4.071, 11.834, 19.535, 27.535, 36.435]])
         helpers.compare_float_2d_arrays(bunch.durations, [[4.0, 4.0, 4.0, 4.0, 4.0]])
         assert bunch.amplitudes is None
