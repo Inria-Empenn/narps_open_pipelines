@@ -217,14 +217,12 @@ class PipelineTeam3C6G(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
-    def get_subject_information(event_file: str, short_run_id: int):
+    def get_subject_information(event_file: str):
         """
         Create Bunchs of subject event information for specifySPMModel.
 
         Parameters :
         - event_file: str, events file for a run of a subject
-        - short_run_id: str, an identifier for the run corresponding to the event_file
-            must be '1' for the first run, '2' for the second run, etc.
 
         Returns :
         - subject_info : Bunch corresponding to the event file
@@ -250,14 +248,14 @@ class PipelineTeam3C6G(Pipeline):
 
         # Create bunch
         return Bunch(
-            conditions = [f'trial_run{short_run_id}'],
+            conditions = [f'trial'],
             onsets = [onsets],
             durations = [durations],
             amplitudes = None,
             tmod = None,
             pmod = [
                 Bunch(
-                    name = [f'gain_run{short_run_id}', f'loss_run{short_run_id}'],
+                    name = [f'gain', f'loss'],
                     poly = [1, 1],
                     param = [weights_gain, weights_loss]
                 )
