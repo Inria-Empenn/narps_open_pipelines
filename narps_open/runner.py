@@ -7,6 +7,7 @@ from os.path import isfile
 from importlib import import_module
 from random import choices
 from argparse import ArgumentParser
+from enum import Flag, auto
 
 from nipype import Workflow, config
 
@@ -18,6 +19,17 @@ from narps_open.data.participants import (
     )
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines import get_implemented_pipelines
+
+class PipelineRunnerLevel(Flag):
+    """ A class to enumerate possible levels for a pipeline. """
+    NONE = 0
+    PREPROCESSING = auto()
+    RUN = auto()
+    SUBJECT = auto()
+    GROUP = auto()
+    ALL = PREPROCESSING | RUN | SUBJECT | GROUP
+    FIRST = PREPROCESSING | RUN | SUBJECT
+    SECOND = GROUP
 
 class PipelineRunner():
     """ A class that allows to run a NARPS pipeline. """
@@ -87,14 +99,38 @@ class PipelineRunner():
             implemented_pipelines[self._team_id])
         self._pipeline = class_type()
 
-    def start(self, first_level_only: bool = False, group_level_only: bool = False) -> None:
+    @staticmethod
+    def get_workflows(input_workflow):
+        """
+        Return a list of nipype.Workflow from the passed argument.
+
+        Arguments:
+            - input_workflow: either a list of nipype.Workflow or a nipype.Workflow
+
+        Returns:
+            - a list of nipype.Worflow:
+                - [input_workflow] if input_workflow is a nipype.Workflow
+                - input_workflow if input_workflow is a list of nipype.Workflow
+            - an empty list if input_workflow is None
+        """
+        if isinstance(input_workflow, Workflow):
+            return [input_workflow]
+        if input_workflow is None:
+            return []
+        if isinstance(input_workflow, list):
+            for sub_workflow in input_workflow:
+                if not isinstance(sub_workflow, Workflow):
+                    raise AttributeError('When using a list of workflows,\
+all elements must be of type nipype.Workflow')
+            return input_workflow
+        raise AttributeError('Workflow must be of type list or nipype.Workflow')
+
+    def start(self, level: PipelineRunnerLevel = PipelineRunnerLevel.ALL) -> None:
         """
         Start the pipeline
 
         Arguments:
-            - first_level_only: bool (False by default), run the first level workflows only,
-                (= preprocessing + run level + subject_level)
-            - group_level_only: bool (False by default), run the group level workflows only
+            - level: PipelineRunnerLevel, indicates which workflow(s) to run
         """
         # Set global nipype config for pipeline execution
         config.update_config(dict(execution = {'stop_on_first_crash': 'True'}))
@@ -103,58 +139,48 @@ class PipelineRunner():
         print('Starting pipeline for team: '+
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
-        if first_level_only and group_level_only:
-            raise AttributeError('first_level_only and group_level_only cannot both be True')
-
-        # Generate workflow lists
-        first_level_workflows = []
-        group_level_workflows = []
-
-        if not group_level_only:
-            for workflow in [
-                self._pipeline.get_preprocessing(),
-                self._pipeline.get_run_level_analysis(),
-                self._pipeline.get_subject_level_analysis()]:
-
-                if isinstance(workflow, list):
-                    for sub_workflow in workflow:
-                        first_level_workflows.append(sub_workflow)
-                else:
-                    first_level_workflows.append(workflow)
-
-        if not first_level_only:
-            for workflow in [self._pipeline.get_group_level_analysis()]:
-                if isinstance(workflow, list):
-                    for sub_workflow in workflow:
-                        group_level_workflows.append(sub_workflow)
-                else:
-                    group_level_workflows.append(workflow)
+        # Generate workflow list
+        workflows = []
+        if bool(level & PipelineRunnerLevel.PREPROCESSING):
+            workflows += self.get_workflows(self._pipeline.get_preprocessing())
+        if bool(level & PipelineRunnerLevel.RUN):
+            workflows += self.get_workflows(self._pipeline.get_run_level_analysis())
+        if bool(level & PipelineRunnerLevel.SUBJECT):
+            workflows += self.get_workflows(self._pipeline.get_subject_level_analysis())
+        if bool(level & PipelineRunnerLevel.GROUP):
+            workflows += self.get_workflows(self._pipeline.get_group_level_analysis())
 
         # Launch workflows
-        for workflow in first_level_workflows + group_level_workflows:
-            if workflow is None:
-                pass
-            elif not isinstance(workflow, Workflow):
-                raise AttributeError('Workflow must be of type nipype.Workflow')
+        for workflow in workflows:
+            nb_procs = Configuration()['runner']['nb_procs']
+            if nb_procs > 1:
+                workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
             else:
-                nb_procs = Configuration()['runner']['nb_procs']
-                if nb_procs > 1:
-                    workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
-                else:
-                    workflow.run()
+                workflow.run()
 
-    def get_missing_first_level_outputs(self):
-        """ Return the list of missing files after computations of the first level """
-        files = self._pipeline.get_preprocessing_outputs()
-        files += self._pipeline.get_run_level_outputs()
-        files += self._pipeline.get_subject_level_outputs()
+    def get_missing_outputs(self, level: PipelineRunnerLevel = PipelineRunnerLevel.ALL):
+        """
+        Return the list of missing files after computations of the level(s)
+        
+        Arguments:
+            - level: PipelineRunnerLevel, indicates for which workflow(s) to search output files
+        """
+        # Disclaimer
+        print('Missing files for team: '+
+            f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
 
-        return [f for f in files if not isfile(f)]
+        # Generate files list
+        files = []
+        if bool(level & PipelineRunnerLevel.PREPROCESSING):
+            files += self._pipeline.get_preprocessing_outputs()
+        if bool(level & PipelineRunnerLevel.RUN):
+            files += self._pipeline.get_run_level_outputs()
+        if bool(level & PipelineRunnerLevel.SUBJECT):
+            files += self._pipeline.get_subject_level_outputs()
+        if bool(level & PipelineRunnerLevel.GROUP):
+            files += self._pipeline.get_group_level_outputs()
 
-    def get_missing_group_level_outputs(self):
-        """ Return the list of missing files after computations of the group level """
-        files = self._pipeline.get_group_level_outputs()
-
+        # Return non existing files
         return [f for f in files if not isfile(f)]
 
 def main():
@@ -171,11 +197,17 @@ def main():
         help='the number of subjects to be selected')
     subjects.add_argument('-r', '--rsubjects', type=str,
         help='the number of subjects to be selected randomly')
-    levels = parser.add_mutually_exclusive_group(required=False)
-    levels.add_argument('-g', '--group', action='store_true', default=False,
-        help='run the group level only')
-    levels.add_argument('-f', '--first', action='store_true', default=False,
-        help='run the first levels only (preprocessing + subjects + runs)')
+    levels = parser.add_argument_group('Pipeline runner levels')
+    levels.add_argument('-al', '--all_levels', action='store_true', default=False,
+        help='run all levels analyses')
+    levels.add_argument('-gl', '--group_level', action='store_true', default=False,
+        help='run the group level analysis')
+    levels.add_argument('-sl', '--subject_level', action='store_true', default=False,
+        help='run the subject level analysis')
+    levels.add_argument('-rl', '--run_level', action='store_true', default=False,
+        help='run the run level analysis')
+    levels.add_argument('-pl', '--preprocessing', action='store_true', default=False,
+        help='run the preprocessing')
     parser.add_argument('-c', '--check', action='store_true', required=False,
         help='check pipeline outputs (runner is not launched)')
     parser.add_argument('-e', '--exclusions', action='store_true', required=False,
@@ -194,7 +226,7 @@ def main():
     runner.pipeline.directories.set_output_dir_with_team_id(arguments.team)
     runner.pipeline.directories.set_working_dir_with_team_id(arguments.team)
 
-    # Handle subject
+    # Handle subjects
     if arguments.subjects is not None:
         runner.subjects = arguments.subjects
     elif arguments.rsubjects is not None:
@@ -209,6 +241,18 @@ def main():
         else:
             runner.nb_subjects = int(arguments.nsubjects)
 
+    # Build pipeline runner level
+    if arguments.all_levels:
+        level = PipelineRunnerLevel.ALL
+    if arguments.preprocessing_level:
+        level &= PipelineRunnerLevel.PREPROCESSING
+    if arguments.run_level:
+        level &= PipelineRunnerLevel.RUN
+    if arguments.subject_level:
+        level &= PipelineRunnerLevel.SUBJECT
+    if arguments.group_level:
+        level &= PipelineRunnerLevel.GROUP
+
     # Check data
     if arguments.check:
         print('Missing files for team', arguments.team, 'after running',
@@ -220,7 +264,8 @@ def main():
 
     # Start the runner
     else:
-        runner.start(arguments.first, arguments.group)
+
+        runner.start(level)
 
 if __name__ == '__main__':
     main()

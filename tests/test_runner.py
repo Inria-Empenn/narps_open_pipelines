@@ -23,7 +23,7 @@ from nipype import Node, Workflow
 from nipype.interfaces.utility import Function
 
 from narps_open.utils.configuration import Configuration
-from narps_open.runner import PipelineRunner
+from narps_open.runner import PipelineRunner, PipelineRunnerLevel
 from narps_open.pipelines import Pipeline
 from narps_open.pipelines.team_2T6S import PipelineTeam2T6S
 
@@ -306,12 +306,10 @@ class TestPipelineRunner:
                 assert file.readline() == 'MockupPipeline : '+workflow+' node_1\n'
                 assert file.readline() == 'MockupPipeline : '+workflow+' node_2\n'
 
-        # 2 - test starting a pipeline partly (group_level_only)
+        # 2 - test starting a pipeline partly (1/8)
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
-        runner.start(False, True)
-
-        # 2 - read results of the pipeline
+        runner.start(PipelineRunnerLevel.GROUP)
         with open(
             join(Configuration()['directories']['test_runs'], 'test_runner.txt'),
             'r', encoding = 'utf-8') as file:
@@ -320,12 +318,10 @@ class TestPipelineRunner:
             assert file.readline() == \
                 'MockupPipeline : TestPipelineRunner_group_level_workflow node_2\n'
 
-        # 3 - test starting a pipeline partly (first_level_only)
+        # 3 - test starting a pipeline partly (2/8)
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
-        runner.start(True, False)
-
-        # 4 - read results of the pipeline
+        runner.start(PipelineRunnerLevel.FIRST)
         with open(
             join(Configuration()['directories']['test_runs'], 'test_runner.txt'),
             'r', encoding = 'utf-8') as file:
@@ -336,10 +332,36 @@ class TestPipelineRunner:
                 assert file.readline() == 'MockupPipeline : '+workflow+' node_1\n'
                 assert file.readline() == 'MockupPipeline : '+workflow+' node_2\n'
 
+        # 4 - test starting a pipeline partly (3/8)
+        runner = PipelineRunner('2T6S')
+        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.start(PipelineRunnerLevel.RUN | PipelineRunnerLevel.SUBJECT)
+        with open(
+            join(Configuration()['directories']['test_runs'], 'test_runner.txt'),
+            'r', encoding = 'utf-8') as file:
+            for workflow in [
+                'TestPipelineRunner_run_level_workflow',
+                'TestPipelineRunner_subject_level_workflow']:
+                assert file.readline() == 'MockupPipeline : '+workflow+' node_1\n'
+                assert file.readline() == 'MockupPipeline : '+workflow+' node_2\n'
+
+        # 5 - test starting a pipeline partly (4/8)
+        runner = PipelineRunner('2T6S')
+        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
+        runner.start(PipelineRunnerLevel.PREPROCESSING | PipelineRunnerLevel.SUBJECT)
+        with open(
+            join(Configuration()['directories']['test_runs'], 'test_runner.txt'),
+            'r', encoding = 'utf-8') as file:
+            for workflow in [
+                'TestPipelineRunner_preprocessing_workflow',
+                'TestPipelineRunner_subject_level_workflow']:
+                assert file.readline() == 'MockupPipeline : '+workflow+' node_1\n'
+                assert file.readline() == 'MockupPipeline : '+workflow+' node_2\n'
+
     @staticmethod
     @mark.unit_test
-    def test_get_missing_first_level_outputs():
-        """ Test the get_missing_first_level_outputs method """
+    def test_get_missing_outputs():
+        """ Test the get_missing_outputs method """
 
         # 1a - Instantiate a pipeline
         runner = PipelineRunner('2T6S')
@@ -355,35 +377,32 @@ class TestPipelineRunner:
             if isfile(file):
                 remove(file)
 
-        # 2 - Check for missing files
-        missing_files = runner.get_missing_first_level_outputs()
-        assert len(missing_files) == 4
+        # 1c - Check for missing files
+        missing_files = runner.get_missing_outputs()
+        assert len(missing_files) == 6
         assert 'preprocessing_output.md' in missing_files[0]
         assert 'run_output.md' in missing_files[1]
         assert 'subject_001_output_1.md' in missing_files[2]
         assert 'subject_001_output_2.md' in missing_files[3]
+        assert 'group_1_output_a.md' in missing_files[4]
+        assert 'group_1_output_b.md' in missing_files[5]
 
-        # 3 - Simulate pipeline run (create output files)
+        # 1d - Simulate pipeline run (create output files)
         Path(runner.pipeline.get_preprocessing_outputs()[0]).touch()
         Path(runner.pipeline.get_subject_level_outputs()[0]).touch()
         Path(runner.pipeline.get_subject_level_outputs()[1]).touch()
 
-        # 4 - Check again for missing files
+        # 1e - Check again for missing files
         missing_files = runner.get_missing_first_level_outputs()
         assert len(missing_files) == 1
         assert 'run_output.md' in missing_files[0]
 
-    @staticmethod
-    @mark.unit_test
-    def test_get_missing_group_level_outputs():
-        """ Test the get_missing_group_level_outputs method """
-
-        # 1a - Instantiate a pipeline
+        # 2a - Instantiate a pipeline
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
         runner.subjects = ['001', '002', '003', '004']
 
-        # 1b - Remove previously generated files
+        # 2b - Remove previously generated files
         for file in [
             runner.pipeline.get_group_level_outputs()[0].format(nb_subjects = '4'),
             runner.pipeline.get_group_level_outputs()[1].format(nb_subjects = '4')
@@ -391,16 +410,16 @@ class TestPipelineRunner:
             if isfile(file):
                 remove(file)
 
-        # 2 - Check for missing files
-        missing_files = runner.get_missing_group_level_outputs()
+        # 2c - Check for missing files
+        missing_files = runner.get_missing_outputs(PipelineRunnerLevel.GROUP)
         assert len(missing_files) == 2
         assert 'group_4_output_a.md' in missing_files[0]
         assert 'group_4_output_b.md' in missing_files[1]
 
-        # 3 - Simulate pipeline run (create output files)
+        # 2d - Simulate pipeline run (create output files)
         Path(runner.pipeline.get_group_level_outputs()[0].format(nb_subjects = '4')).touch()
         Path(runner.pipeline.get_group_level_outputs()[1].format(nb_subjects = '4')).touch()
 
-        # 4 - Check again for missing files
-        missing_files = runner.get_missing_group_level_outputs()
+        # 2e - Check again for missing files
+        missing_files = runner.get_missing_outputs(PipelineRunnerLevel.GROUP)
         assert len(missing_files) == 0
