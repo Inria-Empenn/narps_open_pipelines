@@ -156,29 +156,36 @@ class PipelineTeam3C6G(Pipeline):
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
-
-            # Merge Node - Merge file names to be removed after datasink node is performed
-            merge_removable_files = Node(Merge(7), name = 'merge_removable_files')
-            merge_removable_files.inputs.ravel_inputs = True
-
-            # Function Nodes remove_files - Remove sizeable files once they aren't needed
-            remove_after_datasink = MapNode(Function(
+            # Function Nodes remove_files - Remove sizeable anat files once they aren't needed
+            remove_anat_after_datasink = Node(Function(
                 function = remove_parent_directory,
                 input_names = ['_', 'file_name'],
                 output_names = []
-                ), name = 'remove_after_datasink', iterfield = 'file_name')
-
-            # Add connections
+                ), name = 'remove_anat_after_datasink')
             preprocessing.connect([
-                (gunzip_func, merge_removable_files, [('out_file', 'in1')]),
-                (gunzip_anat, merge_removable_files, [('out_file', 'in2')]),
-                (realign, merge_removable_files, [('realigned_files', 'in3')]),
-                (extract_first_image, merge_removable_files, [('roi_file', 'in4')]),
-                (coregister, merge_removable_files, [('coregistered_files', 'in5')]),
-                (normalize, merge_removable_files, [('normalized_files', 'in6')]),
-                (smoothing, merge_removable_files, [('smoothed_files', 'in7')]),
-                (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
-                (data_sink, remove_after_datasink, [('out_file', '_')])
+                (gunzip_anat, remove_anat_after_datasink, [('out_file', 'file_name')]),
+                (data_sink, remove_anat_after_datasink, [('out_file', '_')])
+            ])
+
+            # Merge Node - Merge file names to be removed after datasink node is performed
+            merge_removable_func_files = Node(Merge(6), name = 'merge_removable_func_files')
+            merge_removable_func_files.inputs.ravel_inputs = True
+
+            # Function Nodes remove_files - Remove sizeable files once they aren't needed
+            remove_func_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_func_after_datasink', iterfield = 'file_name')
+            preprocessing.connect([
+                (gunzip_func, merge_removable_func_files, [('out_file', 'in1')]),
+                (realign, merge_removable_func_files, [('realigned_files', 'in2')]),
+                (extract_first_image, merge_removable_func_files, [('roi_file', 'in3')]),
+                (coregister, merge_removable_func_files, [('coregistered_files', 'in4')]),
+                (normalize, merge_removable_func_files, [('normalized_files', 'in5')]),
+                (smoothing, merge_removable_func_files, [('smoothed_files', 'in6')]),
+                (merge_removable_func_files, remove_func_after_datasink, [('out', 'file_name')]),
+                (data_sink, remove_func_after_datasink, [('out_file', '_')])
             ])
 
         return preprocessing
