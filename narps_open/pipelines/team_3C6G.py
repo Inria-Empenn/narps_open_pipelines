@@ -299,10 +299,9 @@ class PipelineTeam3C6G(Pipeline):
         # FUNCTION node get_subject_information - get subject specific condition information
         subject_information = MapNode(Function(
                 function = self.get_subject_information,
-                input_names = ['event_file', 'short_run_id'],
+                input_names = ['event_file'],
                 output_names = ['subject_info']),
-            name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
-        subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
+            name = 'subject_information', iterfield = ['event_file'])
         subject_level_analysis.connect(select_files, 'event', subject_information, 'event_file')
 
         # SPECIFY MODEL - generates SPM-specific Model
