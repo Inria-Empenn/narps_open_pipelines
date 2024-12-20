@@ -45,11 +45,7 @@ class PipelineTeam0I4U(Pipeline):
             ]
 
     def get_preprocessing(self):
-        """
-        Return the preprocessing workflow.
-
-        Returns: a nipype.WorkFlow
-        """
+        """ Return a nipype.WorkFlow for the preprocessing part of the pipeline. """
 
         # Initialize workflow
         preprocessing = Workflow(
