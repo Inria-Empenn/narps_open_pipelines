@@ -364,9 +364,8 @@ class PipelineTeam98BT(Pipeline):
         }
         parameter_sets = product(*parameters.values())
         output_dir = join(
-            self.directories.output_dir,
-            'preprocessing',
-            '_run_id_{run_id}_subject_id_{subject_id}'
+            self.directories.output_dir, 'preprocessing',
+            '_subject_id_{subject_id}', '_run_id_{run_id}'
         )
         templates = [
             # Realignment parameters
@@ -529,16 +528,16 @@ class PipelineTeam98BT(Pipeline):
         # SELECT FILES - to select necessary files
         templates = {
             'func' : join(self.directories.output_dir,
-                'preprocessing', '_run_id_*_subject_id_{subject_id}',
+                'preprocessing', '_subject_id_{subject_id}', '_run_id_*',
                 'swuasub-{subject_id}_task-MGT_run-*_bold.nii'),
             'motion_correction': join(self.directories.output_dir,
-                'preprocessing', '_run_id_*_subject_id_{subject_id}',
+                'preprocessing', '_subject_id_{subject_id}', '_run_id_*',
                 'uasub-{subject_id}_task-MGT_run-*_bold.nii'),
             'param' : join(self.directories.output_dir,
-                'preprocessing', '_run_id_*_subject_id_{subject_id}',
+                'preprocessing', '_subject_id_{subject_id}', '_run_id_*',
                 'rp_asub-{subject_id}_task-MGT_run-*_bold.txt'),
             'wc2' : join(self.directories.output_dir,
-                'preprocessing', '_run_id_01_subject_id_{subject_id}',
+                'preprocessing', '_subject_id_{subject_id}', '_run_id_01',
                 'wc2sub-{subject_id}_T1w.nii'),
             'events' : join(self.directories.dataset_dir,
                 'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-*_events.tsv')
