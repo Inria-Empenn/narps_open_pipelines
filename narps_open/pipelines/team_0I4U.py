@@ -6,7 +6,7 @@ from os.path import join
 from itertools import product
 
 from nipype import Workflow, Node, MapNode
-from nipype.interfaces.utility import IdentityInterface, Function, Merge
+from nipype.interfaces.utility import IdentityInterface, Function, Merge, Split
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
 from nipype.interfaces.spm import (
@@ -16,7 +16,7 @@ from nipype.interfaces.spm import (
     FieldMap, Threshold, Normalize12, Smooth
     )
 from nipype.interfaces.spm.base import Info as SPMInfo
-from nipype.interfaces.fsl import ExtractROI
+from nipype.interfaces.fsl import ApplyMask, ExtractROI, MathsCommand
 from nipype.algorithms.modelgen import SpecifySPMModel
 
 from narps_open.pipelines import Pipeline
@@ -151,12 +151,12 @@ class PipelineTeam0I4U(Pipeline):
         segmentation = Node(NewSegment(), name = 'segmentation')
         segmentation.inputs.write_deformation_fields = [False, True]
         segmentation.inputs.tissues = [
-            [(spm_tissues_file, 1), 1, (True, False), (True, False)],
-            [(spm_tissues_file, 2), 1, (True, False), (True, False)],
-            [(spm_tissues_file, 3), 2, (True, False), (True, False)],
-            [(spm_tissues_file, 4), 3, (True, False), (True, False)],
-            [(spm_tissues_file, 5), 4, (True, False), (True, False)],
-            [(spm_tissues_file, 6), 2, (True, False), (True, False)]
+            [(spm_tissues_file, 1), 2, (True, False), (True, False)], # Grey matter
+            [(spm_tissues_file, 2), 2, (True, False), (True, False)], # White matter
+            [(spm_tissues_file, 3), 2, (True, False), (True, False)], # CSF
+            [(spm_tissues_file, 4), 3, (True, False), (True, False)], # Bone
+            [(spm_tissues_file, 5), 4, (True, False), (True, False)], # Soft tissue
+            [(spm_tissues_file, 6), 2, (True, False), (True, False)] # Air / background
         ]
         preprocessing.connect(gunzip_anat, 'out_file', segmentation, 'channel_files')
 
@@ -168,15 +168,32 @@ class PipelineTeam0I4U(Pipeline):
             segmentation, 'forward_deformation_field', normalize, 'deformation_file')
         preprocessing.connect(coregistration, 'coregistered_files', normalize, 'apply_to_files')
 
+        # SPLIT - Split probability maps as they output from the segmentation node
+        #   outputs.out1 is Grey matter (c1*)
+        #   outputs.out2 is White matter (c2*)
+        #   outputs.out3 is CSF (c3*)
+        split_segmentation_maps = Node(Split(), name = 'split_segmentation_maps')
+        split_segmentation_maps.inputs.splits = [1, 1, 1, 3]
+        split_segmentation_maps.inputs.squeeze = True # Unfold one-element splits removing the list
+        preprocessing.connect(
+            segmentation, 'normalized_class_images', split_segmentation_maps, 'inlist')
+
+        # MATHS COMMAND - create grey-matter mask
+        #     Values below 0.2 will be set to 0.0, others to 1.0
+        threshold_grey_matter = Node(MathsCommand(), name = 'threshold_grey_matter')
+        threshold_grey_matter.inputs.args = '-thr 0.2 -bin'
+        threshold_grey_matter.inputs.output_type = 'NIFTI'
+        preprocessing.connect(split_segmentation_maps, 'out1', threshold_grey_matter, 'in_file')
+
         # MASKING - Mask func using segmented and normalized grey matter mask
-        # TODO
-        #preprocessing.connect(segmentation, 'normalized_class_images', masking, 'mask')
-        #OR preprocessing.connect(segmentation, 'modulated_class_images', masking, 'mask')
+        mask_func = MapNode(ApplyMask(), name = 'mask_func', iterfield = 'in_file')
+        preprocessing.connect(normalize, 'normalized_files', mask_func, 'in_file')
+        preprocessing.connect(threshold_grey_matter, 'out_file', mask_func, 'mask_file')
 
         # SMOOTHING - 5 mm fixed FWHM smoothing
         smoothing = Node(Smooth(), name = 'smoothing')
         smoothing.inputs.fwhm = self.fwhm
-        preprocessing.connect(normalize, 'normalized_files', smoothing, 'in_files')
+        preprocessing.connect(mask_func, 'out_file', smoothing, 'in_files')
 
         # DATASINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name='data_sink')
