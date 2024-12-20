@@ -41,7 +41,7 @@ class PipelineTeam0H5E(Pipeline):
         # Contrast '0001' corresponds to:
         #  - effect_of_loss in the 'gainfirst' model
         #  - effect_of_gain in the 'lossfirst' model
-        self.contrast_list = ['0001'] 
+        self.contrast_list = ['0001']
 
     def get_preprocessing(self):
         """ Return a Nipype workflow describing the prerpocessing part of the pipeline """
@@ -247,13 +247,13 @@ class PipelineTeam0H5E(Pipeline):
         templates = [join(
             self.directories.output_dir,
             'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
-            'swrrsub-{subject_id}_task-MGT_run-{run_id}_bold.nii')]#TODO
+            'smwrrsub-{subject_id}_task-MGT_run-{run_id}_bold_roi.nii')]
 
         # Motion parameters file
         templates += [join(
             self.directories.output_dir,
             'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
-            'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')]
+            'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold_roi.txt')]
 
         # Format with subject_ids
         return_list = []
@@ -363,14 +363,14 @@ class PipelineTeam0H5E(Pipeline):
         templates = {
             'func': join(self.directories.output_dir, 'preprocessing',
                 '_subject_id_{subject_id}', '_run_id_*',
-                'swrrsub-{subject_id}_task-MGT_run-*_bold.nii', #TODO
+                'smwrrsub-{subject_id}_task-MGT_run-*_bold_roi.nii'
             ),
             'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
-                'sub-{subject_id}_task-MGT_run-*_events.tsv',
+                'sub-{subject_id}_task-MGT_run-*_events.tsv'
             ),
             'parameters': join(self.directories.output_dir, 'preprocessing',
                 '_subject_id_{subject_id}', '_run_id_*',
-                'rp_sub-{subject_id}_task-MGT_run-*_bold.txt', #TODO
+                'rp_sub-{subject_id}_task-MGT_run-*_bold_roi.txt'
             )
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
@@ -650,7 +650,8 @@ class PipelineTeam0H5E(Pipeline):
             two_sample_t_test_design = Node(TwoSampleTTestDesign(),
                 name = 'two_sample_t_test_design')
             two_sample_t_test_design.inputs.unequal_variance = True
-            two_sample_t_test_design.inputs.no_grand_mean_scaling = True # no "overall grand mean scaling"
+            # no "overall grand mean scaling"
+            two_sample_t_test_design.inputs.no_grand_mean_scaling = True
             two_sample_t_test_design.inputs.global_normalization = 1 # ANCOVA=no, no normalisation
             two_sample_t_test_design.inputs.use_implicit_threshold = True # implicit masking only
             two_sample_t_test_design.inputs.global_calc_omit = True # no "global calculation"
