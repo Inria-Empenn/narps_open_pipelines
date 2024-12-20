@@ -201,32 +201,47 @@ class PipelineTeam0I4U(Pipeline):
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
 
-            # Merge Node - Merge file names to be removed after datasink node is performed
-            merge_removable_files = Node(Merge(11), name = 'merge_removable_files')
-            merge_removable_files.inputs.ravel_inputs = True
+            # Merge Node - Merge anat file names to be removed after datasink node is performed
+            merge_removable_anat_files = Node(Merge(5), name = 'merge_removable_anat_files')
+            merge_removable_anat_files.inputs.ravel_inputs = True
 
-            # Function Nodes remove_files - Remove sizeable files once they aren't needed
-            remove_after_datasink = MapNode(Function(
+            # Function Nodes remove_files - Remove sizeable anat files once they aren't needed
+            remove_anat_after_datasink = MapNode(Function(
                 function = remove_parent_directory,
                 input_names = ['_', 'file_name'],
                 output_names = []
-                ), name = 'remove_after_datasink', iterfield = 'file_name')
-
+                ), name = 'remove_anat_after_datasink', iterfield = 'file_name')
             # Add connections
             preprocessing.connect([
-                (gunzip_anat, merge_removable_files, [('out_file', 'in1')]),
-                (gunzip_func, merge_removable_files, [('out_file', 'in2')]),
-                (gunzip_phasediff, merge_removable_files, [('out_file', 'in3')]),
-                (gunzip_magnitude, merge_removable_files, [('out_file', 'in4')]),
-                (fieldmap, merge_removable_files, [('vdm', 'in5')]),
-                (motion_correction, merge_removable_files, [('realigned_unwarped_files', 'in6')]),
-                (extract_first_image, merge_removable_files, [('roi_file', 'in7')]),
-                (segmentation, merge_removable_files, [('forward_deformation_field', 'in8')]),
-                (coregistration, merge_removable_files, [('coregistered_files', 'in9')]),
-                (normalize, merge_removable_files, [('normalized_files', 'in10')]),
-                (smoothing, merge_removable_files, [('smoothed_files', 'in11')]),
-                (merge_removable_files, remove_after_datasink, [('out', 'file_name')]),
-                (data_sink, remove_after_datasink, [('out_file', '_')])
+                (gunzip_anat, merge_removable_anat_files, [('out_file', 'in1')]),
+                (gunzip_phasediff, merge_removable_anat_files, [('out_file', 'in2')]),
+                (gunzip_magnitude, merge_removable_anat_files, [('out_file', 'in3')]),
+                (fieldmap, merge_removable_anat_files, [('vdm', 'in4')]),
+                (segmentation, merge_removable_anat_files, [('forward_deformation_field', 'in5')]),
+                (merge_removable_anat_files, remove_anat_after_datasink, [('out', 'file_name')]),
+                (data_sink, remove_anat_after_datasink, [('out_file', '_')])
+            ])
+
+            # Merge Node - Merge func file names to be removed after datasink node is performed
+            merge_removable_func_files = Node(Merge(11), name = 'merge_removable_func_files')
+            merge_removable_func_files.inputs.ravel_inputs = True
+
+            # Function Nodes remove_files - Remove sizeable func files once they aren't needed
+            remove_func_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_func_after_datasink', iterfield = 'file_name')
+            preprocessing.connect([
+                (gunzip_func, merge_removable_func_files, [('out_file', 'in1')]),
+                (motion_correction, merge_removable_func_files, [
+                    ('realigned_unwarped_files', 'in2')]),
+                (extract_first_image, merge_removable_func_files, [('roi_file', 'in3')]),
+                (coregistration, merge_removable_func_files, [('coregistered_files', 'in4')]),
+                (normalize, merge_removable_func_files, [('normalized_files', 'in5')]),
+                (smoothing, merge_removable_func_files, [('smoothed_files', 'in6')]),
+                (merge_removable_func_files, remove_func_after_datasink, [('out', 'file_name')]),
+                (data_sink, remove_func_after_datasink, [('out_file', '_')])
             ])
 
         return preprocessing
