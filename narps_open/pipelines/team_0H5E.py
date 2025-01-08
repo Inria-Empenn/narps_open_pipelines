@@ -470,7 +470,7 @@ class PipelineTeam0H5E(Pipeline):
             for m in self.subject_level_models]
 
         # spmT maps
-        templates += [join(self.directories.output_dir, f'subject_level_analysis{m}',
+        templates += [join(self.directories.output_dir, f'subject_level_analysis_{m}',
             '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
             for contrast_id in self.contrast_list for m in self.subject_level_models]
 
