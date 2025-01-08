@@ -5,8 +5,8 @@
 from os.path import join
 from itertools import product
 
-from nipype import Workflow, Node, MapNode, JoinNode
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype import Workflow, Node, MapNode
+from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
 
@@ -113,7 +113,7 @@ class PipelineTeamV55J(Pipeline):
         # For all other parameters we used the default values. We did not use Jacobian modulation.
         fieldmap = Node(FieldMap(), name = 'fieldmap')
         fieldmap.inputs.blip_direction = -1
-        fieldmap.inputs.echo_times= [4.92, 7.38]
+        fieldmap.inputs.echo_times = (4.92, 7.38)
         fieldmap.inputs.total_readout_time = 29.15
         fieldmap.inputs.matchanat = True
         fieldmap.inputs.matchvdm = True
@@ -150,20 +150,20 @@ class PipelineTeamV55J(Pipeline):
         # routine in SPM12, with default values for each parameter and using the template tissue
         # probability maps (grey matter, white matter, CSF, bone, soft tissue, and air/background)
         # in the tpm folder of SPM12.
-        # We saved a bias-corrected version of the image and both inverse and forward deformation field
-        # images.
+        # We saved a bias-corrected version of the image and both inverse
+        # and forward deformation field images.
         spm_tissues_file = join(SPMInfo.getinfo()['path'], 'tpm', 'TPM.nii')
         segmentation = Node(NewSegment(), name = 'segmentation')
         segmentation.inputs.write_deformation_fields = [True, True]
         segmentation.inputs.tissues = [
-            [(spm_tissues_file, 1), 1, (True, False), (True, False)],
+            [(spm_tissues_file, 1), 1, (True, False), (True, False)], # TODO change gaussians ?
             [(spm_tissues_file, 2), 1, (True, False), (True, False)],
             [(spm_tissues_file, 3), 2, (True, False), (True, False)],
             [(spm_tissues_file, 4), 3, (True, False), (True, False)],
             [(spm_tissues_file, 5), 4, (True, False), (True, False)],
             [(spm_tissues_file, 6), 2, (True, False), (True, False)]
         ]
-        preprocessing.connect(coregistration, 'coregistered_source', segmentation,'channel_files')
+        preprocessing.connect(coregistration, 'coregistered_source', segmentation, 'channel_files')
 
         # NORMALIZE12 - Normalization of func
         # We used the "Normalise: Write" routine in SPM12. We set the motion-corrected EPI images
@@ -185,18 +185,14 @@ class PipelineTeamV55J(Pipeline):
         # the FWHM of the Gaussian smoothing kernel to 6mm. We used the default values for
         # the other parameters.
         smoothing = Node(Smooth(), name = 'smoothing')
-        normalize_func.inputs.fwhm = 6
-        normalize_func.inputs.implicit_masking = False
+        smoothing.inputs.fwhm = 6
+        smoothing.inputs.implicit_masking = False
         preprocessing.connect(normalize_func, 'normalized_files', smoothing, 'in_files')
 
         # DATASINK - Store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name='data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        preprocessing.connect(
-            motion_correction, 'realignment_parameters', data_sink, 'preprocess.@parameters')
         preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocess.@smoothing')
-        preprocessing.connect(
-            segmentation, 'native_class_images', data_sink, 'preprocess.@seg_maps_native')
         preprocessing.connect(
             segmentation, 'normalized_class_images', data_sink, 'preprocess.@seg_maps_norm')
 
@@ -204,7 +200,7 @@ class PipelineTeamV55J(Pipeline):
         if Configuration()['pipelines']['remove_unused_data']:
 
             # Merge Node - Merge func file names to be removed after datasink node is performed
-            merge_removable_func_files = Node(Merge(...), name = 'merge_removable_func_files')
+            merge_removable_func_files = Node(Merge(7), name = 'merge_removable_func_files')
             merge_removable_func_files.inputs.ravel_inputs = True
 
             # Function Nodes remove_files - Remove sizeable files once they aren't needed
@@ -214,20 +210,22 @@ class PipelineTeamV55J(Pipeline):
                 output_names = []
                 ), name = 'remove_func_after_datasink', iterfield = 'file_name')
             preprocessing.connect(gunzip_func, 'out_file', merge_removable_func_files, 'in1')
-            preprocessing.connect(realign, 'realigned_files', merge_removable_func_files, 'in2')
             preprocessing.connect(
-                coregister_func, 'coregistered_files', merge_removable_func_files, 'in3')
+                extract_tenth_image, 'roi_file', merge_removable_func_files, 'in2')
+            preprocessing.connect(fieldmap, 'vdm', merge_removable_func_files, 'in3')
             preprocessing.connect(
-                normalize_func, 'normalized_files', merge_removable_func_files, 'in4')
-            preprocessing.connect(smoothing, 'smoothed_files', merge_removable_func_files, 'in5')
+                motion_correction, 'mean_image', merge_removable_func_files, 'in4')
             preprocessing.connect(
-                remove_first_image, 'roi_file', merge_removable_func_files, 'in6')
+                coregistration, 'coregistered_source', merge_removable_func_files, 'in5')
+            preprocessing.connect(smoothing, 'smoothed_files',  merge_removable_func_files, 'in6')
+            preprocessing.connect(
+                segmentation, 'native_class_images', merge_removable_func_files, 'in7')
             preprocessing.connect(
                 merge_removable_func_files, 'out', remove_func_after_datasink, 'file_name')
             preprocessing.connect(data_sink, 'out_file', remove_func_after_datasink, '_')
 
             # Merge Node - Merge anat file names to be removed after datasink node is performed
-            merge_removable_anat_files = Node(Merge(...), name = 'merge_removable_anat_files')
+            merge_removable_anat_files = Node(Merge(3), name = 'merge_removable_anat_files')
             merge_removable_anat_files.inputs.ravel_inputs = True
 
             # Function Nodes remove_files - Remove sizeable files once they aren't needed
@@ -239,10 +237,6 @@ class PipelineTeamV55J(Pipeline):
             preprocessing.connect(gunzip_anat, 'out_file', merge_removable_anat_files, 'in1')
             preprocessing.connect(gunzip_phasediff, 'out_file', merge_removable_anat_files, 'in2')
             preprocessing.connect(gunzip_magnitude, 'out_file', merge_removable_anat_files, 'in3')
-            preprocessing.connect(
-                coregister_anat, 'coregistered_source', merge_removable_anat_files, 'in2')
-            preprocessing.connect(
-                normalize_anat, 'normalized_source', merge_removable_anat_files, 'in3')
             preprocessing.connect(
                 merge_removable_anat_files, 'out', remove_anat_after_datasink, 'file_name')
             preprocessing.connect(
@@ -259,23 +253,11 @@ class PipelineTeamV55J(Pipeline):
             'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
             'swusub-{subject_id}_task-MGT_run-{run_id}_bold.nii')]
 
-        # Motion parameters file
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
-            'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold.txt')]
-
-        # Segmentation class images (native)
-        templates += [join(
-            self.directories.output_dir,
-            'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
-            'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold_roi.txt')]
-
         # Segmentation class images (normalized)
         templates += [join(
             self.directories.output_dir,
             'preprocessing', '_subject_id_{subject_id}', '_run_id_{run_id}',
-            'rp_sub-{subject_id}_task-MGT_run-{run_id}_bold_roi.txt')]
+            f'wc{c}' + 'sub-{subject_id}_T1w.nii') for c in range(1, 7)]
 
         # Format with subject_ids
         return_list = []
@@ -289,7 +271,7 @@ class PipelineTeamV55J(Pipeline):
         """ Return a Nipype workflow describing the run level analysis part of the pipeline """
         return None
 
-    def get_subject_information(event_file: str, short_run_id: int):
+    def get_subject_information(event_file: str):
         """
         Create a Bunch of subject event information for specifySPMModel.
 
@@ -356,7 +338,7 @@ class PipelineTeamV55J(Pipeline):
                 Bunch(
                     name = ['gain', 'loss'],
                     poly = [1, 1],
-                    param = [weights_gain[gain], weights_loss[loss]]
+                    param = [weights_gain, weights_loss]
                 ),
                 None,
                 None
@@ -365,37 +347,40 @@ class PipelineTeamV55J(Pipeline):
             regressors = None
         )
 
-    def compute_mask(wc1_file, wc2_file, wc3_file):
+    def union_mask(masks: list, threshold: float = 0.0):
         """
-        Function to compute mask to which.
+        Compute union between masks, then binarize the result using a threshold value.
 
         Parameters:
-            - wc1_file: str, file wc1 obtained using segmentation function from SPM
-            - wc2_file: str, file wc2 obtained using segmentation function from SPM
-            - wc3_file: str, file wc3 obtained using segmentation function from SPM
+            - masks: list, a list of .nii masks
+            - threshold: float, values under threshold will be set to 0.0, other to 1.0
+
+        Returns:
+            - binarized union mask
         """
-        from os import makdir
-        from os.path import join, isdir
+        from os.path import abspath
 
-        from nilearn import masking, plotting
-        from nibabel import Nifti1Image, save
+        from nibabel import Nifti1Image, load as nib_load, save as nib_save
 
-        masks_list = []
-        for mask in [wc1_file, wc2_file, wc3_file]:
-            mask_img = nib.load(mask)
-            mask_data = mask_img.get_fdata()
-            mask_affine = mask_img.affine
-            masks_list.append(mask_data)
+        # Open mask files
+        for mask_id, mask in enumerate(masks):
+            mask_image = nib_load(mask)
+            mask_data = mask_image.get_fdata()
+            mask_affine = mask_image.affine
 
-        mask_img = masks_list[0] + masks_list[1] + masks_list[2] > 0.3
-        mask_img = mask_img.astype('float64')
-        mask = Nifti1Image(mask_img, mask_affine)
-        if not os.path.isdir(join(result_dir, output_dir, 'subject_level_analysis')):
-            os.mkdir(join(result_dir, output_dir, 'subject_level_analysis'))
-        if not os.path.isdir(join(result_dir, output_dir, 'subject_level_analysis', f"_subject_id_{subject_id}")):
-            os.mkdir(join(result_dir, output_dir, 'subject_level_analysis', f"_subject_id_{subject_id}"))
-        mask_path = join(result_dir, output_dir, 'subject_level_analysis', f"_subject_id_{subject_id}", 'computed_mask.nii')
-        save(mask, mask_path)
+            # Perform mask union
+            if mask_id == 0:
+                mask_union = mask_data
+            else:
+                mask_union += mask_data
+
+        # Binarize mask
+        mask_union = mask_union > threshold
+
+        # Output file
+        mask_union = mask_union.astype('float64')
+        mask_path = abspath('mask.nii')
+        nib_save(Nifti1Image(mask_union, mask_affine), mask_path)
 
         return mask_path
 
@@ -451,35 +436,39 @@ class PipelineTeamV55J(Pipeline):
         subject_level_analysis.connect(
             subject_information, 'subject_info', specify_model, 'subject_info')
         subject_level_analysis.connect(select_files, 'func', specify_model, 'functional_runs')
-        # subject_level_analysis.connect(
-        #    select_files, 'parameters', specify_model, 'realignment_parameters')
+
+        # MERGE - merge mask files into a list
+        merge_masks = Node(Merge(3), name = 'merge_masks')
+        subject_level_analysis.connect(select_files, 'wc1', merge_masks, 'in1')
+        subject_level_analysis.connect(select_files, 'wc2', merge_masks, 'in2')
+        subject_level_analysis.connect(select_files, 'wc3', merge_masks, 'in3')
 
         # FUNCTION node compute_mask - Compute mask from wc1, wc2, wc3 files
-        compute_mask = Node(Function(
-            function = self.compute_mask),
-            input_names = ['wc1_file', 'wc2_file', 'wc3_file'],
+        mask_union = Node(Function(
+            function = self.union_mask),
+            input_names = ['masks', 'threshold'],
             output_names = ['mask'],
-            name = 'compute_mask')
-        subject_level_analysis.connect(selectfiles, 'wc1', compute_mask, 'wc1_file')
-        subject_level_analysis.connect(selectfiles, 'wc2', compute_mask, 'wc2_file')
-        subject_level_analysis.connect(selectfiles, 'wc3', compute_mask, 'wc3_file')
+            name = 'mask_union')
+        mask_union.inputs.threshold = 0.3
+        subject_level_analysis.connect(merge_masks, 'out', mask_union, 'masks')
 
         # LEVEL1 DESIGN - generates an SPM design matrix
-        model_design = Node(Level1Design(), name='model_design')
+        model_design = Node(Level1Design(), name = 'model_design')
         model_design.inputs.bases = {'hrf': {'derivs': [0, 0]}}
         model_design.inputs.timing_units = 'secs'
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = 'AR(1)'
-        subject_level_analysis.connect(compute_mask, 'mask', model_design, 'mask_image')
+        subject_level_analysis.connect(mask_union, 'mask', model_design, 'mask_image')
         subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
 
         # ESTIMATE MODEL - estimate the parameters of the model
         model_estimate = Node(EstimateModel(), name = 'model_estimate')
         model_estimate.inputs.estimation_method = {'Classical': 1}
-        (model_design, model_estimate, [('spm_mat_file', 'spm_mat_file')]),
+        subject_level_analysis.connect(
+            model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
 
         # ESTIMATE CONTRAST - estimates contrasts
-        contrast_estimate = Node(EstimateContrast(), name="contrast_estimate")
+        contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
         contrast_estimate.inputs.contrasts = self.subject_level_contrasts
         subject_level_analysis.connect(
             model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
@@ -489,33 +478,31 @@ class PipelineTeamV55J(Pipeline):
             model_estimate, 'residual_image', contrast_estimate, 'residual_image')
 
         # DATASINK - store the wanted results in the wanted repository
-        datasink = Node(DataSink(base_directory=result_dir, container=output_dir), name='datasink')
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        subject_level_analysis.connect(
+            contrast_estimate, 'con_images', data_sink, 'subject_level_analysis.@con_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spmT_images', data_sink, 'subject_level_analysis.@spmT_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spm_mat_file', data_sink, 'subject_level_analysis.@spm_mat_file')
 
-        """
-                            (model_estimate, datasink, [('mask_image', 'subject_level_analysis.@mask')]),
-                            (contrast_estimate, datasink, [('con_images', 'subject_level_analysis.@con_images'),
-                                                                    ('spmT_images', 'subject_level_analysis.@spmT_images'),
-                                                                    ('spm_mat_file', 'subject_level_analysis.@spm_mat_file')])
-        """
         return subject_level_analysis
-
 
     def get_subject_level_outputs(self):
         """ Return the names of the files the subject level analysis is supposed to generate. """
 
         # Contrat maps
-        templates = [join(self.directories.output_dir, f'subject_level_analysis',
-            '_subject_id_{subject_id}', f'con_{c}.nii')\
-            for c in self.contrast_list]
+        templates = [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'con_{c}.nii') for c in self.contrast_list]
 
         # SPM.mat file
-        templates += [join(self.directories.output_dir, f'subject_level_analysis',
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
             '_subject_id_{subject_id}', 'SPM.mat')]
 
         # spmT maps
-        templates += [join(self.directories.output_dir, f'subject_level_analysis',
-            '_subject_id_{subject_id}', f'spmT_{contrast_id}.nii')\
-            for contrast_id in self.contrast_list]
+        templates += [join(self.directories.output_dir, 'subject_level_analysis',
+            '_subject_id_{subject_id}', f'spmT_{c}.nii') for c in self.contrast_list]
 
         # Format with subject_ids
         return_list = []
@@ -524,191 +511,294 @@ class PipelineTeamV55J(Pipeline):
 
         return return_list
 
-
-    def get_subset_contrasts(file_list, method, subject_list, participants_file):
+    def get_group_level_analysis(self):
         """
-        Parameters :
-        - file_list : original file list selected by selectfiles node
-        - subject_list : list of subject IDs that are in the wanted group for the analysis
-        - participants_file: str, file containing participants characteristics
-        - method: str, one of "equalRange", "equalIndifference" or "groupComp"
+        Return all workflows for the group level analysis.
 
-        This function return the file list containing only the files belonging to subject in the wanted group.
+        Returns;
+            - a list of nipype.WorkFlow
         """
-        equalIndifference_id = []
-        equalRange_id = []
-        equalIndifference_files = []
-        equalRange_files = []
 
-        with open(participants_file, 'rt') as f:
-                next(f)  # skip the header
+        methods = ['equalRange', 'equalIndifference', 'groupComp']
+        return [self.get_group_level_analysis_sub_workflow(method) for method in methods]
 
-                for line in f:
-                    info = line.strip().split()
-
-                    if info[0][-3:] in subject_list and info[1] == "equalIndifference":
-                        equalIndifference_id.append(info[0][-3:])
-                    elif info[0][-3:] in subject_list and info[1] == "equalRange":
-                        equalRange_id.append(info[0][-3:])
-
-        for file in file_list:
-            sub_id = file.split('/')
-            if sub_id[-2][-3:] in equalIndifference_id:
-                equalIndifference_files.append(file)
-            elif sub_id[-2][-3:] in equalRange_id:
-                equalRange_files.append(file)
-
-        return equalIndifference_id, equalRange_id, equalIndifference_files, equalRange_files
-
-
-    def get_l2_analysis(subject_list, n_sub, contrast_list, method, exp_dir, result_dir, working_dir, output_dir):
+    def get_group_level_analysis_sub_workflow(self, method):
         """
-        Returns the 2nd level of analysis workflow.
+        Return a workflow for the group level analysis.
 
         Parameters:
-            - exp_dir: str, directory where raw data are stored
-            - result_dir: str, directory where results will be stored
-            - working_dir: str, name of the sub-directory for intermediate results
-            - output_dir: str, name of the sub-directory for final results
-            - subject_list: list of str, list of subject for which you want to do the preprocessing
-            - contrast_list: list of str, list of contrasts to analyze
-            - n_sub: float, number of subjects used to do the analysis
-            - method: one of "equalRange", "equalIndifference" or "groupComp"
+            - method: one of 'equalRange', 'equalIndifference' or 'groupComp'
 
         Returns:
-            - l2_analysis: Nipype WorkFlow
+            - group_level_analysis: nipype.WorkFlow
         """
-        # information_source - a function free node to iterate over the list of subject names
-        information_source_groupanalysis = Node(IdentityInterface(fields=['contrast_id', 'subjects'],
-                                                          subjects = subject_list),
-                          name="information_source_groupanalysis")
+        # Compute the number of participants used to do the analysis
+        nb_subjects = len(self.subject_list)
 
-        information_source_groupanalysis.iterables = [('contrast_id', contrast_list)]
+        # Initialize workflow
+        group_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = f'group_level_analysis_{method}_nsub_{nb_subjects}')
 
-        # SelectFiles
-        contrast_file = join(self.directories.output_dir, 'subject_level_analysis', '_subject_id_*', "con_00{contrast_id}.nii")
+        # IDENTITY INTERFACE - iterate over the list of contrasts
+        information_source = Node(
+            IdentityInterface(
+                fields = ['contrast_id']),
+                name = 'information_source')
+        information_source.iterables = [('contrast_id', self.contrast_list)]
 
-        participants_file = join(exp_dir, 'participants.tsv')
+        # SELECT FILES - select contrasts for all subjects
+        templates = {
+            'contrast' : join('subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii')
+            }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.output_dir
+        select_files.inputs.force_list = True
+        group_level_analysis.connect(
+            information_source, 'contrast_id', select_files, 'contrast_id')
 
-        templates = {'contrast' : contrast_file, 'participants' : participants_file}
+        # Function Node get_equal_range_subjects
+        #   Get subjects in the equalRange group and in the subject_list
+        get_equal_range_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_range_subjects'
+        )
+        get_equal_range_subjects.inputs.list_1 = get_group('equalRange')
+        get_equal_range_subjects.inputs.list_2 = self.subject_list
 
-        selectfiles_groupanalysis = Node(SelectFiles(templates, base_directory=result_dir, force_list= True),
-                           name="selectfiles_groupanalysis")
+        # Function Node get_equal_indifference_subjects
+        #   Get subjects in the equalIndifference group and in the subject_list
+        get_equal_indifference_subjects = Node(Function(
+            function = list_intersection,
+            input_names = ['list_1', 'list_2'],
+            output_names = ['out_list']
+            ),
+            name = 'get_equal_indifference_subjects'
+        )
+        get_equal_indifference_subjects.inputs.list_1 = get_group('equalIndifference')
+        get_equal_indifference_subjects.inputs.list_2 = self.subject_list
 
-        # Datasink node : to save important files
-        datasink_groupanalysis = Node(DataSink(base_directory = result_dir, container = output_dir),
-                                      name = 'datasink_groupanalysis')
+        # Create a function to complete the subject ids out from the get_equal_*_subjects nodes
+        #   If not complete, subject id '001' in search patterns
+        #   would match all contrast files with 'con_0001.nii'.
+        complete_subject_ids = lambda l : [f'_subject_id_{a}' for a in l]
 
-        # Node to select subset of contrasts
-        sub_contrasts = Node(Function(input_names = ['file_list', 'method', 'subject_list', 'participants_file'],
-                                     output_names = ['equalIndifference_id', 'equalRange_id', 'equalIndifference_files', 'equalRange_files'],
-                                     function = get_subset_contrasts),
-                            name = 'sub_contrasts')
+        # Function Node elements_in_string
+        #   Get contrast files for required subjects
+        # Note : using a MapNode with elements_in_string requires using clean_list to remove
+        #   None values from the out_list
+        get_contrasts = MapNode(Function(
+            function = elements_in_string,
+            input_names = ['input_str', 'elements'],
+            output_names = ['out_list']
+            ),
+            name = 'get_contrasts', iterfield = 'input_str'
+        )
+        group_level_analysis.connect(select_files, 'contrasts', get_contrasts, 'input_str')
 
-        sub_contrasts.inputs.method = method
+        # ESTIMATE MODEL - (inputs are set below, depending on the method used)
+        estimate_model = Node(EstimateModel(), name = 'estimate_model')
+        estimate_model.inputs.estimation_method = {'Classical':1}
 
-        ## Estimate model
-        estimate_model = Node(EstimateModel(estimation_method={'Classical':1}), name = "estimate_model")
-
-        ## Estimate contrasts
-        estimate_contrast = Node(EstimateContrast(group_contrast=True),
-                                 name = "estimate_contrast")
+        # Estimate contrasts
+        estimate_contrast = Node(EstimateContrast(), name = 'estimate_contrast')
+        estimate_contrast.inputs.group_contrast=True
+        group_level_analysis.connect(
+            estimate_model, 'spm_mat_file', estimate_contrast, 'spm_mat_file')
+        group_level_analysis.connect(
+            estimate_model, 'residual_image', estimate_contrast, 'residual_image')
+        group_level_analysis.connect(
+            estimate_model, 'beta_images', estimate_contrast, 'beta_images')
 
         ## Create thresholded maps
-        threshold = MapNode(Threshold(use_fwe_correction = False, height_threshold = 0.001), name = "threshold", iterfield = ["stat_image", "contrast_index"])
+        threshold = MapNode(Threshold(),
+            name = 'threshold', iterfield = ['stat_image', 'contrast_index'])
+        threshold.inputs.use_fwe_correction = False
+        threshold.inputs.height_threshold = 0.001
+        group_level_analysis.connect(
+            estimate_contrast, 'spm_mat_file', threshold, 'spm_mat_file')
+        group_level_analysis.connect(
+            estimate_contrast, 'spmT_images', threshold, 'stat_image')
 
-        l2_analysis = Workflow(base_dir = join(result_dir, working_dir), name = f"l2_analysis_{method}_nsub_{n_sub}")
-
-        l2_analysis.connect([(information_source_groupanalysis, selectfiles_groupanalysis, [('contrast_id', 'contrast_id')]),
-            (information_source_groupanalysis, sub_contrasts, [('subjects', 'subject_list')]),
-            (selectfiles_groupanalysis, sub_contrasts, [('contrast', 'file_list'), ('participants', 'participants_file')]),
-            (estimate_model, estimate_contrast, [('spm_mat_file', 'spm_mat_file'),
-                ('residual_image', 'residual_image'),
-                ('beta_images', 'beta_images')]),
-            (estimate_contrast, threshold, [('spm_mat_file', 'spm_mat_file'),
-                ('spmT_images', 'stat_image')]),
-            (estimate_model, datasink_groupanalysis, [('mask_image', f"l2_analysis_{method}_nsub_{n_sub}.@mask")]),
-            (estimate_contrast, datasink_groupanalysis, [('spm_mat_file', f"l2_analysis_{method}_nsub_{n_sub}.@spm_mat"),
-                ('spmT_images', f"l2_analysis_{method}_nsub_{n_sub}.@T"),
-                ('con_images', f"l2_analysis_{method}_nsub_{n_sub}.@con")]),
-            (threshold, datasink_groupanalysis, [('thresholded_map', f"l2_analysis_{method}_nsub_{n_sub}.@thresh")])])
-
-        if method=='equalRange' or method=='equalIndifference':
-            contrasts = [('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])]
-            ## Specify design matrix
-            one_sample_t_test_design = Node(OneSampleTTestDesign(), name = "one_sample_t_test_design")
-
-            l2_analysis.connect([(sub_contrasts, one_sample_t_test_design, [(f"{method}_files", 'in_files')]),
-                (one_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])])
+        if method in ('equalRange', 'equalIndifference'):
+            estimate_contrast.inputs.contrasts = [
+                ('Group', 'T', ['mean'], [1]), ('Group', 'T', ['mean'], [-1])
+                ]
 
             threshold.inputs.contrast_index = [1, 2]
             threshold.synchronize = True
 
-        elif method == 'groupComp':
-            contrasts = [('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [1, -1])]
-            # Node for the design matrix
-            two_sample_t_test_design = Node(TwoSampleTTestDesign(), name = 'two_sample_t_test_design')
+            # Specify design matrix
+            one_sample_t_test_design = Node(OneSampleTTestDesign(),
+                name = 'one_sample_t_test_design')
+            group_level_analysis.connect(
+                one_sample_t_test_design, 'spm_mat_file', estimate_model, 'spm_mat_file')
+            group_level_analysis.connect(
+                get_contrasts, ('out_list', clean_list), one_sample_t_test_design, 'in_files')
 
-            l2_analysis.connect([(sub_contrasts, two_sample_t_test_design, [('equalRange_files', "group1_files"),
-                ('equalIndifference_files', 'group2_files')]),
-                (two_sample_t_test_design, estimate_model, [("spm_mat_file", "spm_mat_file")])])
+        if method == 'equalRange':
+            group_level_analysis.connect(
+                get_equal_range_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
+
+        elif method == 'equalIndifference':
+            group_level_analysis.connect(
+                get_equal_indifference_subjects, ('out_list', complete_subject_ids),
+                get_contrasts, 'elements'
+                )
+
+        elif method == 'groupComp':
+            estimate_contrast.inputs.contrasts = [
+                ('Eq range vs Eq indiff in loss', 'T', ['Group_{1}', 'Group_{2}'], [-1, 1])
+                ]
 
             threshold.inputs.contrast_index = [1]
             threshold.synchronize = True
 
-        estimate_contrast.inputs.contrasts = contrasts
 
-        return l2_analysis
+            # Function Node elements_in_string
+            #   Get contrast files for required subjects
+            # Note : using a MapNode with elements_in_string requires using clean_list to remove
+            #   None values from the out_list
+            get_contrasts_2 = MapNode(Function(
+                function = elements_in_string,
+                input_names = ['input_str', 'elements'],
+                output_names = ['out_list']
+                ),
+                name = 'get_contrasts_2', iterfield = 'input_str'
+            )
 
+            # Node for the design matrix
+            two_sample_t_test_design = Node(TwoSampleTTestDesign(),
+                name = 'two_sample_t_test_design')
+            group_level_analysis.connect([
+                (select_files, get_contrasts_2, [('contrasts', 'input_str')]),
+                (get_equal_range_subjects, get_contrasts, [
+                    (('out_list', complete_subject_ids), 'elements')
+                    ]),
+                (get_equal_indifference_subjects, get_contrasts_2, [
+                    (('out_list', complete_subject_ids), 'elements')
+                    ]),
+                (get_contrasts, two_sample_t_test_design, [
+                    (('out_list', clean_list), 'group1_files')
+                    ]),
+                (get_contrasts_2, two_sample_t_test_design, [
+                    (('out_list', clean_list), 'group2_files')
+                    ]),
+                (two_sample_t_test_design, estimate_model, [('spm_mat_file', 'spm_mat_file')])
+                ])
 
-    def reorganize_results(result_dir, output_dir, n_sub, team_ID):
-        """
-        Reorganize the results to analyze them.
+        # Datasink - save important files
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
+        group_level_analysis.connect(estimate_model, 'mask_image',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@mask')
+        group_level_analysis.connect(estimate_contrast, 'spm_mat_file',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@spm_mat')
+        group_level_analysis.connect(estimate_contrast, 'spmT_images',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@T')
+        group_level_analysis.connect(estimate_contrast, 'con_images',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@con')
+        group_level_analysis.connect(threshold, 'thresholded_map',
+            data_sink, f'group_level_analysis_{method}_nsub_{nb_subjects}.@thresh')
 
-        Parameters:
-            - result_dir: str, directory where results will be stored
-            - output_dir: str, name of the sub-directory for final results
-            - n_sub: float, number of subject used for the analysis
-            - team_ID: str, ID of the team to reorganize results
+        return group_level_analysis
 
-        """
-        from os.path import join as join
-        import os
-        import shutil
-        import gzip
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
 
-        h1 = join(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_01')
-        h2 = join(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_01')
-        h3 = join(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_01')
-        h4 = join(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_01')
-        h5 = join(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_02')
-        h6 = join(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_02')
-        h7 = join(result_dir, output_dir, f"l2_analysis_equalIndifference_nsub_{n_sub}", '_contrast_id_02')
-        h8 = join(result_dir, output_dir, f"l2_analysis_equalRange_nsub_{n_sub}", '_contrast_id_02')
-        h9 = join(result_dir, output_dir, f"l2_analysis_groupComp_nsub_{n_sub}", '_contrast_id_02')
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}', '_contrast_id_{contrast_id}',
+            '{file}')
 
-        h = [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
-        repro_unthresh = [join(filename, "spmT_0002.nii") if i in [4, 5] else join(filename,
-                         "spmT_0001.nii") for i, filename in enumerate(h)]
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_groupComp_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}', '{file}'
+            )
 
-        repro_thresh = [join(filename, "_threshold1",
-             "spmT_0002_thr.nii") if i in [4, 5] else join(filename,
-              "_threshold0", "spmT_0001_thr.nii")  for i, filename in enumerate(h)]
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
 
-        if not os.path.isdir(join(result_dir, "NARPS-reproduction")):
-            os.mkdir(join(result_dir, "NARPS-reproduction"))
+        return return_list
 
-        for i, filename in enumerate(repro_unthresh):
-            f_in = filename
-            f_out = join(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_unthresholded.nii")
-            shutil.copyfile(f_in, f_out)
-
-        for i, filename in enumerate(repro_thresh):
-            f_in = filename
-            f_out = join(result_dir, "NARPS-reproduction", f"team_{team_ID}_nsub_{n_sub}_hypo{i+1}_thresholded.nii")
-            shutil.copyfile(f_in, f_out)
-
-        print(f"Results files of team {team_ID} reorganized.")
-
-
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1 - Positive parametric effect of gains
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 2 - Positive parametric effect of gains
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 3 - Positive parametric effect of gains
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 4 - Positive parametric effect of gains
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 5 - Negative parametric effect of losses
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 6 - Negative parametric effect of losses
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 7 - Positive parametric effect of losses
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 8 - Positive parametric effect of losses
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii'),
+            # Hypothesis 9
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
