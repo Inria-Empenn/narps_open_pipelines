@@ -62,20 +62,23 @@ class TestPipelinesTeamV55J:
     @mark.unit_test
     def test_union_mask(temporary_data_dir):
         """ Test the union_mask method
-            For this test, we created the three following files by downsampling output files
-                from preprocessing nodes :
-                - wc1sub-001_T1w-32.nii (grey-matter mask)
-                - wc2sub-001_T1w-32.nii (white matter mask)
-                - wc3sub-001_T1w-32.nii (csf mask)
-            Voxel dimension was multiplied by 32.
+            For this test, we created the three following files by using a small region of interest
+            from the wc* preprocessiong output files :
+                - wc1sub-020_T1w_roi.nii.gz (grey-matter mask)
+                - wc2sub-020_T1w_roi.nii.gz (white matter mask)
+                - wc3sub-020_T1w_roi.nii.gz (csf mask)
+            A region of interest of 10x10x10 voxels was selected from the original files, using:
+            > fslroi wc1sub-020_T1w.nii wc1sub-020_T1w_roi.nii 80 10 78 10 48 10
+            > fslroi wc2sub-020_T1w.nii wc2sub-020_T1w_roi.nii 80 10 78 10 48 10
+            > fslroi wc3sub-020_T1w.nii wc3sub-020_T1w_roi.nii 80 10 78 10 48 10
         """
         # Test files
         wc1_file = join(Configuration()['directories']['test_data'], 'pipelines',
-            'team_V55J', 'wc1sub-001_T1w-32.nii')
+            'team_V55J', 'wc1sub-020_T1w_roi.nii.gz')
         wc2_file = join(Configuration()['directories']['test_data'], 'pipelines',
-            'team_V55J', 'wc2sub-001_T1w-32.nii')
+            'team_V55J', 'wc2sub-020_T1w_roi.nii.gz')
         wc3_file = join(Configuration()['directories']['test_data'], 'pipelines',
-            'team_V55J', 'wc3sub-001_T1w-32.nii')
+            'team_V55J', 'wc3sub-020_T1w_roi.nii.gz')
 
         # Expected results
         reference_file_1 = join(
