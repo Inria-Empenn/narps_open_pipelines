@@ -173,7 +173,7 @@ class PipelineTeam98BT(Pipeline):
             name = 'information_source_runs')
         information_source_runs.iterables = ('run_id', self.run_list)
         preprocessing.connect(
-            information_source_runs, 'subject_id', information_source_subjects, 'subject_id')
+            information_source_subjects, 'subject_id', information_source_runs, 'subject_id')
 
         # SELECT FILES - Select necessary subject files
         templates = {
