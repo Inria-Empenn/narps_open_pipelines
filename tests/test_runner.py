@@ -271,19 +271,12 @@ class TestPipelineRunner:
         with raises(AttributeError):
             runner.start()
 
-        # 2b - test starting a pipeline with wrong workflow type
+        # 3 - test starting a pipeline with wrong workflow type
         runner = PipelineRunner('2T6S')
         runner._pipeline = MockupWrongPipeline2() # hack the runner by setting a test Pipeline
 
         with raises(AttributeError):
             runner.start()
-
-        # 2b - test starting a pipeline with wrong options (fist_level_only + group_level_only)
-        runner = PipelineRunner('2T6S')
-        runner._pipeline = MockupPipeline() # hack the runner by setting a test Pipeline
-
-        with raises(AttributeError):
-            runner.start(True, True)
 
     @staticmethod
     @mark.unit_test
@@ -360,6 +353,37 @@ class TestPipelineRunner:
 
     @staticmethod
     @mark.unit_test
+    def test_get_workflows():
+        """ Test the get_workflows method """
+        runner = PipelineRunner('2T6S')
+        workflow_1 = Workflow(name = 'workflow_1')
+        workflow_2 = Workflow(name = 'workflow_2')
+
+        # Error when passing something that is not a nipype.Workflow
+        with raises(AttributeError):
+            runner.get_workflows(183)
+
+        # Error when passing something that is not a list of nipype.Workflow
+        with raises(AttributeError):
+            runner.get_workflows([workflow_1, 183])
+
+        # Check output when passing a nipype.Workflow
+        test = runner.get_workflows(workflow_1)
+        assert isinstance(test, list)
+        assert test == [workflow_1]
+
+        # Check output when passing a list of nipype.Workflow
+        test = runner.get_workflows([workflow_1, workflow_2])
+        assert isinstance(test, list)
+        assert test == [workflow_1, workflow_2]
+
+        # Check output when passing None
+        test = runner.get_workflows(None)
+        assert isinstance(test, list)
+        assert test == []
+
+    @staticmethod
+    @mark.unit_test
     def test_get_missing_outputs():
         """ Test the get_missing_outputs method """
 
@@ -393,9 +417,18 @@ class TestPipelineRunner:
         Path(runner.pipeline.get_subject_level_outputs()[1]).touch()
 
         # 1e - Check again for missing files
-        missing_files = runner.get_missing_first_level_outputs()
+        missing_files = runner.get_missing_outputs(PipelineRunnerLevel.FIRST)
         assert len(missing_files) == 1
         assert 'run_output.md' in missing_files[0]
+
+        missing_files = runner.get_missing_outputs(PipelineRunnerLevel.RUN)
+        assert len(missing_files) == 1
+        assert 'run_output.md' in missing_files[0]
+
+        missing_files = runner.get_missing_outputs(PipelineRunnerLevel.GROUP)
+        assert len(missing_files) == 2
+        assert 'group_1_output_a.md' in missing_files[0]
+        assert 'group_1_output_b.md' in missing_files[1]
 
         # 2a - Instantiate a pipeline
         runner = PipelineRunner('2T6S')

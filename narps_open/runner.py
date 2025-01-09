@@ -140,31 +140,30 @@ all elements must be of type nipype.Workflow')
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
         print(f'\tThe following levels will be run: {level}')
 
-        # Generate workflow list & check for missing outputs
+        # Generate workflow list & level list
         workflows = []
-        output_checks = []
+        levels = []
         if bool(level & PipelineRunnerLevel.PREPROCESSING):
             workflows += self.get_workflows(self._pipeline.get_preprocessing())
-            output_checks += self.get_missing_outputs(PipelineRunnerLevel.PREPROCESSING)
+            levels.append(PipelineRunnerLevel.PREPROCESSING)
         if bool(level & PipelineRunnerLevel.RUN):
             workflows += self.get_workflows(self._pipeline.get_run_level_analysis())
-            output_checks += self.get_missing_outputs(PipelineRunnerLevel.RUN)
+            levels.append(PipelineRunnerLevel.RUN)
         if bool(level & PipelineRunnerLevel.SUBJECT):
             workflows += self.get_workflows(self._pipeline.get_subject_level_analysis())
-            output_checks += self.get_missing_outputs(PipelineRunnerLevel.SUBJECT)
+            levels.append(PipelineRunnerLevel.SUBJECT)
         if bool(level & PipelineRunnerLevel.GROUP):
             workflows += self.get_workflows(self._pipeline.get_group_level_analysis())
-            output_checks += self.get_missing_outputs(PipelineRunnerLevel.GROUP)
+            levels.append(PipelineRunnerLevel.GROUP)
 
         # Launch workflows
-        for workflow, output_check in zip(workflows, output_checks):
+        for workflow, current_level in zip(workflows, levels):
             nb_procs = Configuration()['runner']['nb_procs']
             if nb_procs > 1:
                 workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
-                output_check()
             else:
                 workflow.run()
-                output_check()
+            self.get_missing_outputs(current_level)
 
     def get_missing_outputs(self, level: PipelineRunnerLevel = PipelineRunnerLevel.ALL):
         """
