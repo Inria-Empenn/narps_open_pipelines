@@ -10,13 +10,14 @@ Usage:
     pytest -q test_team_V55J.py
     pytest -q test_team_V55J.py -k <selected_test>
 """
-from os import remove
-from os.path import join, exists
+from os.path import join, exists, abspath
+from shutil import rmtree
 from filecmp import cmp
 
 from pytest import helpers, mark
-from nipype import Workflow
+from nipype import Workflow, Node
 from nipype.interfaces.base import Bunch
+from nipype.interfaces.utility import Function
 
 from narps_open.utils.configuration import Configuration
 from narps_open.pipelines.team_V55J import PipelineTeamV55J
@@ -68,9 +69,9 @@ class TestPipelinesTeamV55J:
                 - wc2sub-020_T1w_roi.nii.gz (white matter mask)
                 - wc3sub-020_T1w_roi.nii.gz (csf mask)
             A region of interest of 10x10x10 voxels was selected from the original files, using:
-            > fslroi wc1sub-020_T1w.nii wc1sub-020_T1w_roi.nii 80 10 78 10 48 10
-            > fslroi wc2sub-020_T1w.nii wc2sub-020_T1w_roi.nii 80 10 78 10 48 10
-            > fslroi wc3sub-020_T1w.nii wc3sub-020_T1w_roi.nii 80 10 78 10 48 10
+            > fslroi wc1sub-020_T1w.nii wc1sub-020_T1w_roi.nii 94 10 85 10 19 10
+            > fslroi wc2sub-020_T1w.nii wc2sub-020_T1w_roi.nii 94 10 85 10 19 10
+            > fslroi wc3sub-020_T1w.nii wc3sub-020_T1w_roi.nii 94 10 85 10 19 10
         """
         # Test files
         wc1_file = join(Configuration()['directories']['test_data'], 'pipelines',
@@ -92,7 +93,7 @@ class TestPipelinesTeamV55J:
         union_mask = Node(Function(
             input_names = ['masks', 'threshold'],
             output_names = ['mask'],
-            function = PipelineTeamUK24.get_average_values),
+            function = PipelineTeamV55J.union_mask),
             name = 'union_mask')
         union_mask.base_dir = temporary_data_dir
         union_mask.inputs.masks = [wc1_file, wc2_file, wc3_file]
@@ -104,8 +105,9 @@ class TestPipelinesTeamV55J:
             temporary_data_dir, union_mask.name, 'mask.nii'))
         assert exists(created_mask)
         assert cmp(reference_file_1, created_mask)
-        # Remove file
-        remove(created_mask)
+
+        # Remove experiment dir
+        rmtree(temporary_data_dir, ignore_errors=True)
 
         # New test
         union_mask.inputs.masks = [wc3_file, wc1_file, wc2_file]

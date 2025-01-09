@@ -192,9 +192,9 @@ class PipelineTeamV55J(Pipeline):
         # DATASINK - Store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name='data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
-        preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocess.@smoothing')
+        preprocessing.connect(smoothing, 'smoothed_files', data_sink, 'preprocessing.@smoothing')
         preprocessing.connect(
-            segmentation, 'normalized_class_images', data_sink, 'preprocess.@seg_maps_norm')
+            segmentation, 'normalized_class_images', data_sink, 'preprocessing.@seg_maps_norm')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
@@ -277,8 +277,6 @@ class PipelineTeamV55J(Pipeline):
 
         Parameters :
         - event_file: str, events file for a run of a subject
-        - short_run_id: str, an identifier for the run corresponding to the event_file
-            must be '1' for the first run, '2' for the second run, etc.
 
         Returns :
         - a Bunch corresponding to the event file
@@ -379,10 +377,10 @@ class PipelineTeamV55J(Pipeline):
 
         # Output file
         mask_union = mask_union.astype('float64')
-        mask_path = abspath('mask.nii')
-        nib_save(Nifti1Image(mask_union, mask_affine), mask_path)
+        binarized_mask_union = abspath('mask.nii')
+        nib_save(Nifti1Image(mask_union, mask_affine), binarized_mask_union)
 
-        return mask_path
+        return binarized_mask_union
 
     def get_subject_level_analysis(self):
         """ Return a nipype.WorkFlow describing the subject level analysis part of the pipeline """
@@ -406,12 +404,12 @@ class PipelineTeamV55J(Pipeline):
             'event': join(self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv'
             ),
-            'wc1': join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', 'wc1sub-{subject_id}_T1w.nii'),
-            'wc2': join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', 'wc2sub-{subject_id}_T1w.nii'),
-            'wc3': join(self.directories.output_dir, 'preprocessing',
-                '_subject_id_{subject_id}', 'wc3sub-{subject_id}_T1w.nii')
+            'wc1': join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
+                '_run_id_*', 'wc1sub-{subject_id}_T1w.nii'),
+            'wc2': join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
+                '_run_id_*', 'wc2sub-{subject_id}_T1w.nii'),
+            'wc3': join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}',
+                '_run_id_*', 'wc3sub-{subject_id}_T1w.nii')
         }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.dataset_dir
@@ -420,10 +418,9 @@ class PipelineTeamV55J(Pipeline):
         # FUNCTION node get_subject_information - get subject specific condition information
         subject_information = MapNode(Function(
                 function = self.get_subject_information,
-                input_names = ['event_file', 'short_run_id'],
+                input_names = ['event_file'],
                 output_names = ['subject_info']),
-            name = 'subject_information', iterfield = ['event_file', 'short_run_id'])
-        subject_information.inputs.short_run_id = list(range(1, len(self.run_list) + 1))
+            name = 'subject_information', iterfield = ['event_file'])
         subject_level_analysis.connect(select_files, 'event', subject_information, 'event_file')
 
         # SPECIFY MODEL - generates SPM-specific Model
@@ -445,9 +442,9 @@ class PipelineTeamV55J(Pipeline):
 
         # FUNCTION node compute_mask - Compute mask from wc1, wc2, wc3 files
         mask_union = Node(Function(
-            function = self.union_mask),
+            function = self.union_mask,
             input_names = ['masks', 'threshold'],
-            output_names = ['mask'],
+            output_names = ['binarized_mask_union']),
             name = 'mask_union')
         mask_union.inputs.threshold = 0.3
         subject_level_analysis.connect(merge_masks, 'out', mask_union, 'masks')
@@ -458,7 +455,8 @@ class PipelineTeamV55J(Pipeline):
         model_design.inputs.timing_units = 'secs'
         model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
         model_design.inputs.model_serial_correlations = 'AR(1)'
-        subject_level_analysis.connect(mask_union, 'mask', model_design, 'mask_image')
+        subject_level_analysis.connect(
+            mask_union, 'binarized_mask_union', model_design, 'mask_image')
         subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
 
         # ESTIMATE MODEL - estimate the parameters of the model
