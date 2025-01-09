@@ -131,7 +131,7 @@ narps_open_status --json
 > For further information about these command line tools, read the corresponding documentation pages.
 > * `narps_open_runner` : [docs/running.md](docs/running.md)
 > * `narps_open_tester` : [docs/testing.md](docs/testing.md#command-line-tool)
-> * `narps_open_correlations` : [docs/correlation.md](docs/correlation.md#command-line-tool)
+> * `narps_open_correlations` : [docs/testing.md](docs/testing.md#command-line-tool)
 > * `narps_description` : [docs/description.md](docs/description.md)
 > * `narps_results` : [docs/data.md](docs/data.md#results-from-narps-teams)
 > * `narps_open_status` : [docs/status.md](docs/status.md)
