@@ -378,20 +378,17 @@ class PipelineTeam98BT(Pipeline):
             'run_id': self.run_list,
         }
         parameter_sets = product(*parameters.values())
-        output_dir = join(
-            self.directories.output_dir, 'preprocessing',
-            '_subject_id_{subject_id}', '_run_id_{run_id}'
-        )
+        output_dir = join(self.directories.output_dir, 'preprocessing', '_subject_id_{subject_id}')
+        run_output_dir = join(output_dir, '_run_id_{run_id}')
         templates = [
             # Realignment parameters
-            join(output_dir, 'rp_asub-{subject_id}_task-MGT_run-{run_id}_bold.txt'),
+            join(run_output_dir, 'rp_asub-{subject_id}_task-MGT_run-{run_id}_bold.txt'),
             # Realigned unwarped files
-            join(output_dir, 'uasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            join(run_output_dir, 'uasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
             # Normalized_files
-            join(output_dir, 'swuasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
+            join(run_output_dir, 'swuasub-{subject_id}_task-MGT_run-{run_id}_bold.nii'),
             # Normalized class images
-            join(output_dir, 'wc2sub-{subject_id}_T1w.nii'),
-            join(output_dir, 'wc1sub-{subject_id}_T1w.nii')
+            join(output_dir, 'wc2sub-{subject_id}_T1w.nii')
         ]
         return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
             for parameter_values in parameter_sets for template in templates]
