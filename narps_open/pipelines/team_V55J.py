@@ -136,7 +136,7 @@ class PipelineTeamV55J(Pipeline):
 
         # COREGISTER - Coregistration from anat to realigned func mean image
         # We kept the default values for all other parameters.
-        # TODO apply to files ... but reverse tansform ?
+        # TODO apply to files ... but reverse transform ?
         coregistration = Node(Coregister(), name = 'coregistration')
         coregistration.inputs.jobtype = 'estimate'
         coregistration.inputs.write_mask = False

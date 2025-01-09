@@ -108,7 +108,7 @@ class PipelineRunner():
             - input_workflow: either a list of nipype.Workflow or a nipype.Workflow
 
         Returns:
-            - a list of nipype.Worflow:
+            - a list of nipype.Workflow:
                 - [input_workflow] if input_workflow is a nipype.Workflow
                 - input_workflow if input_workflow is a list of nipype.Workflow
             - an empty list if input_workflow is None
