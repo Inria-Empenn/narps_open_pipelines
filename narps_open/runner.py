@@ -138,37 +138,41 @@ all elements must be of type nipype.Workflow')
         # Disclaimer
         print('Starting pipeline for team: '+
             f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
+        print(f'\tThe following levels will be run: {level}')
 
-        # Generate workflow list
+        # Generate workflow list & check for missing outputs
         workflows = []
+        output_checks = []
         if bool(level & PipelineRunnerLevel.PREPROCESSING):
             workflows += self.get_workflows(self._pipeline.get_preprocessing())
+            output_checks += self.get_missing_outputs(PipelineRunnerLevel.PREPROCESSING)
         if bool(level & PipelineRunnerLevel.RUN):
             workflows += self.get_workflows(self._pipeline.get_run_level_analysis())
+            output_checks += self.get_missing_outputs(PipelineRunnerLevel.RUN)
         if bool(level & PipelineRunnerLevel.SUBJECT):
             workflows += self.get_workflows(self._pipeline.get_subject_level_analysis())
+            output_checks += self.get_missing_outputs(PipelineRunnerLevel.SUBJECT)
         if bool(level & PipelineRunnerLevel.GROUP):
             workflows += self.get_workflows(self._pipeline.get_group_level_analysis())
+            output_checks += self.get_missing_outputs(PipelineRunnerLevel.GROUP)
 
         # Launch workflows
-        for workflow in workflows:
+        for workflow, output_check in zip(workflows, output_checks):
             nb_procs = Configuration()['runner']['nb_procs']
             if nb_procs > 1:
                 workflow.run('MultiProc', plugin_args = {'n_procs': nb_procs})
+                output_check()
             else:
                 workflow.run()
+                output_check()
 
     def get_missing_outputs(self, level: PipelineRunnerLevel = PipelineRunnerLevel.ALL):
         """
         Return the list of missing files after computations of the level(s)
-        
+
         Arguments:
             - level: PipelineRunnerLevel, indicates for which workflow(s) to search output files
         """
-        # Disclaimer
-        print('Missing files for team: '+
-            f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
-
         # Generate files list
         files = []
         if bool(level & PipelineRunnerLevel.PREPROCESSING):
@@ -180,8 +184,17 @@ all elements must be of type nipype.Workflow')
         if bool(level & PipelineRunnerLevel.GROUP):
             files += self._pipeline.get_group_level_outputs()
 
+        # Get non existing files
+        missing = [f for f in files if not isfile(f)]
+
+        # Disclaimer
+        if missing:
+            print('There are missing files for team: '+
+                f'{self.team_id}, with {len(self.subjects)} subjects: {self.subjects}')
+            print(missing)
+
         # Return non existing files
-        return [f for f in files if not isfile(f)]
+        return missing
 
 def main():
     """ Entry-point for the command line tool narps_open_runner """
@@ -197,17 +210,10 @@ def main():
         help='the number of subjects to be selected')
     subjects.add_argument('-r', '--rsubjects', type=str,
         help='the number of subjects to be selected randomly')
-    levels = parser.add_argument_group('Pipeline runner levels')
-    levels.add_argument('-al', '--all_levels', action='store_true', default=False,
-        help='run all levels analyses')
-    levels.add_argument('-gl', '--group_level', action='store_true', default=False,
-        help='run the group level analysis')
-    levels.add_argument('-sl', '--subject_level', action='store_true', default=False,
-        help='run the subject level analysis')
-    levels.add_argument('-rl', '--run_level', action='store_true', default=False,
-        help='run the run level analysis')
-    levels.add_argument('-pl', '--preprocessing', action='store_true', default=False,
-        help='run the preprocessing')
+    parser.add_argument('-l', '--levels', nargs='+', type=str, action='extend',
+        choices=['p', 'r', 's', 'g'],
+        help='the analysis levels to run (p=preprocessing, r=run, s=subject, g=group)'
+        )
     parser.add_argument('-c', '--check', action='store_true', required=False,
         help='check pipeline outputs (runner is not launched)')
     parser.add_argument('-e', '--exclusions', action='store_true', required=False,
@@ -242,29 +248,25 @@ def main():
             runner.nb_subjects = int(arguments.nsubjects)
 
     # Build pipeline runner level
-    if arguments.all_levels:
+    if arguments.levels is None:
         level = PipelineRunnerLevel.ALL
-    if arguments.preprocessing_level:
-        level &= PipelineRunnerLevel.PREPROCESSING
-    if arguments.run_level:
-        level &= PipelineRunnerLevel.RUN
-    if arguments.subject_level:
-        level &= PipelineRunnerLevel.SUBJECT
-    if arguments.group_level:
-        level &= PipelineRunnerLevel.GROUP
+    else:
+        level = PipelineRunnerLevel.NONE
+        if 'p' in arguments.levels:
+            level |= PipelineRunnerLevel.PREPROCESSING
+        if 'r' in arguments.levels:
+            level |= PipelineRunnerLevel.RUN
+        if 's' in arguments.levels:
+            level |= PipelineRunnerLevel.SUBJECT
+        if 'g' in arguments.levels:
+            level |= PipelineRunnerLevel.GROUP
 
     # Check data
     if arguments.check:
-        print('Missing files for team', arguments.team, 'after running',
-            len(runner.pipeline.subject_list), 'subjects:')
-        if not arguments.group:
-            print('First level:', runner.get_missing_first_level_outputs())
-        if not arguments.first:
-            print('Group level:', runner.get_missing_group_level_outputs())
+        runner.get_missing_outputs(level)
 
     # Start the runner
     else:
-
         runner.start(level)
 
 if __name__ == '__main__':
