@@ -552,7 +552,7 @@ class PipelineTeam98BT(Pipeline):
                 'preprocessing', '_subject_id_{subject_id}', '_run_id_*',
                 'rp_asub-{subject_id}_task-MGT_run-*_bold.txt'),
             'wc2' : join(self.directories.output_dir,
-                'preprocessing', '_subject_id_{subject_id}', '_run_id_01',
+                'preprocessing', '_subject_id_{subject_id}',
                 'wc2sub-{subject_id}_T1w.nii'),
             'events' : join(self.directories.dataset_dir,
                 'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-*_events.tsv')
