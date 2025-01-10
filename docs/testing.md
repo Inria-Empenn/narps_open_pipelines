@@ -43,7 +43,7 @@ Tests can be launched manually or while using CI (Continuous Integration).
 * To run a tests with a given mark 'mark' : `pytest -m 'mark'`
 * To create code coverage data : `coverage run -m pytest ./tests` then `coverage report` to see the code coverage result or `coverage xml` to output a .xml report file
 
-## Command line tool
+## Command line tools
 
 We created the simple command line tool `narps_open_tester` to help testing the outcome of one pipeline.
 
@@ -57,6 +57,14 @@ narps_open_tester -t 08MQ
 This will run the pipeline for the requested team -here 08MQ- on subsets of subjects (20, 40, 60, 80 and 108). For each subset, the outputs of the pipeline (statistical maps for each of the 9 hypotheses) will be compared with original results from the team using a Pearson correlation computation. At each step, if one of the correlation score is below the threshold (see `correlation_thresholds` defined in `narps_open/utils/configuration/testing_config.toml`), the tests ends. Otherwise, it proceeds to the next step, i.e.: the next subset of subjects.
 
 Once finished, a text file report (`test_pipeline-*.txt`) is created, containing all the computed correlation values.
+
+The command line tool `narps_open_correlations` is also available and can be used as follows:
+
+```bash
+narps_open_correlations -t 2T6S -n 60
+```
+
+to get the correlation values for the results of a previously executed pipeline (here team 2T6S, with 60 subjects).
 
 ## Configuration files for testing
 
