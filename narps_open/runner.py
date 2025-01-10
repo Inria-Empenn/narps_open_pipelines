@@ -143,18 +143,27 @@ all elements must be of type nipype.Workflow')
         # Generate workflow list & level list
         workflows = []
         levels = []
+
         if bool(level & PipelineRunnerLevel.PREPROCESSING):
-            workflows += self.get_workflows(self._pipeline.get_preprocessing())
-            levels.append(PipelineRunnerLevel.PREPROCESSING)
+            new_workflows = self.get_workflows(self._pipeline.get_preprocessing())
+            workflows += new_workflows
+            levels += [PipelineRunnerLevel.NONE for w in new_workflows[:-1]]
+            levels += [PipelineRunnerLevel.PREPROCESSING for w in new_workflows[-1:]]
         if bool(level & PipelineRunnerLevel.RUN):
-            workflows += self.get_workflows(self._pipeline.get_run_level_analysis())
-            levels.append(PipelineRunnerLevel.RUN)
+            new_workflows = self.get_workflows(self._pipeline.get_run_level_analysis())
+            workflows += new_workflows
+            levels += [PipelineRunnerLevel.NONE for w in new_workflows[:-1]]
+            levels += [PipelineRunnerLevel.RUN for w in new_workflows[-1:]]
         if bool(level & PipelineRunnerLevel.SUBJECT):
-            workflows += self.get_workflows(self._pipeline.get_subject_level_analysis())
-            levels.append(PipelineRunnerLevel.SUBJECT)
+            new_workflows = self.get_workflows(self._pipeline.get_subject_level_analysis())
+            workflows += new_workflows
+            levels += [PipelineRunnerLevel.NONE for w in new_workflows[:-1]]
+            levels += [PipelineRunnerLevel.SUBJECT for w in new_workflows[-1:]]
         if bool(level & PipelineRunnerLevel.GROUP):
-            workflows += self.get_workflows(self._pipeline.get_group_level_analysis())
-            levels.append(PipelineRunnerLevel.GROUP)
+            new_workflows = self.get_workflows(self._pipeline.get_group_level_analysis())
+            workflows += new_workflows
+            levels += [PipelineRunnerLevel.NONE for w in new_workflows[:-1]]
+            levels += [PipelineRunnerLevel.GROUP for w in new_workflows[-1:]]
 
         # Launch workflows
         for workflow, current_level in zip(workflows, levels):

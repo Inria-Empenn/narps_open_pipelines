@@ -390,7 +390,6 @@ class PipelineTeam0H5E(Pipeline):
 
         # SPECIFY MODEL - generates SPM-specific Model
         specify_model = Node(SpecifySPMModel(), name = 'specify_model')
-        specify_model.inputs.concatenate_runs = True
         specify_model.inputs.input_units = 'secs'
         specify_model.inputs.output_units = 'secs'
         specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
@@ -448,11 +447,14 @@ class PipelineTeam0H5E(Pipeline):
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
         subject_level_analysis.connect(
-            contrast_estimate, 'con_images', data_sink, 'subject_level_analysis.@con_images')
+            contrast_estimate, 'con_images',
+            data_sink, f'subject_level_analysis_{model}.@con_images')
         subject_level_analysis.connect(
-            contrast_estimate, 'spmT_images', data_sink, 'subject_level_analysis.@spmT_images')
+            contrast_estimate, 'spmT_images',
+            data_sink, f'subject_level_analysis_{model}.@spmT_images')
         subject_level_analysis.connect(
-            contrast_estimate, 'spm_mat_file', data_sink, 'subject_level_analysis.@spm_mat_file')
+            contrast_estimate, 'spm_mat_file',
+            data_sink, f'subject_level_analysis_{model}.@spm_mat_file')
 
         return subject_level_analysis
 
@@ -519,7 +521,7 @@ class PipelineTeam0H5E(Pipeline):
 
         # SELECT FILES - select contrasts for all subjects
         templates = {
-            'contrast' : join('subject_level_analysis_{model}', '_subject_id_*', 'con_*.nii')
+            'contrasts' : join('subject_level_analysis_{model}', '_subject_id_*', 'con_*.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.output_dir
