@@ -415,7 +415,7 @@ class PipelineTeam3C6G(Pipeline):
 
         # SELECT FILES - select contrasts for all subjects
         templates = {
-            'contrast' : join('subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii')
+            'contrasts' : join('subject_level_analysis', '_subject_id_*', 'con_{contrast_id}.nii')
             }
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.output_dir
