@@ -289,6 +289,8 @@ class PipelineTeam9T8E(Pipeline):
             contrast_estimate, 'con_images', data_sink, f'{subject_level.name}.@con_images')
         subject_level.connect(
             contrast_estimate, 'spm_mat_file', data_sink, f'{subject_level.name}.@spm_mat_file')
+        subject_level.connect(
+            contrast_estimate, 'spmT_images', data_sink, f'{subject_level.name}.@spmT_images')
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
