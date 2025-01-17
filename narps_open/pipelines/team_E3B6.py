@@ -1,130 +1,132 @@
 #!/usr/bin/python
 # coding: utf-8
 
-"""
-This template can be use to reproduce a pipeline using SPM as main software.
-
-- Replace all occurrences of 48CD by the actual id of the team.
-- All lines starting with [INFO], are meant to help you during the reproduction, these can be removed
-eventually.
-- Also remove lines starting with [TODO], once you did what they suggested.
-"""
-
-# [TODO] Only import modules you use further in te code, remove others from the import section
-
+""" Write the work of NARPS team E3B6 using Nipype """
 from os.path import join
+from itertools import product
 
-# [INFO] The import of base objects from Nipype, to create Workflows
-from nipype import Node, Workflow, MapNode  # , JoinNode, MapNode
-from nipype.algorithms.misc import Gunzip
-from nipype.interfaces.spm import Smooth
-
-# [INFO] a list of interfaces used to manpulate data
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype import Workflow, Node, MapNode, JoinNode
+from nipype.interfaces.utility import IdentityInterface, Function, Rename, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
-# from nipype.algorithms.misc import Gunzip
+from nipype.algorithms.misc import Gunzip
+from nipype.interfaces.spm import (
+    Coregister, OneSampleTTestDesign,
+    EstimateModel, EstimateContrast, Level1Design,
+    TwoSampleTTestDesign, RealignUnwarp, NewSegment, SliceTiming,
+    DARTELNorm2MNI, FieldMap, Threshold
+    )
+from nipype.interfaces.spm.base import Info as SPMInfo
+from nipype.interfaces.fsl import ExtractROI
+from nipype.algorithms.modelgen import SpecifySPMModel
+from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
-# [INFO] a list of SPM-specific interfaces
-# from nipype.algorithms.modelgen import SpecifySPMModel
-# from nipype.interfaces.spm import (
-#    Smooth,
-#    Level1Design, OneSampleTTestDesign, TwoSampleTTestDesign,
-#    EstimateModel, EstimateContrast, Threshold
-#    )
-
-# [INFO] In order to inherit from Pipeline
 from narps_open.pipelines import Pipeline
-
+from narps_open.data.task import TaskInformation
+from narps_open.data.participants import get_group
+from narps_open.core.common import (
+    remove_parent_directory, list_intersection, elements_in_string, clean_list
+    )
+from narps_open.utils.configuration import Configuration
 
 class PipelineTeamE3B6(Pipeline):
-    """ A class that defines the pipeline of team E3B6
-    """
+    """ A class that defines the pipeline of team E3B6 """
 
     def __init__(self):
         super().__init__()
         self._fwhm = 6.0
+        self.team_id = 'E3B6'
+
+        # Define contrasts
+        self.contrast_list = ['0001', '0002', '0003']
+        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
+        self.subject_level_contrasts = [
+            ('trial', 'T', conditions, [1, 0, 0]),
+            ('effect_of_gain', 'T', conditions, [0, 1, 0]),
+            ('effect_of_loss', 'T', conditions, [0, 0, 1])
+        ]
 
     def get_preprocessing(self):
         """
-        Preprocessing order : fMRIprep + smoothing
-        Smoothing :  SPM 12 ; v7487 fixed Gaussian kernel in MNI volume FWHM = 6 mm
+        Create the preprocessing workflow.
+            Preprocessing order : fMRIprep + smoothing
+            Smoothing :  SPM 12 ; v7487 fixed Gaussian kernel in MNI volume FWHM = 6 mm
         """
+        # Create preprocessing workflow
+        preprocessing =  Workflow(base_dir = self.directories.working_dir, name = 'preprocessing')
 
-        # IdentityInterface node - allows to iterate over subjects and runs
-        info_source = Node(
-            IdentityInterface(fields=['subject_id', 'run_id']),
-            name='info_source'
-        )
+        # IDENTITY INTERFACE - To iterate on subjects
+        info_source = Node(IdentityInterface(fields=['subject_id', 'run_id']), name='info_source')
         info_source.iterables = [
             ('subject_id', self.subject_list),
             ('run_id', self.run_list),
-        ]
+            ]
 
-        # Templates to select files node
+        # SELECT FILES - Select necessary files
         file_templates = {
-            'func': join(
-                'derivatives', 'fmriprep', 'sub-{subject_id}', 'func', 'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_preproc'
+            'func': join('derivatives', 'fmriprep', 'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-{run_}_bold_space-MNI152NLin2009cAsym_preproc'
             )
         }
+        select_files = Node(SelectFiles(file_templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.dataset_dir
+        preprocessing.connect(info_source, 'subject_id', select_files, 'subject_id')
+        preprocessing.connect(info_source, 'run_id', select_files, 'run_id')
 
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(file_templates, base_directory=self.directories.dataset_dir),
-            name='select_files'
-        )
+        # GUNZIP - gunzip files because SPM do not use .nii.gz files
+        gunzip_func = MapNode(Gunzip(), name='gunzip_func', iterfield=['in_file'])
+        preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
+
+        # SMOOTH - smoothing node
+        smoothing = Node(Smooth(), name = 'smooth')
+        smoothing.inputs.fwhm = self.fwhm
+        preprocessing.connect(gunzip_func, 'out_file', smoothing, 'in_files')
 
         # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory=self.directories.output_dir),
-            name='data_sink',
-        )
-
-        # Gunzip - gunzip files because SPM do not use .nii.gz files
-        gunzip_func = MapNode(Gunzip(), name='gunzip_func', iterfield=['in_file'])
-
-        # Smooth - smoothing node
-        smooth = Node(Smooth(fwhm=self.fwhm),
-                      name='smooth')
-
-        preprocessing = Workflow(
-            base_dir=self.directories.working_dir,
-            name='preprocessing'
-        )
-
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
         preprocessing.connect(
-            [
-                (
-                    info_source,
-                    select_files,
-                    [('subject_id', 'subject_id'), ('run_id', 'run_id')],
-                ),
-                (
-                    select_files,
-                    gunzip_func,
-                    [('func', 'in_file')]),
-                (
-                    gunzip_func,
-                    smooth,
-                    [('out_file', 'in_files')]),
-                (
-                    smooth,
-                    data_sink,
-                    [('smoothed_files', 'preprocessing.@output_image')],
-                ),
-            ]
-        )
+            smoothing, 'smoothed_files', data_sink, 'preprocessing.@output_image')
+
+        # Remove large files, if requested
+        if Configuration()['pipelines']['remove_unused_data']:
+
+            # Function Nodes remove_files - Remove sizeable func files once they aren't needed
+            remove_func_after_datasink = MapNode(Function(
+                function = remove_parent_directory,
+                input_names = ['_', 'file_name'],
+                output_names = []
+                ), name = 'remove_func_after_datasink', iterfield = 'file_name')
+            preprocessing.connect([
+                (gunzip_func, remove_func_after_datasink, [('out_file', 'file_name')]),
+                (data_sink, remove_func_after_datasink, [('out_file', '_')])
+            ])
 
         return preprocessing
 
+    def get_preprocessing_outputs(self):
+        """ Return the names of the files the preprocessing is supposed to generate. """
+
+        # Outputs from preprocessing (smoothed func files)
+        parameters = {
+            'subject_id': self.subject_list,
+            'run_id': self.run_list,
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(self.directories.output_dir, 'preprocessing',
+            '_run_id_{run_id}_subject_id_{subject_id}',
+            'ssub-{subject_id}_task-MGT_run-{run_id}_bold.nii')
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
     def get_run_level_analysis(self):
         """
-        No run level analysis has been done by team Q6O0
-        There was no run level analysis for the pipelines using SPM
+        No run level analysis has been done by team E3B6
+        (No run level analysis for the pipelines using SPM
         """
         return None
 
-    # [INFO] This function is used in the subject level analysis pipelines using SPM
-    # [TODO] Adapt this example to your specific pipeline
     def get_subject_infos(event_files: list, runs: list):
         """
         The model contained 6 regressors per run:
@@ -226,150 +228,49 @@ class PipelineTeamE3B6(Pipeline):
 
         return subject_info
 
-    # [INFO] This function creates the contrasts that will be analyzed in the first level analysis
-    # [TODO] Adapt this example to your specific pipeline
-    def get_contrasts(self):
-        """
-        Create the list of tuples that represents contrasts.
-        Each contrast is in the form :
-        (Name,Stat,[list of condition names],[weights on those conditions])
-
-        Returns:
-            - contrasts: list of tuples, list of contrasts to analyze
-        """
-        # List of condition names
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
-
-        # Create contrasts
-        trial = ('trial', 'T', conditions, [1, 0, 0])
-        effect_gain = ('effect_of_gain', 'T', conditions, [0, 1, 0])
-        effect_loss = ('effect_of_loss', 'T', conditions, [0, 0, 1])
-
-        # Contrast list
-        return [trial, effect_gain, effect_loss]
-
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
 
-        # [INFO] The following part stays the same for all pipelines
+        # Init workflow
+        subject_level_analysis = Workflow(
+            base_dir = self.directories.working_dir,
+            name = 'subject_level_analysis'
+            )
 
-        # Infosource Node - To iterate on subjects
-        info_source = Node(
-            IdentityInterface(
-                fields = ['subject_id', 'dataset_dir', 'results_dir', 'working_dir', 'run_list'],
-                dataset_dir = self.directories.dataset_dir,
-                results_dir = self.directories.results_dir,
-                working_dir = self.directories.working_dir,
-                run_list = self.run_list
-            ),
-            name='info_source',
-        )
+        # IDENTITY INTERFACE - To iterate on subjects
+        info_source = Node(IdentityInterface(fields = ['subject_id']), name = 'info_source')
         info_source.iterables = [('subject_id', self.subject_list)]
 
-        # Templates to select files node
-        # [TODO] Change the name of the files depending on the filenames of results of preprocessing
+        # SELECT FILES - to select necessary files
         templates = {
-            'func': join(
-                self.directories.results_dir,
-                'preprocess',
-                '_run_id_*_subject_id_{subject_id}',
-                'complete_filename_{subject_id}_complete_filename.nii',
+            'func': join('preprocessing', '_run_id_*_subject_id_{subject_id}',
+                'ssub-{subject_id}_task-MGT_run-*_bold.nii',
             ),
             'event': join(
-                self.directories.dataset_dir,
-                'sub-{subject_id}',
-                'func',
+                self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
             )
         }
+        select_files = Node(SelectFiles(templates), name = 'select_files')
+        select_files.inputs.base_directory = self.directories.results_dir
+        subject_level_analysis.connect(info_source, 'subject_id', select_files, 'subject_id')
 
-        # SelectFiles node - to select necessary files
-        select_files = Node(
-            SelectFiles(templates, base_directory = self.directories.dataset_dir),
-            name = 'select_files'
-        )
-
-        # DataSink Node - store the wanted results in the wanted repository
-        data_sink = Node(
-            DataSink(base_directory = self.directories.output_dir),
-            name = 'data_sink'
-        )
-
-        # [INFO] This is the node executing the get_subject_infos_spm function
-        # Subject Infos node - get subject specific condition information
-        subject_infos = Node(
-            Function(
-                input_names = ['event_files', 'runs'],
-                output_names = ['subject_info'],
+        # FUNCTION node get_subject_information - get subject specific condition information
+        subject_infos = Node(Function(
                 function = self.get_subject_infos,
+                input_names = ['event_files', 'runs'],
+                output_names = ['subject_info']
             ),
             name = 'subject_infos',
         )
         subject_infos.inputs.runs = self.run_list
+        subject_level_analysis.connect(select_files, 'events', subject_information, 'event_file')
 
-        # [INFO] This is the node executing the get_contrasts function
-        # Contrasts node - to get contrasts
-        contrasts = Node(
-            Function(
-                input_names = ['subject_id'],
-                output_names = ['contrasts'],
-                function = self.get_contrasts,
-            ),
-            name = 'contrasts',
-        )
+        # DATASINK - store the wanted results in the wanted repository
+        data_sink = Node(DataSink(), name = 'data_sink')
+        data_sink.inputs.base_directory = self.directories.output_dir
 
-        # [INFO] The following part has to be modified with nodes of the pipeline
-
-        # [TODO] For each node, replace 'node_name' by an explicit name, and use it for both:
-        #   - the name of the variable in which you store the Node object
-        #   - the 'name' attribute of the Node
-        # [TODO] The node_function refers to a NiPype interface that you must import
-        # at the beginning of the file.
-        node_name = Node(
-            node_function,
-            name = 'node_name'
-        )
-
-        # [TODO] Add other nodes with the different steps of the pipeline
-
-        # [INFO] The following part defines the nipype workflow and the connections between nodes
-
-        subject_level_analysis = Workflow(
-            base_dir = self.directories.working_dir,
-            name = 'subject_level_analysis'
-        )
-        # [TODO] Add the connections the workflow needs
-        # [INFO] Input and output names can be found on NiPype documentation
-        subject_level_analysis.connect([
-            (
-                info_source,
-                select_files,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                info_source,
-                contrasts,
-                [('subject_id', 'subject_id')]
-            ),
-            (
-                select_files,
-                subject_infos,
-                [('event', 'event_files')]
-            ),
-            (
-                select_files,
-                node_name,
-                [('func', 'node_input_name')]
-            ),
-            (
-                node_name, data_sink,
-                [('node_output_name', 'preprocess.@sym_link')]
-            ),
-        ])
-
-        # [INFO] Here we simply return the created workflow
         return subject_level_analysis
-        return None
 
     # [INFO] This function returns the list of ids and files of each group of participants
     # to do analyses for both groups, and one between the two groups.
