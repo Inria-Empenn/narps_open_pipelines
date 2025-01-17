@@ -20,10 +20,15 @@ Tips for people using M1 MacBooks: `git-annex` is not yet available for M1 MacBo
 
 The `datalad install` command only downloaded the metadata associated with the dataset ; to download the actual files run the following command:
 
+> [!WARNING]
+> The following command lines will download **all** the data, which represents around :
+>  * 3 GB for `data/results/`
+>  * 880 GB for `data/original/`
+
 ```bash
 # To get all the data
 cd data/
-datalad get ./*
+datalad get --recursive ./*
 ```
 
 If you only want parts of the data, replace the `./*` by the paths to the desired files.

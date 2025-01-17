@@ -734,7 +734,7 @@ class PipelineTeamX19V(Pipeline):
             'contrast_id': self.contrast_list,
             'method': ['equalRange', 'equalIndifference'],
             'file': [
-                '_cluster0/zstat1_pval.nii.gz ',
+                '_cluster0/zstat1_pval.nii.gz',
                 '_cluster0/zstat1_threshold.nii.gz',
                 '_cluster1/zstat2_pval.nii.gz',
                 '_cluster1/zstat2_threshold.nii.gz',
@@ -758,7 +758,7 @@ class PipelineTeamX19V(Pipeline):
         parameters = {
             'contrast_id': self.contrast_list,
             'file': [
-                '_cluster0/zstat1_pval.nii.gz ',
+                '_cluster0/zstat1_pval.nii.gz',
                 '_cluster0/zstat1_threshold.nii.gz',
                 'tstat1.nii.gz',
                 'zstat1.nii.gz'
