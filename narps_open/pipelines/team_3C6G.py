@@ -164,7 +164,7 @@ class PipelineTeam3C6G(Pipeline):
                     output_names = []
                 ),
                 joinsource = 'select_run_files',
-                joinfield = 'run_id',
+                joinfield = '_',
                 name = 'remove_anat_after_datasink'
             )
             preprocessing.connect([
