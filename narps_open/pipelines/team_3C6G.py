@@ -157,11 +157,16 @@ class PipelineTeam3C6G(Pipeline):
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
             # Function Nodes remove_files - Remove sizeable anat files once they aren't needed
-            remove_anat_after_datasink = Node(Function(
-                function = remove_parent_directory,
-                input_names = ['_', 'file_name'],
-                output_names = []
-                ), name = 'remove_anat_after_datasink')
+            remove_anat_after_datasink = JoinNode(
+                Function(
+                    function = remove_parent_directory,
+                    input_names = ['_', 'file_name'],
+                    output_names = []
+                ),
+                joinsource = 'select_run_files',
+                joinfield = 'run_id',
+                name = 'remove_anat_after_datasink'
+            )
             preprocessing.connect([
                 (gunzip_anat, remove_anat_after_datasink, [('out_file', 'file_name')]),
                 (data_sink, remove_anat_after_datasink, [('out_file', '_')])
