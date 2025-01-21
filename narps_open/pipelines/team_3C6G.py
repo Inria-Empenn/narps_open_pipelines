@@ -6,7 +6,7 @@
 from os.path import join
 from itertools import product
 
-from nipype import Node, Workflow, MapNode
+from nipype import Node, Workflow, MapNode, JoinNode
 from nipype.interfaces.utility import IdentityInterface, Function, Merge
 from nipype.interfaces.io import SelectFiles, DataSink
 from nipype.algorithms.misc import Gunzip
@@ -253,14 +253,14 @@ class PipelineTeam3C6G(Pipeline):
 
         # Create bunch
         return Bunch(
-            conditions = [f'trial'],
+            conditions = ['trial'],
             onsets = [onsets],
             durations = [durations],
             amplitudes = None,
             tmod = None,
             pmod = [
                 Bunch(
-                    name = [f'gain', f'loss'],
+                    name = ['gain', 'loss'],
                     poly = [1, 1],
                     param = [weights_gain, weights_loss]
                 )
