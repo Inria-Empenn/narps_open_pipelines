@@ -156,8 +156,18 @@ class PipelineTeam3C6G(Pipeline):
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
+
+            # This node helps gathering data from the workflow iterations over runs
+            join_removable_files = JoinNode(IdentityInterface(
+                fields = ['file_name', '_']),
+                joinsource = 'remove_node',
+                joinfield = '_',
+                name = 'join_removable_files')
+            preprocessing.connect(gunzip_anat, 'out_file', join_removable_files, 'file_name')
+            preprocessing.connect(data_sink, 'out_file', join_removable_files, '_')
+
             # Function Nodes remove_files - Remove sizeable anat files once they aren't needed
-            remove_anat_after_datasink = JoinNode(
+            remove_anat_after_datasink = MapNode(
                 Function(
                     function = remove_parent_directory,
                     input_names = ['_', 'file_name'],
@@ -167,10 +177,9 @@ class PipelineTeam3C6G(Pipeline):
                 joinfield = '_',
                 name = 'remove_anat_after_datasink'
             )
-            preprocessing.connect([
-                (gunzip_anat, remove_anat_after_datasink, [('out_file', 'file_name')]),
-                (data_sink, remove_anat_after_datasink, [('out_file', '_')])
-            ])
+            preprocessing.connect(join_removable_files, '_', remove_anat_after_datasink, '_')
+            preprocessing.connect(
+                join_removable_files, 'file_name', remove_anat_after_datasink, 'file_name')
 
             # Merge Node - Merge file names to be removed after datasink node is performed
             merge_removable_func_files = Node(Merge(6), name = 'merge_removable_func_files')
