@@ -37,9 +37,9 @@ class PipelineTeamE3B6(Pipeline):
         self.team_id = 'E3B6'
 
         # Define contrasts
-        self.contrast_list = ['0001', '0002', '0003']
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1']
-        self.subject_level_contrasts = [
+        self.contrast_list = ['0001', '0002', '0003'] #TODO
+        conditions = ['trial', 'trialxgain^1', 'trialxloss^1'] #TODO
+        self.subject_level_contrasts = [ #TODO
             ('trial', 'T', conditions, [1, 0, 0]),
             ('effect_of_gain', 'T', conditions, [0, 1, 0]),
             ('effect_of_loss', 'T', conditions, [0, 0, 1])
@@ -77,8 +77,10 @@ class PipelineTeamE3B6(Pipeline):
         preprocessing.connect(select_files, 'func', gunzip_func, 'in_file')
 
         # SMOOTH - smoothing node
+        # https://github.com/Remi-Gau/NARPS_CPPL/blob/v0.0.2/subfun/smooth_batch.m
         smoothing = Node(Smooth(), name = 'smooth')
         smoothing.inputs.fwhm = self.fwhm
+        smoothing.inputs.data_type = 0
         preprocessing.connect(gunzip_func, 'out_file', smoothing, 'in_files')
 
         # DataSink Node - store the wanted results in the wanted repository
@@ -89,6 +91,9 @@ class PipelineTeamE3B6(Pipeline):
 
         # Remove large files, if requested
         if Configuration()['pipelines']['remove_unused_data']:
+            # Merge Node - Merge func file names to be removed after datasink node is performed
+            merge_removable_func_files = Node(Merge(2), name = 'merge_removable_func_files')
+            merge_removable_func_files.inputs.ravel_inputs = True
 
             # Function Nodes remove_files - Remove sizeable func files once they aren't needed
             remove_func_after_datasink = MapNode(Function(
@@ -97,7 +102,9 @@ class PipelineTeamE3B6(Pipeline):
                 output_names = []
                 ), name = 'remove_func_after_datasink', iterfield = 'file_name')
             preprocessing.connect([
-                (gunzip_func, remove_func_after_datasink, [('out_file', 'file_name')]),
+                (gunzip_func, merge_removable_func_files, [('out_file', 'in1')]),
+                (smoothing, merge_removable_func_files, [('smoothed_files', 'in2')]),
+                (merge_removable_func_files, remove_func_after_datasink, [('out', 'file_name')]),
                 (data_sink, remove_func_after_datasink, [('out_file', '_')])
             ])
 
@@ -121,10 +128,7 @@ class PipelineTeamE3B6(Pipeline):
         return return_list
 
     def get_run_level_analysis(self):
-        """
-        No run level analysis has been done by team E3B6
-        (No run level analysis for the pipelines using SPM
-        """
+        """ No run level analysis was done by team E3B6 (as for all the pipelines using SPM) """
         return None
 
     def get_subject_infos(event_files: list, runs: list):
@@ -229,7 +233,9 @@ class PipelineTeamE3B6(Pipeline):
         return subject_info
 
     def get_subject_level_analysis(self):
-        """ Return a Nipype workflow describing the subject level analysis part of the pipeline """
+        """ Return a Nipype workflow describing the subject level analysis part of the pipeline
+            https://github.com/Remi-Gau/NARPS_CPPL/blob/v0.0.2/step_3_run_first_level.m
+        """
 
         # Init workflow
         subject_level_analysis = Workflow(
@@ -246,6 +252,7 @@ class PipelineTeamE3B6(Pipeline):
             'func': join('preprocessing', '_run_id_*_subject_id_{subject_id}',
                 'ssub-{subject_id}_task-MGT_run-*_bold.nii',
             ),
+            'mask': join(), #TODO
             'event': join(
                 self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
@@ -254,6 +261,13 @@ class PipelineTeamE3B6(Pipeline):
         select_files = Node(SelectFiles(templates), name = 'select_files')
         select_files.inputs.base_directory = self.directories.results_dir
         subject_level_analysis.connect(info_source, 'subject_id', select_files, 'subject_id')
+
+        # Compute explicit mask
+        """
+        The spatial region modeled included the voxels of the brain mask from fMRIprep: it was used as an explicit mask in the subject-level GLM in SPM. We computed the union of the brainmasks computed for each functional run by fMRIprep.
+        The SPM threshold to define the implicit mask was set to 0 (instead of the 0.8 default).
+        https://github.com/Remi-Gau/NARPS_CPPL/blob/v0.0.2/subfun/create_mask.m
+        """
 
         # FUNCTION node get_subject_information - get subject specific condition information
         subject_infos = Node(Function(
@@ -266,9 +280,51 @@ class PipelineTeamE3B6(Pipeline):
         subject_infos.inputs.runs = self.run_list
         subject_level_analysis.connect(select_files, 'events', subject_information, 'event_file')
 
+        # SPECIFY MODEL - Generates SPM-specific Model
+        specify_model = Node(SpecifySPMModel(), name = 'specify_model')
+        specify_model.inputs.concatenate_runs = False
+        specify_model.inputs.input_units = 'secs'
+        specify_model.inputs.output_units = 'secs'
+        specify_model.inputs.time_repetition = TaskInformation()['RepetitionTime']
+        specify_model.inputs.high_pass_filter_cutoff = 128
+        subject_level_analysis.connect(select_files, 'func', specify_model, 'functional_runs')
+        subject_level_analysis.connect(
+            subject_information, 'subject_info', specify_model, 'subject_info')
+        subject_level_analysis.connect( , , specify_model, 'realignment_parameters')
+
+        # LEVEL1DESIGN - Generates an SPM design matrix
+        model_design = Node(Level1Design(), name = 'model_design')
+        model_design.inputs.bases = {'hrf': {'derivs': [1, 1]}}
+        model_design.inputs.timing_units = 'secs'
+        model_design.inputs.interscan_interval = TaskInformation()['RepetitionTime']
+        model_design.inputs.volterra_expansion_order = 2
+        subject_level_analysis.connect(specify_model, 'session_info', model_design, 'session_info')
+
+        # ESTIMATE MODEL - estimate the parameters of the model
+        model_estimate = Node(EstimateModel(), name = 'model_estimate')
+        model_estimate.inputs.estimation_method = {'Classical': 1}
+        subject_level_analysis.connect(
+            model_design, 'spm_mat_file', model_estimate, 'spm_mat_file')
+
+        # ESTIMATE CONTRAST - estimates contrasts
+        contrast_estimate = Node(EstimateContrast(), name = 'contrast_estimate')
+        contrast_estimate.inputs.contrasts = self.subject_level_contrasts
+        subject_level_analysis.connect(
+            model_estimate, 'spm_mat_file', contrast_estimate, 'spm_mat_file')
+        subject_level_analysis.connect(
+            model_estimate, 'beta_images', contrast_estimate, 'beta_images')
+        subject_level_analysis.connect(
+            model_estimate, 'residual_image', contrast_estimate,'residual_image')
+
         # DATASINK - store the wanted results in the wanted repository
         data_sink = Node(DataSink(), name = 'data_sink')
         data_sink.inputs.base_directory = self.directories.output_dir
+        subject_level_analysis.connect(
+            contrast_estimate, 'con_images', data_sink, 'subject_level_analysis.@con_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spmT_images', data_sink, 'subject_level_analysis.@spmT_images')
+        subject_level_analysis.connect(
+            contrast_estimate, 'spm_mat_file', data_sink, 'subject_level_analysis.@spm_mat_file')
 
         return subject_level_analysis
 
@@ -321,6 +377,7 @@ class PipelineTeamE3B6(Pipeline):
     def get_group_level_analysis(self):
         """
         Return all workflows for the group level analysis.
+        https://github.com/Remi-Gau/NARPS_CPPL/blob/v0.0.2/step_4_run_second_level.m
 
         Returns;
             - a list of nipype.WorkFlow
@@ -339,6 +396,13 @@ class PipelineTeamE3B6(Pipeline):
         Returns:
             - group_level_analysis: nipype.WorkFlow
         """
+
+        # Clusternig used https://github.com/spisakt/pTFCE/releases/tag/v0.1.3
+
+
+
+
+
         # [INFO] The following part stays the same for all preprocessing pipelines
 
         # Infosource node - iterate over the list of contrasts generated
