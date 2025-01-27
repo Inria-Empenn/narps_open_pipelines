@@ -173,8 +173,7 @@ class PipelineTeam3C6G(Pipeline):
                     input_names = ['_', 'file_name'],
                     output_names = []
                 ),
-                joinsource = 'select_run_files',
-                joinfield = '_',
+                iterfield = ['file_name'],
                 name = 'remove_anat_after_datasink'
             )
             preprocessing.connect(join_removable_files, '_', remove_anat_after_datasink, '_')
