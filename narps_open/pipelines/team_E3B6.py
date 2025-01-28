@@ -37,12 +37,12 @@ class PipelineTeamE3B6(Pipeline):
         self.team_id = 'E3B6'
 
         # Define contrasts
-        self.contrast_list = ['0001', '0002', '0003'] #TODO
-        conditions = ['trial', 'trialxgain^1', 'trialxloss^1'] #TODO
-        self.subject_level_contrasts = [ #TODO
-            ('trial', 'T', conditions, [1, 0, 0]),
-            ('effect_of_gain', 'T', conditions, [0, 1, 0]),
-            ('effect_of_loss', 'T', conditions, [0, 0, 1])
+        self.contrast_list = ['0001', '0002', '0003']
+        conditions = ['trialxparam_gain^1', 'trialxparam_loss^1']
+        self.subject_level_contrasts = [
+            ('positive_effect_of_gain', 'T', conditions, [0, 1, 0]),
+            ('negative_effect_of_loss', 'T', conditions, [0, 0, -1]),
+            ('positive_effect_of_loss', 'T', conditions, [0, 0, 1])
         ]
 
     def get_preprocessing(self):
@@ -131,106 +131,115 @@ class PipelineTeamE3B6(Pipeline):
         """ No run level analysis was done by team E3B6 (as for all the pipelines using SPM) """
         return None
 
-    def get_subject_infos(event_files: list, runs: list):
+    def get_nuisance_regressors():
         """
-        The model contained 6 regressors per run:
+        Nuisance regressors: as specified above included white matter signal, CSF signal, framewise displacement, and censoring regressors
+        """
+        return
 
-        - One predictor with onset at the start of the trial and duration of 4s.
+    def get_subject_infos(event_file: str, short_run_id: str):
+        """
+        We used an approach similar to Tom et al 2007.
+        All trials were modeled using a single condition (with a duration of 4 secs)
+        and three additional parametric regressors were included :
+            a) param_loss: a regressor modulated by the loss vallue associated to that trial
+            b) param_gain: regressor modulated by the gain vallue associated to that trial
+            c) the Euclidean distance of the gain/loss combination from the indifference line
+                (i.e. assuming lambda=2 and a linear value function).
 
-        - Two parametric modulators (one for gains, one for losses)
-          were added to the trial onset predictor.
-          The two parametric modulators were orthogonalized w.r.t. the main predictor,
-          but were not orthogonalized w.r.t. one another.
+        All loss/gain/EV values were mean-centered in a runwise fashion before being used
+        to modulate the trial regressor.
 
-        - Two predictors modelling the decision output,
-          one for accepting the gamble and one for rejecting it
-          (merging strong and weak decisions).
+        Button presses were modelled as a separate condition of no interest:
+        they were modelled as delta functions (duration = 0) with onsets defined by the trial onset + reaction time relative to that trial.
+        They were then convolved with the HRF (see below).
 
-        The onset was defined as the beginning of the trial + RT
-        and the duration was set to 0 (stick function).
-        - One constant term for each run was included (SPM12 default design).
+        Trials with no reponse or very short reponses (< 500 ms) were modelled separately in another condition of no interest.
 
-        Create Bunchs for specifySPMModel.
+        The HRF was modelled using SPM's canonical HRF function.
+
+        Drift regressors were the DCT basis included in the GLM (SPM default 128 secs high-pass filter)
+
+        Orthogonalization: the SPM automatic orthogonalization of parametric regressors was disabled.
+        In other words the gain, loss and expected value modualted regressors were not orthogonalized with respect to the unmodulated regressors
+        (as we were not interested in the activations due to this regressors per se).
+
+        Create Bunch for specifySPMModel.
 
         Parameters :
-        - event_files: list of events files (one per run) for the subject
-        - runs: list of runs to use
+        - event_file: str, event files for the run
+        - short_run_id: str, shorten version of the run id
 
         Returns :
-        - subject_info : list of Bunch for 1st level analysis.
+        Bunch for 1st level analysis
         """
+        from numpy import mean
         from nipype.interfaces.base import Bunch
 
-        condition_names = ['gamble_trial', 'nointerest_trial']
-        onset = {}
-        duration = {}
-        weights_gain = {}
-        weights_loss = {}
-        weights_ev = {}
-        onset_button = {}
-        duration_button = {}
+        # Parameters and regressors for the main trial condition
+        onsets = []
+        durations = []
+        param_loss = []
+        param_gain = []
+        expected_value = []
 
-        # Loop over number of runs
-        for run_id in range(len(runs)):
+        # Parameters for the button presses condition
+        onsets_button = []
+        durations_button = []
 
-            # Create dictionary items with empty lists
-            onset.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            duration.update({s + '_run' + str(run_id + 1): [] for s in condition_names})
-            weights_gain.update({'gain_run' + str(run_id + 1): []})
-            weights_loss.update({'loss_run' + str(run_id + 1): []})
+        # Parameters for the no response condition
+        onsets_no_response = []
+        durations_no_response = []
 
-            with open(event_files[run_id], 'rt') as event_file:
-                next(event_file)  # skip the header
+        # Read events file
+        with open(event_file, 'rt') as file:
+            next(file)  # skip the header
 
-                for line in event_file:
-                    info = line.strip().split()
+            for line in file:
+                info = line.strip().split()
 
-                    for condition in condition_names:
-                        val = condition + '_run' + str(run_id + 1)  # trial_run1 or accepting_run1
-                        val_gain = 'gain_run' + str(run_id + 1)  # gain_run1
-                        val_loss = 'loss_run' + str(run_id + 1)  # loss_run1
-                        if condition == 'trial':
-                            onset[val].append(float(info[0]))  # onsets for trial_run1
-                            duration[val].append(float(4))
-                            weights_gain[val_gain].append(float(info[2]))
-                            weights_loss[val_loss].append(float(info[3]))
-                        elif condition == 'accepting' and 'accept' in info[5]:
-                            onset[val].append(float(info[0]) + float(info[4]))
-                            duration[val].append(float(0))
-                        elif condition == 'rejecting' and 'reject' in info[5]:
-                            onset[val].append(float(info[0]) + float(info[4]))
-                            duration[val].append(float(0))
+                if float(info[4]) < 0.5 or 'NoResp' in info[5]:
+                    # No response condition
+                    onsets_no_response.append(float(info[0]) + float(info[4]))
+                    durations_no_response.append(0.0) # TODO : duration not specified
+                else:
+                    # Button presses condition
+                    onsets_button.append(float(info[0]) + float(info[4]))
+                    durations_button.append(0.0)
 
-        # Bunching is done per run, i.e. trial_run1, trial_run2, etc.
-        # But names must not have '_run1' etc because we concatenate runs
-        subject_info = []
-        for run_id in range(len(runs)):
-            conditions = [s + '_run' + str(run_id + 1) for s in condition_names]
-            gain = 'gain_run' + str(run_id + 1)
-            loss = 'loss_run' + str(run_id + 1)
+                    # Main trial
+                    onsets.append(float(info[0]))
+                    durations.append(4.0)
+                    param_gain.append(float(info[2]))
+                    param_loss.append(float(info[3]))
+                    # Compute expected value
+                    # see https://github.com/Remi-Gau/NARPS_CPPL/blob/1835647390f94625b5de2470b7a975b8e2454a92/step_3_run_first_level.m#L107
+                    expected_value.append(abs(0.5 * float(info[2]) - float(info[3])) / 1.25**.5)
 
-            subject_info.insert(
-                run_id,
+        # Mean center regressors
+        param_gain = list(param_gain - mean(param_gain))
+        param_loss = list(param_loss - mean(param_loss))
+        expected_value = list(expected_value - mean(expected_value))
+
+        # Return data formatted as a Bunch
+        return Bunch(
+            conditions = ['trial', 'button_press', 'no_response'],
+            onsets = [onsets, onsets_button, onsets_no_response],
+            durations = [durations, durations_button, durations_no_response],
+            amplitudes = None,
+            tmod = None,
+            pmod = [
                 Bunch(
-                    conditions=condition_names,
-                    onsets=[onset[c] for c in conditions],
-                    durations=[duration[c] for c in conditions],
-                    amplitudes=None,
-                    tmod=None,
-                    pmod=[
-                        Bunch(
-                            name=['gain', 'loss'],
-                            poly=[1, 1],
-                            param=[weights_gain[gain], weights_loss[loss]],
-                        ),
-                        None,
-                    ],
-                    regressor_names=None,
-                    regressors=None,
+                    name = ['param_loss', 'param_gain', 'expected_value'],
+                    poly = [1, 1, 1],
+                    param = [param_loss, param_gain, expected_value],
                 ),
+                None,
+                None
+            ],
+            regressor_names = None,
+            regressors = None
             )
-
-        return subject_info
 
     def get_subject_level_analysis(self):
         """ Return a Nipype workflow describing the subject level analysis part of the pipeline
@@ -252,7 +261,9 @@ class PipelineTeamE3B6(Pipeline):
             'func': join('preprocessing', '_run_id_*_subject_id_{subject_id}',
                 'ssub-{subject_id}_task-MGT_run-*_bold.nii',
             ),
-            'mask': join(), #TODO
+            'mask': join(self.directories.dataset_dir, 'derivatives', 'fmriprep',
+                'sub-{subject_id}', 'func',
+                'sub-{subject_id}_task-MGT_run-*_bold_space-MNI152NLin2009cAsym_brainmask.nii.gz'),
             'event': join(
                 self.directories.dataset_dir, 'sub-{subject_id}', 'func',
                 'sub-{subject_id}_task-MGT_run-*_events.tsv',
@@ -512,3 +523,104 @@ class PipelineTeamE3B6(Pipeline):
 
         # [INFO] Here we simply return the created workflow
         return group_level_analysis
+
+
+    def get_group_level_outputs(self):
+        """ Return all names for the files the group level analysis is supposed to generate. """
+
+        # Handle equalRange and equalIndifference
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['equalRange', 'equalIndifference'],
+            'file': [
+                'con_0001.nii', 'con_0002.nii', 'mask.nii', 'SPM.mat',
+                'spmT_0001.nii', 'spmT_0002.nii',
+                join('_threshold0', 'spmT_0001_thr.nii'), join('_threshold1', 'spmT_0002_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list = [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        # Handle groupComp
+        parameters = {
+            'contrast_id': self.contrast_list,
+            'method': ['groupComp'],
+            'file': [
+                'con_0001.nii', 'mask.nii', 'SPM.mat', 'spmT_0001.nii',
+                join('_threshold0', 'spmT_0001_thr.nii')
+                ],
+            'nb_subjects' : [str(len(self.subject_list))]
+        }
+        parameter_sets = product(*parameters.values())
+        template = join(
+            self.directories.output_dir,
+            'group_level_analysis_{method}_nsub_{nb_subjects}',
+            '_contrast_id_{contrast_id}',
+            '{file}'
+            )
+
+        return_list += [template.format(**dict(zip(parameters.keys(), parameter_values)))\
+            for parameter_values in parameter_sets]
+
+        return return_list
+
+    def get_hypotheses_outputs(self):
+        """ Return all hypotheses output file names. """
+        nb_sub = len(self.subject_list)
+        files = [
+            # Hypothesis 1
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 2
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 3
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 4
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0001', 'spmT_0001.nii'),
+            # Hypothesis 5
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold0', 'spmT_0002_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 6
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', '_threshold1', 'spmT_0002_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0002', 'spmT_0002.nii'),
+            # Hypothesis 7
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalIndifference_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 8
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold1', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_equalRange_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii'),
+            # Hypothesis 9
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', '_threshold0', 'spmT_0001_thr.nii'),
+            join(f'group_level_analysis_groupComp_nsub_{nb_sub}',
+                '_contrast_id_0003', 'spmT_0001.nii')
+        ]
+        return [join(self.directories.output_dir, f) for f in files]
