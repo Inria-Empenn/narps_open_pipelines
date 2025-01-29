@@ -160,8 +160,8 @@ class PipelineTeam3C6G(Pipeline):
             # This node helps gathering data from the workflow iterations over runs
             join_removable_files = JoinNode(IdentityInterface(
                 fields = ['file_name', '_']),
-                joinsource = 'remove_node',
-                joinfield = '_',
+                joinsource = 'data_sink',
+                joinfield = 'out_file',
                 name = 'join_removable_files')
             preprocessing.connect(gunzip_anat, 'out_file', join_removable_files, 'file_name')
             preprocessing.connect(data_sink, 'out_file', join_removable_files, '_')
