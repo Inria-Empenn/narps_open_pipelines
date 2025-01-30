@@ -147,8 +147,8 @@ class PipelineTeam0I4U(Pipeline):
         segmentation = Node(NewSegment(), name = 'segmentation')
         segmentation.inputs.write_deformation_fields = [False, True]
         segmentation.inputs.tissues = [
-            [(spm_tissues_file, 1), 2, (True, False), (True, False)], # Grey matter
-            [(spm_tissues_file, 2), 2, (True, False), (True, False)], # White matter
+            [(spm_tissues_file, 1), 1, (True, False), (True, False)], # Grey matter
+            [(spm_tissues_file, 2), 1, (True, False), (True, False)], # White matter
             [(spm_tissues_file, 3), 2, (True, False), (True, False)], # CSF
             [(spm_tissues_file, 4), 3, (True, False), (True, False)], # Bone
             [(spm_tissues_file, 5), 4, (True, False), (True, False)], # Soft tissue
