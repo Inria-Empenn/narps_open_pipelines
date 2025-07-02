@@ -11,7 +11,9 @@ Usage:
     pytest -q test_image.py -k <selected_test>
 """
 
-from os.path import abspath, join
+from os.path import abspath, join, basename, exists
+from filecmp import cmp
+
 from numpy import isclose
 
 from pytest import mark
@@ -46,3 +48,40 @@ class TestCoreImage:
 
         # Check voxel sizes
         assert isclose(outputs.voxel_dimensions, [8.0, 8.0, 9.6]).all()
+
+    @staticmethod
+    @mark.unit_test
+    def test_get_image_timepoint(temporary_data_dir):
+        """ Test the get_image_timepoint function """
+
+        # Path to the test image
+        test_file_path = abspath(join(
+            Configuration()['directories']['test_data'],
+            'core',
+            'image',
+            'test_timepoint_input.nii.gz'))
+
+        # Create a Nipype Node using get_image_timepoint
+        test_get_image_timepoint = Node(Function(
+            function = im.get_image_timepoint,
+            input_names = ['in_file', 'time_point'],
+            output_names = ['out_file']
+            ), name = 'test_get_image_timepoint')
+        test_get_image_timepoint.inputs.in_file = test_file_path
+        test_get_image_timepoint.inputs.time_point = 10
+        test_get_image_timepoint.base_dir = temporary_data_dir
+        outputs = test_get_image_timepoint.run().outputs
+
+        # Check output file name
+        assert basename(outputs.out_file) == 'test_timepoint_input_timepoint-10.nii'
+
+        # Check if file exists
+        assert exists(outputs.out_file)
+
+        # Compare with expected
+        test_file_path = abspath(join(
+            Configuration()['directories']['test_data'],
+            'core',
+            'image',
+            'test_timepoint_output.nii'))
+        assert cmp(outputs.out_file, test_file_path)
