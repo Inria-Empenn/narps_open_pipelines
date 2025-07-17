@@ -21,7 +21,13 @@ def main():
         help = 'the team ID', choices = get_implemented_pipelines())
     parser.add_argument('-n', '--nsubjects', type = int, required = True,
         help='the number of subjects to be selected')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
+
+    # Init configuration
+    if arguments.config:
+        Configuration('custom').config_file = arguments.config
 
     # Initialize pipeline
     runner = PipelineRunner(arguments.team)

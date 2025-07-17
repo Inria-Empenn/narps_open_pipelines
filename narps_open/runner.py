@@ -209,8 +209,6 @@ def main():
 
     # Parse arguments
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
-    parser.add_argument('--config', type=str, required=False,
-        help='custom configuration file to be used')
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID', choices=get_implemented_pipelines())
     subjects = parser.add_mutually_exclusive_group(required=True)
@@ -228,6 +226,8 @@ def main():
         help='check pipeline outputs (runner is not launched)')
     parser.add_argument('-e', '--exclusions', action='store_true', required=False,
         help='run the analyses without the excluded subjects')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
 
     # Check arguments
