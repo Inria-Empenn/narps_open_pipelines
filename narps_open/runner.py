@@ -209,6 +209,8 @@ def main():
 
     # Parse arguments
     parser = ArgumentParser(description='Run the pipelines from NARPS.')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID', choices=get_implemented_pipelines())
     subjects = parser.add_mutually_exclusive_group(required=True)
@@ -232,6 +234,10 @@ def main():
     if arguments.exclusions and not arguments.nsubjects:
         print('Argument -e/--exclusions only works with -n/--nsubjects')
         return
+
+    # Init configuration
+    if arguments.config:
+        Configuration('custom').config_file = arguments.config
 
     # Initialize a PipelineRunner
     runner = PipelineRunner(team_id = arguments.team)
