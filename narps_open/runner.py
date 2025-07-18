@@ -226,12 +226,18 @@ def main():
         help='check pipeline outputs (runner is not launched)')
     parser.add_argument('-e', '--exclusions', action='store_true', required=False,
         help='run the analyses without the excluded subjects')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
 
     # Check arguments
     if arguments.exclusions and not arguments.nsubjects:
         print('Argument -e/--exclusions only works with -n/--nsubjects')
         return
+
+    # Init configuration
+    if arguments.config:
+        Configuration('custom').config_file = arguments.config
 
     # Initialize a PipelineRunner
     runner = PipelineRunner(team_id = arguments.team)

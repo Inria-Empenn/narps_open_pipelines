@@ -28,6 +28,7 @@ narps_description -h
 #                         the sub dictionary of team description
 #  --json                output team description as JSON
 #  --md                  output team description as Markdown
+#  --config CONFIG       custom configuration file to be used
 
 narps_description -t 2T6S --json
 # {

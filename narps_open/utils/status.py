@@ -197,8 +197,15 @@ def main():
     formats = parser.add_mutually_exclusive_group(required = False)
     formats.add_argument('--json', action='store_true', help='output the report as JSON')
     formats.add_argument('--md', action='store_true', help='output the report as Markdown')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
 
+    # Init configuration
+    if arguments.config:
+        Configuration('custom').config_file = arguments.config
+
+    # Generate report
     report = PipelineStatusReport()
     report.generate()
 

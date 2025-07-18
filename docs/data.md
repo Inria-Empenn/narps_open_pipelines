@@ -88,6 +88,7 @@ narps_results -h
                             a list of team IDs
       -a, --all             download results from all teams
       -r, --rectify         rectify the results
+      --config CONFIG       custom configuration file to be used
 
 # Either download all collections
 narps_results -a

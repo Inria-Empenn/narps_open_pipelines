@@ -19,8 +19,15 @@ def main():
     group.add_argument('-a', '--all', action='store_true', help='download results from all teams')
     parser.add_argument('-r', '--rectify', action='store_true', default = False, required = False,
         help='rectify the results')
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
 
+    # Init configuration
+    if arguments.config:
+        Configuration('custom').config_file = arguments.config
+
+    # Start collecting result data
     factory = ResultsCollectionFactory()
 
     if arguments.all:

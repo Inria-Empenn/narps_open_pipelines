@@ -59,6 +59,7 @@ narps_open_status -h
 #   -h, --help  show this help message and exit
 #   --json      output the report as JSON
 #   --md        output the report as Markdown
+#   --config CONFIG  custom configuration file to be used
 
 narps_open_status --json
 # {
