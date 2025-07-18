@@ -28,7 +28,7 @@ def get_image_timepoint(in_file: str, time_point: int):
     """
     Extract the 3D volume at a given time point from a 4D Nifti image.
     Create a Nifti file containing the 3D volume.
-    Return the filename of the created 3D ouput file.
+    Return the filename of the created 3D output file.
 
     Arguments:
         in_file: str, string that represent an absolute path to a Nifti 4D image.
