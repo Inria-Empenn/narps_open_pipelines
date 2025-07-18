@@ -13,6 +13,7 @@ Usage:
 
 from os.path import abspath, join, basename, exists
 from filecmp import cmp
+from shutil import copyfile
 
 from numpy import isclose
 
@@ -51,8 +52,8 @@ class TestCoreImage:
 
     @staticmethod
     @mark.unit_test
-    def test_get_image_timepoint(temporary_data_dir):
-        """ Test the get_image_timepoint function """
+    def test_get_image_timepoints(temporary_data_dir):
+        """ Test the get_image_timepoints function """
 
         # Path to the test image
         test_file_path = abspath(join(
@@ -63,25 +64,52 @@ class TestCoreImage:
 
         # Create a Nipype Node using get_image_timepoint
         test_get_image_timepoint = Node(Function(
-            function = im.get_image_timepoint,
-            input_names = ['in_file', 'time_point'],
+            function = im.get_image_timepoints,
+            input_names = ['in_file', 'start_time_point', 'end_time_point'],
             output_names = ['out_file']
             ), name = 'test_get_image_timepoint')
         test_get_image_timepoint.inputs.in_file = test_file_path
-        test_get_image_timepoint.inputs.time_point = 10
+        test_get_image_timepoint.inputs.start_time_point = 10
+        test_get_image_timepoint.inputs.end_time_point = 10
         test_get_image_timepoint.base_dir = temporary_data_dir
         outputs = test_get_image_timepoint.run().outputs
 
         # Check output file name
-        assert basename(outputs.out_file) == 'test_timepoint_input_timepoint-10.nii'
+        assert basename(outputs.out_file) == 'test_timepoint_input_timepoint-10-10.nii'
 
         # Check if file exists
         assert exists(outputs.out_file)
 
         # Compare with expected
-        test_file_path = abspath(join(
+        out_test_file_path = abspath(join(
             Configuration()['directories']['test_data'],
             'core',
             'image',
             'test_timepoint_output.nii'))
-        assert cmp(outputs.out_file, test_file_path)
+        assert cmp(outputs.out_file, out_test_file_path)
+
+        # Try a new time range
+        test_get_image_timepoint = Node(Function(
+            function = im.get_image_timepoints,
+            input_names = ['in_file', 'start_time_point', 'end_time_point'],
+            output_names = ['out_file']
+            ), name = 'test_get_image_timepoint')
+        test_get_image_timepoint.inputs.in_file = test_file_path
+        test_get_image_timepoint.inputs.start_time_point = 2
+        test_get_image_timepoint.inputs.end_time_point = 4
+        test_get_image_timepoint.base_dir = temporary_data_dir
+        outputs = test_get_image_timepoint.run().outputs
+
+        # Check output file name
+        assert basename(outputs.out_file) == 'test_timepoint_input_timepoint-2-4.nii'
+
+        # Check if file exists
+        assert exists(outputs.out_file)
+
+        # Compare with expected
+        out_test_file_path = abspath(join(
+            Configuration()['directories']['test_data'],
+            'core',
+            'image',
+            'test_timepoint_output_2.nii'))
+        assert cmp(outputs.out_file, out_test_file_path)
