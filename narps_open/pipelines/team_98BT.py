@@ -424,9 +424,9 @@ class PipelineTeam98BT(Pipeline):
         from os import makedirs
         from os.path import join
         from nibabel import load
+        from nibabel.processing import resample_from_to
         from numpy import mean
-        from pandas import read_table
-        from nilearn.image import iter_img, resample_to_img
+        from pandas import read_csv
 
         # Ignore all future warnings
         from warnings import simplefilter
@@ -435,22 +435,23 @@ class PipelineTeam98BT(Pipeline):
         simplefilter(action = 'ignore', category = RuntimeWarning)
 
         # Load wc2 file and create a mask out of it
-        wc2 = load(wc2_file)
-        wc2_mask = wc2.get_fdata() > 0.6
-        wc2_mask = wc2_mask.astype(int)
+        wm_class_image = load(wc2_file)
+        wm_mask_data = wm_class_image.get_fdata() > 0.6
+        wm_mask_data = wm_mask_data.astype(int)
 
         # Compute the mean signal in white matter, for each slice of the functional data
         mean_wm = []
-        for current_slice in iter_img(load(func_file)):
-            slice_data = resample_to_img(
-                current_slice, wc2, interpolation = 'nearest', clip = True).get_fdata()
+        func_image = load(func_file)
+        for index in range(func_image.header.get_data_shape()[3]):
+            resampled_func = resample_from_to(
+                func_image.slicer[..., index], wm_class_image, order = 0, mode = 'nearest')
+
             # Append mean value of masked data
-            mean_wm.append(mean(slice_data * wc2_mask))
+            mean_wm.append(mean(resampled_func.get_fdata() * wm_mask_data))
 
         # Create new parameters file
-        data_frame = read_table(parameters_file, sep = '  ', header = None)
+        data_frame = read_csv(parameters_file, sep = '\t', dtype = str)
         data_frame['Mean_WM'] = mean_wm
-
         new_parameters_file = join(working_dir, 'parameters_files',
             f'parameters_file_sub-{subject_id}_run-{run_id}.tsv')
 

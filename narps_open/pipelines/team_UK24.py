@@ -68,23 +68,21 @@ class PipelineTeamUK24(Pipeline):
         """
         from os import makedirs
         from os.path import join, abspath
-
-        from nilearn.image import load_img, math_img, index_img, get_data
+        from nibabel import load
+        from numpy import mean
 
         # Load input images
-        mask_img = load_img(mask)
-        in_file_img = load_img(in_file)
+        mask_image = load(mask)
+        in_file_image = load(in_file)
+
+        # Create mask
+        mask_data = mask_image.get_fdata() > 0.0
+        mask_data = mask_data.astype(int)
 
         # Loop through time points
         average_values = []
-        for frame_index in range(in_file_img.shape[3]):
-            average_values.append(
-                get_data(math_img(
-                    'np.mean(image * (mask > 0.0))',
-                    image = index_img(in_file_img, frame_index),
-                    mask = mask_img
-                ))
-            )
+        for index in range(in_file_image.shape[3]):
+            average_values.append(mean(in_file_image.slicer[..., index].get_fdata() * mask_data))
 
         # Write confounds to a file
         out_file_name = abspath(f'sub-{subject_id}_run-{run_id}_' + out_file_suffix)
