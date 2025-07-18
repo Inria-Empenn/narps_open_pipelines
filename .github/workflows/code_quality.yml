@@ -25,14 +25,14 @@ jobs:
     # Steps that define the job
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
@@ -50,7 +50,7 @@ jobs:
         pylint --fail-under 8 tests > pylint_report_tests.txt
 
     - name: Archive pylint results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure() # Only if previous step failed
       with:
         name: pylint-reports-python
