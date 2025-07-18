@@ -16,7 +16,6 @@ from nipype.interfaces.spm import (
     DARTELNorm2MNI, FieldMap, Threshold
     )
 from nipype.interfaces.spm.base import Info as SPMInfo
-from nipype.interfaces.fsl import ExtractROI
 from nipype.algorithms.modelgen import SpecifySPMModel
 from niflow.nipype1.workflows.fmri.spm import create_DARTEL_template
 
@@ -26,6 +25,7 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     remove_parent_directory, list_intersection, elements_in_string, clean_list
     )
+from narps_open.core.image import get_image_timepoints
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeam98BT(Pipeline):
@@ -264,10 +264,13 @@ class PipelineTeam98BT(Pipeline):
         preprocessing.connect(slice_timing, 'timecorrected_files', motion_correction, 'in_files')
 
         # Intrasubject coregistration
-        extract_first = Node(ExtractROI(), name = 'extract_first')
-        extract_first.inputs.t_min = 1
-        extract_first.inputs.t_size = 1
-        extract_first.inputs.output_type = 'NIFTI'
+        extract_first = Node(Function(
+            function = get_image_timepoints,
+            input_names = ['in_file', 'start_time_point', 'end_time_point'],
+            output_names = ['roi_file']
+            ), name = 'extract_first')
+        extract_first.inputs.start_time_point = 1
+        extract_first.inputs.end_time_point = 1
         preprocessing.connect(
             motion_correction, 'realigned_unwarped_files', extract_first, 'in_file')
 
