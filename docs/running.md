@@ -30,6 +30,7 @@ narps_open_runner -h
 	                        the analysis levels to run (p=preprocessing, r=run, s=subject, g=group)
 	  -c, --check           check pipeline outputs (runner is not launched)
 	  -e, --exclusions      run the analyses without the excluded subjects
+	  --config CONFIG       custom configuration file to be used
 
 narps_open_runner -t 2T6S -s 001 006 020 100 # Launches the full pipeline on the given subjects
 narps_open_runner -t 2T6S -r 4 # Launches the full pipeline on 4 random subjects
