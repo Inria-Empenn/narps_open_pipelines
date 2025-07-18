@@ -124,6 +124,17 @@ This module contains a set of functions dedicated to computations on images.
 # Get dimensions of voxels along x, y, and z in mm (returns e.g.: [1.0, 1.0, 1.0]).
 get_voxel_dimensions('/path/to/the/image.nii.gz')
 ```
+
+ * `get_image_timepoint` : extracts the 3D volume in a given time point range from a 4D Nifti image
+
+```python
+# Create a nifti 3D file containing time point 5 of the input image (returns a path to the generated 3D image)
+get_image_timepoints('/path/to/the/image.nii.gz', 5, 5):
+
+# Create a nifti 3D file containing time points 5 to 10 of the input image (returns a path to the generated 3D image)
+get_image_timepoints('/path/to/the/image.nii.gz', 5, 10):
+```
+
 ## narps_open.core.interfaces
 
 This module contains a set of interface creators inheriting form the `narps_open.core.interfaces.InterfaceCreator` abstract class.
