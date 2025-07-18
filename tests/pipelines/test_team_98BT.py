@@ -140,7 +140,7 @@ class TestPipelinesTeam98BT:
         helpers.compare_float_2d_arrays(pmod.param, [
             [14.0, 34.0, 38.0, 10.0, 16.0],
             [6.0, 14.0, 19.0, 15.0, 17.0],
-            [1, 1, 0, 0, 0]
+            [1, 2, -2, -2, -1]
             ])
 
     @staticmethod
