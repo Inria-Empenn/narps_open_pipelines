@@ -24,8 +24,24 @@ from narps_open.utils.configuration import Configuration
 from narps_open.data.results import ResultsCollection
 from narps_open.data.participants import get_participants_subset
 
-# Init configuration, to ensure it is in testing mode
-Configuration(config_type='testing')
+def pytest_addoption(parser):
+    """ Add a configuration option for narps_open to the pytest command line """
+    parser.addoption('--narps_open_config',
+        action='store', help='NARPS Open Pipelines configuration file')
+
+@fixture(scope='session', autouse=True)
+def load_configuration(request):
+    """ Automatically load narps_open configuration from the corresponding
+        pytest command line argument.
+    """
+    config_file = request.config.getoption('--narps_open_config')
+
+    if config_file:
+        # Init configuration with custom file
+        Configuration(config_type='custom').config_file = config_file
+    else:
+        # Ensure it is in testing mode
+        Configuration(config_type='testing')
 
 @fixture
 def temporary_data_dir():

@@ -1,0 +1,26 @@
+[general]
+title = "Testing configuration for the NARPS open pipelines project, to be used inside the nipype/nipype:py38 docker container"
+config_type = "custom"
+
+[directories]
+dataset = "/work/data/original/ds001734/"
+reproduced_results = "/work/run/reproduced/"
+narps_results = "/work/data/results/"
+test_data = "/work/tests/test_data/"
+test_runs = "/work/run/"
+
+[runner]
+nb_procs = 8 # Maximum number of threads executed by the runner
+nb_trials = 3 # Maximum number of executions to have the pipeline executed completely
+
+[pipelines]
+remove_unused_data = true # set to true to activate remove nodes of pipelines
+
+[results]
+neurovault_naming = true # true if results files are saved using the neurovault naming, false if they use naming of narps
+
+[testing]
+
+[testing.pipelines]
+nb_subjects_per_group = 4 # Compute first level analyses by subgroups of N subjects, to avoid lacking of disk and memory
+correlation_thresholds = [0.30, 0.70, 0.78, 0.85, 0.93] # Correlation between reproduced hypotheses files and results, respectively for [20, 40, 60, 80, 108] subjects.
