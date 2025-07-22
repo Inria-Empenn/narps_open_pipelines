@@ -42,6 +42,7 @@ Tests can be launched manually or while using CI (Continuous Integration).
 * To specify a test -for which the name contains 'test_pattern'- inside a test file : `pytest test_file.py -k "test_pattern"`
 * To run a tests with a given mark 'mark' : `pytest -m 'mark'`
 * To create code coverage data : `coverage run -m pytest ./tests` then `coverage report` to see the code coverage result or `coverage xml` to output a .xml report file
+* To use a custom configuration file (other than `narps_open/utils/configuration/test_config.toml` that is used by default): `pytest --narps_open_config=<path_to_the_custom_config_file>`
 
 ## Command line tools
 
@@ -62,6 +63,7 @@ The command line tool `narps_open_correlations` is also available and can be use
 
 ```bash
 narps_open_correlations -t 2T6S -n 60
+narps_open_correlations -t 2T6S -n 60 --config <path_to_a_custom_config_file>
 ```
 
 to get the correlation values for the results of a previously executed pipeline (here team 2T6S, with 60 subjects).
@@ -70,7 +72,7 @@ to get the correlation values for the results of a previously executed pipeline 
 
 * `pytest.ini` is a global configuration files for using pytest (see reference [here](https://docs.pytest.org/en/7.1.x/reference/customize.html)). It allows to [register markers](https://docs.pytest.org/en/7.1.x/example/markers.html) that help to better identify tests. Note that `pytest.ini` could be replaced by data inside `pyproject.toml` in the next versions.
 * `tests/conftest.py` defines common functions, parameters, and [helpers](https://pytest-helpers-namespace.readthedocs.io/en/latest/) that are later available to all tests
-* `narps_open/utils/configuration/testing_config.toml` sets the parameters for the `testing` configuration type (see how the [configuration](/docs/configuration.md) module works). This configuration type is automatically used for testing (as defined in `tests/conftest.py`).
+* `narps_open/utils/configuration/testing_config.toml` sets the parameters for the `testing` configuration type (see how the [configuration](/docs/configuration.md) module works). This configuration type is used by default for testing (as defined in `tests/conftest.py`), but a configuration can be passed at runtime using the `narps_open_config` option in the `pytest` command line.
 
 ## Writing tests
 

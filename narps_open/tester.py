@@ -17,15 +17,22 @@ def main():
     parser = ArgumentParser(description='Test the pipelines from NARPS.')
     parser.add_argument('-t', '--team', type=str, required=True,
         help='the team ID', choices=get_implemented_pipelines())
+    parser.add_argument('--config', type=str, required=False,
+        help='custom configuration file to be used')
     arguments = parser.parse_args()
 
-    sys.exit(pytest.main([
+    pytest_arguments = [
         '-s',
         '-q',
         '-x',
         f'tests/pipelines/test_team_{arguments.team}.py',
         '-m',
-        'pipeline_test']))
+        'pipeline_test']
+
+    if 'config' in arguments:
+        pytest_arguments.append(f'--narps_open_config={arguments.config}')
+
+    sys.exit(pytest.main(pytest_arguments))
 
 if __name__ == '__main__':
     main()
