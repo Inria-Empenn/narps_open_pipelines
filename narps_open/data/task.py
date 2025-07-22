@@ -12,13 +12,16 @@ from narps_open.utils.singleton import SingletonMeta
 class TaskInformation(dict, metaclass=SingletonMeta):
     """ This class allows to access information about the task performed in NARPS """
 
-    task_information_file = join(Configuration()['directories']['dataset'], 'task-MGT_bold.json')
-
-    def __init__(self):
+    def __init__(self, task_file=''):
         super().__init__()
 
         # Load information from the task-MGT_bold.json file
-        with open(self.task_information_file, 'rb') as file:
+        if task_file:
+            task_information_file = task_file # For testing purpose only
+        else:            
+            task_information_file = join(
+                Configuration()['directories']['dataset'], 'task-MGT_bold.json')
+        with open(task_information_file, 'rb') as file:
             self.update(load(file))
 
         # Compute derived information

@@ -18,10 +18,9 @@ from narps_open.utils.configuration import Configuration
 from narps_open.data import task
 
 @fixture(scope='function', autouse=True)
-def mock_task_data(mocker):
-    """ Patch the json.load method to mock task data """
-    mocker.patch.object(
-        task.TaskInformation, 'task_information_file',
+def load_test_task_data():
+    """ Init the TaskInformation class with task data for testing """
+    task.TaskInformation(
         join(Configuration()['directories']['test_data'], 'data', 'task', 'task-info.json')
         )
 
