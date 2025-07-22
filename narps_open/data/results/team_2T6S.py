@@ -7,8 +7,7 @@ from os.path import join
 
 from shutil import copyfile
 
-from nibabel import load
-from nilearn.image import math_img
+from nibabel import load, save, Nifti1Image
 
 from narps_open.data.results import ResultsCollection
 
@@ -44,5 +43,4 @@ class ResultsCollection2T6S(ResultsCollection):
 
             # Change the signs of values inside the input image
             input_image = load(input_file)
-            output_image = math_img('img*-1', img = input_image)
-            output_image.to_filename(rectified_file)
+            save(Nifti1Image(input_image.get_fdata()*-1, input_image.affine), rectified_file)

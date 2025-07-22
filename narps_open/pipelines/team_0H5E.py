@@ -17,9 +17,6 @@ from nipype.interfaces.spm import (
    EstimateModel, EstimateContrast, Threshold
    )
 from nipype.interfaces.spm.base import Info as SPMInfo
-from nipype.interfaces.fsl import (
-    ExtractROI
-    )
 
 from narps_open.pipelines import Pipeline
 from narps_open.data.task import TaskInformation
@@ -27,6 +24,7 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     remove_parent_directory, list_intersection, elements_in_string, clean_list
     )
+from narps_open.core.image import get_image_timepoints
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeam0H5E(Pipeline):
@@ -93,10 +91,13 @@ class PipelineTeam0H5E(Pipeline):
 
         # EXTRACTROI - remove first image of func
         # > Removal of "dummy" scans (deleting the first four volumes from each run)
-        remove_first_image = Node(ExtractROI(), name = 'remove_first_image')
-        remove_first_image.inputs.t_min = 4
-        remove_first_image.inputs.t_size = 449 # number of time points - 4
-        remove_first_image.inputs.output_type='NIFTI'
+        remove_first_image = Node(Function(
+            function = get_image_timepoints,
+            input_names = ['in_file', 'start_time_point', 'end_time_point'],
+            output_names = ['roi_file']
+            ), name = 'remove_first_image')
+        remove_first_image.inputs.start_time_point = 4
+        remove_first_image.inputs.end_time_point = 453 # last image
         preprocessing.connect(gunzip_func, 'out_file', remove_first_image, 'in_file')
 
         # REALIGN - motion correction

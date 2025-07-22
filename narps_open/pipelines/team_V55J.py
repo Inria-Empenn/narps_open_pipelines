@@ -14,7 +14,6 @@ from nipype.interfaces.spm import (
     Coregister, Smooth, OneSampleTTestDesign, EstimateModel, EstimateContrast,
     Level1Design, TwoSampleTTestDesign, RealignUnwarp,
     Normalize12, NewSegment, FieldMap, Threshold)
-from nipype.interfaces.fsl import ExtractROI
 from nipype.algorithms.modelgen import SpecifySPMModel
 from nipype.interfaces.spm.base import Info as SPMInfo
 
@@ -24,6 +23,7 @@ from narps_open.data.participants import get_group
 from narps_open.core.common import (
     remove_parent_directory, list_intersection, elements_in_string, clean_list
     )
+from narps_open.core.image import get_image_timepoints
 from narps_open.utils.configuration import Configuration
 
 class PipelineTeamV55J(Pipeline):
@@ -100,10 +100,13 @@ class PipelineTeamV55J(Pipeline):
 
         # EXTRACTROI - get the image 10 in func file
         # "For each run, we selected image 10 to distortion correct and asked to match the VDM file"
-        extract_tenth_image = Node(ExtractROI(), name = 'extract_tenth_image')
-        extract_tenth_image.inputs.t_min = 10
-        extract_tenth_image.inputs.t_size = 1
-        extract_tenth_image.inputs.output_type='NIFTI'
+        extract_tenth_image = Node(Function(
+            function = get_image_timepoints,
+            input_names = ['in_file', 'start_time_point', 'end_time_point'],
+            output_names = ['roi_file']
+            ), name = 'extract_tenth_image')
+        extract_tenth_image.inputs.start_time_point = 9 # 0-based 10th image
+        extract_tenth_image.inputs.end_time_point = 9
         preprocessing.connect(gunzip_func, 'out_file', extract_tenth_image, 'in_file')
 
         # FIELDMAP - Calculate VDM routine of the FieldMap tool in SPM12
