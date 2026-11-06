@@ -278,7 +278,7 @@ class PipelineTeamUK24(Pipeline):
             'fd_power_2012.txt')\
             for index in range(len(self.run_list))]
 
-        # Realignement parameters
+        # Realignment parameters
         templates += [join(output_dir, f'_realign_func{index}',
             'rp_sub-{subject_id}'+f'_task-MGT_run-{run_id}_bold.txt')\
             for index, run_id in zip(range(len(self.run_list)), self.run_list)]
