@@ -25,15 +25,15 @@ jobs:
   pytest:
 
     # Define the runner for this job
-    runs-on: self-hosted
+    runs-on: nipype/nipype:py38
 
     # Steps that define the job
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Load configuration for self-hosted runner
-      run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
+    #- name: Load configuration for self-hosted runner
+    #  run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
 
     - name: Install dependencies
       run: |
