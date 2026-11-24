@@ -27,7 +27,8 @@ jobs:
   pytest:
 
     # Define the runner for this job
-    runs-on: nipype/nipype-py38
+    runs-on: ubuntu-latest
+    container: nipype/nipype:py38
 
     # Steps that define the job
     steps:
