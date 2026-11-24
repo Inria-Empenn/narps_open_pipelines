@@ -3,7 +3,7 @@
 
 """ A simple implementation of the singleton design pattern. """
 
-from threading import Lock
+from threading import RLock
 
 class SingletonMeta(type):
     """ This class is responsible for ensuring Singleton objects for the class it creates.
@@ -15,12 +15,12 @@ class SingletonMeta(type):
     _instances = {}
 
     # Lock object is used to synchronize threads during first access to the Singleton.
-    _lock: Lock = Lock()
+    _lock: RLock = RLock()
 
     def __call__(cls, *args, **kwargs):
         """ Creating only one instance for the class 'cls' """
-        if cls not in cls._instances:
-            with cls._lock:
+        with cls._lock:
+            if cls not in cls._instances:
                 instance = super().__call__(*args, **kwargs)
                 cls._instances[cls] = instance
 
