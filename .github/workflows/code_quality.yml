@@ -20,7 +20,7 @@ jobs:
   pylint:
 
     # Define the OS
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # Steps that define the job
     steps:
