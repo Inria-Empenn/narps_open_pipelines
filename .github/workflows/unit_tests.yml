@@ -27,9 +27,7 @@ jobs:
   pytest:
 
     # Define the runner for this job
-    runs:
-      using: 'docker'
-      image: nipype/nipype-py38
+    runs-on: nipype/nipype-py38
 
     # Steps that define the job
     steps:
