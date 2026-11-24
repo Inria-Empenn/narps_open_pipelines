@@ -26,7 +26,7 @@ jobs:
 
     # Define the runner for this job
     runs-on: docker
-    image: nipype/nipype:py38
+    image: nipype/nipype-py38
 
     # Steps that define the job
     steps:
