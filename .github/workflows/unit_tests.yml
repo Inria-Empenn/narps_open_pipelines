@@ -7,12 +7,14 @@ name: unit_testing
 on:
   push:
     paths:
+      - '**.py'
       - 'narps_open/**/*'
       - 'setup.py'
       - 'pytest.ini'
       - 'tests/conftest.py'
   pull_request:
     paths:
+      - '**.py'
       - 'narps_open/**/*'
       - 'setup.py'
       - 'pytest.ini'
