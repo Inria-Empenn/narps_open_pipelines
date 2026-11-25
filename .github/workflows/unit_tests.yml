@@ -38,8 +38,8 @@ jobs:
 
     - name: Launch tests with pytest & get code coverage
       run: |
-        docker run -u root -v $PWD:/work narps_open:${{github.sha}} datalad install data/original/ds001734
-        docker run -u root -v $PWD:/work narps_open:${{github.sha}} datalad install data/results
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} "git config user.name actions ; git config user.email actions@github.com ; datalad install data/original/ds001734"
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} "git config user.name actions ; git config user.email actions@github.com ; datalad install data/results"
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage report
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage xml
