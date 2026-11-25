@@ -28,26 +28,20 @@ jobs:
 
     # Define the runner for this job
     runs-on: ubuntu-latest
-    container: nipype/nipype:py38
 
     # Steps that define the job
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    #- name: Load configuration for self-hosted runner
-    #  run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[tests]
+    - name: Build docker image
+      run: docker build -t narps_open:${git_hash} .
 
     - name: Launch tests with pytest & get code coverage
       run: |
-        coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
-        coverage report
-        coverage xml
+        docker run -it -v $PWD:/work narps_open:${git_hash} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
+        docker run -it -v $PWD:/work narps_open:${git_hash} coverage report
+        docker run -it -v $PWD:/work narps_open:${git_hash} coverage xml
 
     - name: Archive pytest results
       if: ${{ failure() }} # Run only if previous job fails
