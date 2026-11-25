@@ -35,7 +35,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Checkout datasets with datalad
-      uses: datalad/datalad-action@main
+      uses: datalad/datalad-action/get@main
       with:
         source: https://github.com/OpenNeuroDatasets/ds001734.git
         dataset_path: data/original/ds001734
