@@ -31,8 +31,18 @@ jobs:
 
     # Steps that define the job
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    #- name: Checkout repository
+    #  uses: actions/checkout@v4
+
+    - name: Checkout repository with datalad
+      uses: datalad/datalad-action@master
+      with:
+        add_datalad_to_path: false
+        datasets:
+        - source: ${{github.repositoryUrl}}
+        - branch: ${{github.ref_name}}
+        - install_get_data: false
+        - recursive: true
 
     - name: Build docker image
       run: docker build -t narps_open:${{github.sha}} .
