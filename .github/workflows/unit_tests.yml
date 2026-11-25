@@ -31,18 +31,14 @@ jobs:
 
     # Steps that define the job
     steps:
-    #- name: Checkout repository
-    #  uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Checkout repository with datalad
+    - name: Checkout datasets with datalad
       uses: datalad/datalad-action@main
       with:
-        add_datalad_to_path: false
-        datasets:
-        - source: ${{github.repositoryUrl}}
-        - branch: ${{github.ref_name}}
-        - install_get_data: false
-        - recursive: true
+        source: https://github.com/OpenNeuroDatasets/ds001734.git
+        dataset_path: data/original/ds001734
 
     - name: Build docker image
       run: docker build -t narps_open:${{github.sha}} .
