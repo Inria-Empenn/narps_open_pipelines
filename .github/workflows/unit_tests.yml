@@ -39,9 +39,9 @@ jobs:
 
     - name: Launch tests with pytest & get code coverage
       run: |
-        docker run -it -v $PWD:/work narps_open:${{github.sha}} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
-        docker run -it -v $PWD:/work narps_open:${{github.sha}} coverage report
-        docker run -it -v $PWD:/work narps_open:${{github.sha}} coverage xml
+        docker run -v $PWD:/work narps_open:${{github.sha}} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
+        docker run -v $PWD:/work narps_open:${{github.sha}} coverage report
+        docker run -v $PWD:/work narps_open:${{github.sha}} coverage xml
 
     - name: Archive pytest results
       if: ${{ failure() }} # Run only if previous job fails
