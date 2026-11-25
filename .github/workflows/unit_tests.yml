@@ -32,19 +32,14 @@ jobs:
     # Steps that define the job
     steps:
     - uses: actions/checkout@v4
-    - uses: jstritch/setup-git-annex@v1
-
-    - name: Checkout datasets with datalad
-      uses: datalad/datalad-action/get@main
-      with:
-        source: https://github.com/OpenNeuroDatasets/ds001734.git
-        dataset_path: data/original/ds001734
 
     - name: Build docker image
       run: docker build -t narps_open:${{github.sha}} .
 
     - name: Launch tests with pytest & get code coverage
       run: |
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} datalad install data/original/ds001734
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} datalad install data/results
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage report
         docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage xml
