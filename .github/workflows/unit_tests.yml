@@ -39,10 +39,10 @@ jobs:
       with:
         add_datalad_to_path: false
         datasets:
-          - branch: ${{github.ref_name}}
-          - source: ${{github.repositoryUrl}}
-          - install_get_data: false
-          - recursive: true
+        - source: ${{github.repositoryUrl}}
+        - branch: ${{github.ref_name}}
+        - install_get_data: false
+        - recursive: true
 
     - name: Build docker image
       run: docker build -t narps_open:${{github.sha}} .
