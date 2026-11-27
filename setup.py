@@ -14,23 +14,23 @@ will add the current directory (.) to the system path.
 from setuptools import setup, find_packages
 
 requires = [
-    'importlib_resources>=5.10.2,<6.0',
-    'tomli>=2.0.1,<3.0',
+    'importlib_resources>=5.10.2,<5.11',
+    'tomli>=2.0.1,<2.1',
     'networkx>=2.0,<3.0', # a workaround to nipype's bug (issue 3530)
     'nipype>=1.8.6,<1.9',
-    'pandas>=1.5.2,<2.0',
+    'pandas>=1.5.2,<1.6',
     'niflow-nipype1-workflows>=0.0.5,<0.1.0'
 ]
 extras_require = {
     'tests': [
-        'pathvalidate>=3.2.0,<4.0',
-        'pylint>=3.0.3,<4.0',
-        'pytest>=7.2.0,<8.0',
-        'pytest-cov>=2.10.1,<3.0',
-        'pytest-helpers-namespace>=2021.12.29,<2022.0',
-        'pytest-mock>=3.12.0,<4.0',
-        'checksumdir>=1.2.0,<2.0',
-        'requests>=2.32.4,<3.0'
+        'pathvalidate>=3.2.0',
+        'pylint>=3.0.3',
+        'pytest>=7.2.0',
+        'pytest-cov>=2.10.1',
+        'pytest-helpers-namespace>=2021.12.29',
+        'pytest-mock>=3.12.0',
+        'checksumdir>=1.2.0',
+        'requests>=2.32.4'
         ]
 }
 
@@ -46,12 +46,14 @@ setup(
     url = 'https://github.com/Inria-Empenn/narps_open_pipelines',
 
     include_package_data = True,
-    python_requires = '>=3.8,<4.0',
+    python_requires = '>=3.8,<3.12',
     install_requires = requires,
     extras_require = extras_require,
     classifiers = [
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3'
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.8',
+        'License :: OSI Approved :: MIT License'
     ],
     project_urls = {
         'Bug Tracker': 'https://github.com/Inria-Empenn/narps_open_pipelines/issues',
