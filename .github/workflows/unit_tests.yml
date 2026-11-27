@@ -7,13 +7,15 @@ name: unit_testing
 on:
   push:
     paths:
-      - 'narps_open/**'
+      - '**.py'
+      - 'narps_open/**/*'
       - 'setup.py'
       - 'pytest.ini'
       - 'tests/conftest.py'
   pull_request:
     paths:
-      - 'narps_open/**'
+      - '**.py'
+      - 'narps_open/**/*'
       - 'setup.py'
       - 'pytest.ini'
       - 'tests/conftest.py'
@@ -25,30 +27,25 @@ jobs:
   pytest:
 
     # Define the runner for this job
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     # Steps that define the job
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
-    - name: Load configuration for self-hosted runner
-      run: cp /home/neuro/local_testing_config.toml narps_open/utils/configuration/testing_config.toml
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[tests]
+    - name: Build docker image
+      run: docker build -t narps_open:${{github.sha}} .
 
     - name: Launch tests with pytest & get code coverage
       run: |
-        coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
-        coverage report
-        coverage xml
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} /usr/bin/env bash -c "git config --global user.name actions ; git config --global user.email actions@github.com ; datalad install data/original/ds001734"
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} /usr/bin/env bash -c "git config --global user.name actions ; git config --global user.email actions@github.com ; datalad install data/results"
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage run -m pytest --junit-xml=pytest_report.xml -m "not pipeline_test"
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage report
+        docker run -u root -v $PWD:/work narps_open:${{github.sha}} coverage xml
 
     - name: Archive pytest results
-      if: ${{ failure() }} # Run only if previous job fails
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: unit_tests-reports
         path: |

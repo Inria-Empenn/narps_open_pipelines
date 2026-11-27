@@ -8,8 +8,8 @@
 from os import makedirs
 from os.path import join
 from importlib import import_module
-from json import loads
 from urllib.request import urlretrieve, urlopen
+from requests import get as requests_get
 
 from narps_open.utils.configuration import Configuration
 from narps_open.data.description import TeamDescription
@@ -62,14 +62,13 @@ class ResultsCollection():
 
         # Get the images data from Neurovault's API
         collection_url = 'https://neurovault.org/api/collections/' + self.uid + '/images/'
+        response = requests_get(collection_url)
+        json = response.json()
 
-        with urlopen(collection_url) as response:
-            json = loads(response.read())
-
-            file_urls = {}
-            for result in json['results']:
-                # Get data for a file in the collection
-                file_urls[result['name']+'.nii.gz'] = result['file']
+        file_urls = {}
+        for result in json['results']:
+            # Get data for a file in the collection
+            file_urls[result['name']+'.nii.gz'] = result['file']
 
         return file_urls
 
@@ -82,11 +81,11 @@ class ResultsCollection():
         # Download dataset
         print('Collecting results for team', self.team_id)
         for file_name, file_url in self.files.items():
-            urlretrieve(
-                file_url,
-                join(self.directory, file_name),
-                show_download_progress
-                )
+
+            # Get file by its URL and write it bytewise on disk
+            response = requests_get(file_url)
+            with open(join(self.directory, file_name),'wb') as file:
+                file.write(response.content)
 
     def rectify(self):
         """ Rectify files in the collection, if needed.

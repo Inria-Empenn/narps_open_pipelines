@@ -23,13 +23,14 @@ requires = [
 ]
 extras_require = {
     'tests': [
-        'pathvalidate>=3.2.0,<3.3',
-        'pylint>=3.0.3,<3.1',
-        'pytest>=7.2.0,<7.3',
-        'pytest-cov>=2.10.1,<2.11',
-        'pytest-helpers-namespace>=2021.12.29,<2021.13',
-        'pytest-mock>=3.12.0,<3.13',
-        'checksumdir>=1.2.0,<1.3'
+        'pathvalidate>=3.2.0',
+        'pylint>=3.0.3',
+        'pytest>=7.2.0',
+        'pytest-cov>=2.10.1',
+        'pytest-helpers-namespace>=2021.12.29',
+        'pytest-mock>=3.12.0',
+        'checksumdir>=1.2.0',
+        'requests>=2.32.4'
         ]
 }
 
@@ -51,7 +52,8 @@ setup(
     classifiers = [
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.8',
+        'License :: OSI Approved :: MIT License'
     ],
     project_urls = {
         'Bug Tracker': 'https://github.com/Inria-Empenn/narps_open_pipelines/issues',

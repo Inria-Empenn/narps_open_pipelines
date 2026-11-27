@@ -5,4 +5,4 @@ WORKDIR /work
 COPY narps_open/ ./narps_open/
 COPY setup.py ./
 
-RUN /neurodocker/startup.sh pip install .
+RUN /neurodocker/startup.sh pip install .[tests]

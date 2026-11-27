@@ -20,17 +20,17 @@ jobs:
   pylint:
 
     # Define the OS
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # Steps that define the job
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
-        python-version: 3.9
+        python-version: 3.8
 
     - uses: actions/cache@v4
       with:
@@ -50,7 +50,7 @@ jobs:
         pylint --fail-under 8 tests > pylint_report_tests.txt
 
     - name: Archive pylint results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: failure() # Only if previous step failed
       with:
         name: pylint-reports-python
