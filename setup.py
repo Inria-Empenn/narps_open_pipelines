@@ -29,7 +29,8 @@ extras_require = {
         'pytest-cov>=2.10.1,<2.11',
         'pytest-helpers-namespace>=2021.12.29,<2021.13',
         'pytest-mock>=3.12.0,<3.13',
-        'checksumdir>=1.2.0,<1.3'
+        'checksumdir>=1.2.0,<1.3',
+        'requests>=2.32.4'
         ]
 }
 
