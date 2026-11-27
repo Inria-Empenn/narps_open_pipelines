@@ -46,13 +46,12 @@ setup(
     url = 'https://github.com/Inria-Empenn/narps_open_pipelines',
 
     include_package_data = True,
-    python_requires = '>=3.8,<3.12',
+    python_requires = '>=3.8,<4.0',
     install_requires = requires,
     extras_require = extras_require,
     classifiers = [
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3'
     ],
     project_urls = {
         'Bug Tracker': 'https://github.com/Inria-Empenn/narps_open_pipelines/issues',
